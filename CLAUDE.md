@@ -105,10 +105,29 @@ which is under a pixel once snapped, and flipped those corners on ten of the thi
 
 ## Motion
 
-One arrival curve, `cubic-bezier(.2,.8,.2,1)`, and one shorter exit curve. Every animation is
-transform and opacity only, so none of it can cost a reflow on a phone.
+**One curve, `cubic-bezier(.32,.72,0,1)`, and one duration, 420ms.** That is the shape iOS uses
+to present things: quick off the mark, a long tail, no bounce. Everything in a transition uses
+both, so the coin, the cross-fade and the chrome finish together instead of three things ending
+at three different times, which is what "not smooth" usually turns out to mean. Every animation
+is transform and opacity only, so none of it can cost a reflow on a phone.
 
-Three rules, and all three are asserted:
+**Both views are always laid out and cross-faded; they are never switched with `display`.** This
+is the change that fixed the transition rather than decorating it. A `display` swap cannot be
+animated, so the list vanished in a single frame while the coin was still flying, which reads as
+a glitch and not a transition. Worse, an element inside a `display:none` view reports a zero
+rect, so every measurement the zoom needed was conditional on which screen happened to be up,
+and it silently cancelled the zoom more than once. Laid out permanently and faded by opacity,
+either end can be measured at any moment and the change of screen is something the compositor
+does on its own. `visibility` is what takes the hidden view out of hit-testing and the
+accessibility tree, delayed by the duration so it does not disappear mid-fade.
+
+**The hash is the only state.** Nothing reads `history.state` to decide what to draw. It did
+once, and after a reload that state is stale: `Accounts` called `history.back()` and landed on
+whatever entry happened to sit behind, which could be another code, so the app appeared to jump
+sideways. `depth` counts only the entries this page session pushed, so back either unwinds one
+of ours or rewrites the hash in place, and can never walk off into somebody else's history.
+
+Three further rules, and all three are asserted:
 
 1. **Nothing may be load-bearing.** `prefers-reduced-motion` switches the lot off, in the sheet
    and in `app.js`, so any step that waited on `animationend` would wait for ever on a phone
@@ -200,7 +219,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 111 assertions, a couple of minutes, no network
+npm test          # 117 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.

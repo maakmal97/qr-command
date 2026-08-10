@@ -34,10 +34,14 @@ The app remembers whether you left it in plain mode.
 **The motion is part of the answer, not decoration.** Each account's badge in the list is the
 same coin, drawn small, so tapping one **zooms that exact coin up** to fill the screen, and going
 back shrinks it into its place in the list. It is one object moving, not a dot being swapped for
-a picture. The list deals itself out when it opens; stepping between accounts sends the coin out
-the way your thumb went and brings the next in from the far side; saving dips the coin and throws
-a ring off it. If your phone is set to reduce motion, none of it plays and everything still
-works, instantly.
+a picture. One curve and one duration run the whole thing, so the coin, the screen behind it and
+the title all settle at the same moment.
+
+The list deals itself out the first time you open the app, and not again, so coming back to it
+feels like returning to something that was already there. Stepping between accounts sends the
+coin out the way your thumb went and brings the next in from the far side. Saving dips the coin
+and throws a ring off it. If your phone is set to reduce motion, none of it plays and everything
+still works, instantly.
 
 ## Changing the list of codes
 

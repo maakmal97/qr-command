@@ -486,18 +486,36 @@ section("2. The bundle carries the codes and nothing else");
   const cssCode = appCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
   ok("the app opens on the accounts, not on a code",
-    /<body class="view-list">/.test(indexHtml) &&
-    /body\.view-list \.accounts\{display:flex;\}/.test(appCss));
+    /document\.body\.className = "view-list fresh";/.test(appJs) &&
+    /body\.view-list \.accounts,/.test(cssCode));
+
+  /* BOTH VIEWS ARE ALWAYS LAID OUT and cross-faded. A display swap cannot be animated, so the
+   * list used to vanish in one frame while the coin was still flying, which reads as a glitch;
+   * and an element inside a display:none view reports a zero rect, which silently cancelled the
+   * zoom. Neither can happen once both views are permanently in layout. */
+  ok("the two views are cross-faded, never switched with display",
+    !/\.accounts,\.codeview\{display:none;\}/.test(cssCode) &&
+    /\.accounts,\.codeview\{[\s\S]*?position:fixed;/.test(cssCode) &&
+    /transition:opacity var\(--dur\) var\(--ease\), visibility/.test(cssCode));
+
   ok("every account is a named tile on that first screen",
     /id="grid"/.test(indexHtml) && /className = "tile"/.test(appJs) && /tiletext/.test(appJs));
   ok("a code has an explicit way back to the accounts",
-    /id="back"/.test(indexHtml) && /elBack\.addEventListener\("click", goBack\)/.test(appJs));
+    /id="back"/.test(indexHtml) && /elBack\.addEventListener\("click", close\)/.test(appJs));
+
+  /* THE HASH IS THE ONLY STATE. Reading history.state to decide what to draw was a real bug:
+   * after a reload that state is stale, so Accounts called history.back() and landed on
+   * whatever entry happened to be behind, which could be another code. `depth` counts only the
+   * entries this page session pushed, so back either unwinds one of ours or rewrites the hash
+   * in place, and can never walk off into somebody else's history. */
   ok("the two views are addressed by the hash, so back and a home-screen link both work",
-    /function route\(\)/.test(appJs) && /popstate/.test(appJs) && /history\.pushState/.test(appJs));
+    /function route\(pre\)/.test(appJs) && /popstate/.test(appJs) && /history\.pushState/.test(appJs));
+  ok("nothing reads history.state to decide what to draw",
+    !/history\.state\s*&&/.test(appJs) && /if \(depth > 0\) \{ depth--; history\.back\(\); \}/.test(appJs));
   ok("stepping between codes replaces rather than pushes, so back is never a walk backwards " +
      "through everything swiped past", /history\.replaceState\(history\.state/.test(appJs));
   ok("nothing scrolls sideways any more",
-    !/overflow-x:auto/.test(appCss) && !/id="dots"/.test(indexHtml));
+    !/overflow-x:auto/.test(cssCode) && !/id="dots"/.test(indexHtml));
 
   ok("the code saves by share sheet where that exists and by download otherwise",
     /navigator\.canShare\(\s*\{\s*files/.test(appJs) && /navigator\.share\(/.test(appJs) &&
@@ -526,26 +544,32 @@ section("2. The bundle carries the codes and nothing else");
   ok("the list deals itself in, the coin arrives, and stepping between codes travels",
     /@keyframes tile-in/.test(appCss) && /@keyframes coin-in\b/.test(appCss) &&
     /@keyframes coin-out-left/.test(appCss) && /@keyframes coin-in-right/.test(appCss));
-  /* The zoom. The thumbnail on a tile is the same coin drawn small, and opening an account
-   * flies that very image up to full size, so it reads as one object moving rather than a dot
-   * being swapped for a coin. Both ends are measured while their own view is on screen, which
-   * is why fly() takes rects: whichever view is hidden reports zeros for everything in it, and
-   * measuring after the switch made the previous version do nothing at all, silently. */
+  /* The zoom. A tile's badge is the same coin drawn small, and opening an account flies that
+   * very image up to full size, so it reads as one object moving. fly() takes RECTS, and each
+   * end is measured by its caller, which is what keeps the ordering honest. */
   ok("a tile's thumbnail is the real coin, drawn small",
     /className = "tiledot"/.test(appJs) && /decorative: true/.test(appJs) &&
     /function drawThumbs\(\)/.test(appJs) && /\.tiledot\{/.test(cssCode));
   ok("opening an account flies that same image up to full size",
     /function fly\(fromRect, toRect, image, opts\)/.test(appJs) &&
     /fly\(from, to, pre\.canvas/.test(appJs) && /\.flier\{/.test(cssCode));
-  ok("going back flies it down into its tile again",
-    /reverse: true/.test(appJs) && /fly\(from, to, shot/.test(appJs));
-  ok("both ends are measured while their own view is on screen",
-    /var from = thumb \? thumb\.getBoundingClientRect\(\) : null;/.test(appJs) &&
-    /var to = elBtn\.getBoundingClientRect\(\);/.test(appJs));
+  ok("closing flies it down into its tile again",
+    /fly\(from, to, shot/.test(appJs) && /function close\(\)/.test(appJs));
+  ok("the flier works out its own direction from the two rects",
+    /var shrinking = toRect\.width < fromRect\.width;/.test(appJs));
   ok("the flier carries the full-size render and is only ever scaled down",
     /c\.width = image\.width;/.test(appJs) && /var s = small\.width \/ big\.width;/.test(appJs));
+  ok("what the flier covers is revealed one frame before it goes, so there is no gap and no " +
+     "double image", /onArrive, Math\.max\(0, ms - 32\)/.test(appJs));
+  ok("a second tap cannot strand the first zoom", /function killFlier\(\)/.test(appJs) &&
+    /killFlier\(\);/.test(appJs));
+  ok("a zero-size rect can never start a zoom",
+    /function rectOf\(el\)/.test(appJs) && /\(r\.width && r\.height\) \? r : null/.test(appJs));
   ok("if the zoom cannot play, the coin still gets an entrance",
-    /if \(!flew\) \{ restore\(\); oneShot\(elBtn, "enter"/.test(appJs));
+    /oneShot\(elBtn, "enter", 320\);/.test(appJs));
+  ok("the list deals itself in once, not every time it comes back",
+    /body\.view-list\.fresh \.tile\{/.test(cssCode) && /classList\.remove\("fresh"\)/.test(appJs));
+
   ok("the decorative escape from the safe-size rule is used for thumbnails only",
     (appJs.match(/decorative: true/g) || []).length === 1);
   ok("saving throws a ring off the coin", /@keyframes flash/.test(appCss) && /function flash\(/.test(appJs));
@@ -561,8 +585,7 @@ section("2. The bundle carries the codes and nothing else");
    * restored the same way. */
   ok("the flier always cleans up, whatever the animation does",
     /setTimeout\(finish, ms \+ \d+\)/.test(appJs) &&
-    /a\.finished\.then\(finish, finish\)/.test(appJs) &&
-    /setTimeout\(restore, \d+\)/.test(appJs));
+    /a\.finished\.then\(finish, finish\)/.test(appJs));
 
   /* One-shot animation classes must remove themselves. They all set `animation` on the same
    * element, so one left behind out-ranks the next by nothing more than being further down the

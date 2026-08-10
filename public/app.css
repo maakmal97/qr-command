@@ -34,7 +34,12 @@
   --pill:999px;
   --thumb:36px;
   --sh:0 8px 40px rgba(0,0,0,0.35);
-  --t:520ms cubic-bezier(.4,0,.2,1);
+  --t:420ms cubic-bezier(.32,.72,0,1);
+  /* One curve for the whole app. It is the shape iOS uses to present things: quick off the
+   * mark, a long tail, no bounce. One duration too, so the coin, the fade and the chrome all
+   * finish together instead of three things ending at three times. */
+  --ease:cubic-bezier(.32,.72,0,1);
+  --dur:420ms;
   --tap:44px;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",
          Roboto,Helvetica,Arial,sans-serif;
@@ -53,16 +58,39 @@ body{
   background:linear-gradient(160deg,#14121f 0%,#0d1020 60%,#0a0d18 100%);
   background-attachment:fixed;
   overflow:hidden;
-  padding:env(safe-area-inset-top) env(safe-area-inset-right)
-          env(safe-area-inset-bottom) env(safe-area-inset-left);
   overscroll-behavior:none;
   -webkit-tap-highlight-color:transparent;
 }
 
-/* Two views, one at a time. */
-.accounts,.codeview{display:none;}
-body.view-list .accounts{display:flex;}
-body.view-code .codeview{display:flex;}
+/* TWO VIEWS, BOTH ALWAYS LAID OUT, cross-faded.
+ *
+ * They used to be toggled with display, and that is why the transition read as a glitch: a
+ * display swap cannot be animated, so the list vanished in a single frame while the coin was
+ * still flying. It also made every measurement conditional, because an element inside a
+ * display:none view reports a zero rect, which silently cancelled the zoom more than once.
+ * Laid out permanently and faded by opacity, both ends can be measured at any moment and the
+ * change of screen is something the compositor does on its own.
+ *
+ * visibility is what takes the hidden one out of hit-testing and out of the accessibility
+ * tree; it is delayed by the duration on the way out so it does not disappear mid-fade. */
+.accounts,.codeview{
+  position:fixed;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  z-index:1;
+  opacity:0;
+  visibility:hidden;
+  transition:opacity var(--dur) var(--ease), visibility 0s linear var(--dur);
+  padding:env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+body.view-list .accounts,
+body.view-code .codeview{
+  opacity:1;
+  visibility:visible;
+  transition:opacity var(--dur) var(--ease), visibility 0s linear 0s;
+}
 
 /* The aurora, and the one thing in this file that had to be rebuilt for speed.
  *
@@ -98,12 +126,11 @@ body.view-code .codeview{display:flex;}
 /* ==================================================================== accounts */
 
 .accounts{
-  position:relative;
-  z-index:1;
-  height:100%;
-  flex-direction:column;
   gap:14px;
-  padding:clamp(16px,3.4vh,30px) 16px 16px;
+  padding-top:clamp(16px,3.4vh,30px);
+  padding-left:16px;
+  padding-right:16px;
+  padding-bottom:16px;
 }
 
 .atitle{
@@ -152,17 +179,15 @@ body.view-code .codeview{display:flex;}
   border-radius:50%;
   display:block;
   box-shadow:0 1px 2px rgba(0,0,0,.5), 0 0 14px -3px var(--dot,#888);
+  transition:opacity 260ms var(--ease);
 }
+/* Drawn lazily, one per idle callback, so each fades up as it lands rather than popping. */
+.tiledot:not(.lit){opacity:.55;}
 .tiletext{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word;min-width:0;}
 
 /* ==================================================================== the code */
 
-.codeview{
-  position:relative;
-  z-index:1;
-  height:100%;
-  flex-direction:column;
-}
+
 
 .bar{
   flex:0 0 auto;
@@ -330,7 +355,7 @@ body.view-code .codeview{display:flex;}
  * to zero rather than waiting on animationend, or a reduced-motion phone would sit for ever
  * waiting for an event that is never coming. */
 :root{
-  --in:340ms cubic-bezier(.2,.8,.2,1);
+  --in:340ms var(--ease);
   --out:150ms cubic-bezier(.4,0,1,1);
 }
 
@@ -340,9 +365,9 @@ body.view-code .codeview{display:flex;}
 }
 /* The list deals itself out, top left to bottom right. Capped at the twelfth so a longer
  * account list can never turn the stagger into a wait. */
-body.view-list .tile{
-  animation:tile-in 320ms cubic-bezier(.2,.8,.2,1) backwards;
-  animation-delay:calc(min(var(--i,0),12) * 24ms);
+body.view-list.fresh .tile{
+  animation:tile-in 320ms var(--ease) backwards;
+  animation-delay:calc(min(var(--i,0),12) * 22ms);
 }
 
 @keyframes name-in{
@@ -355,7 +380,7 @@ body.view-list .tile{
   from{opacity:0;transform:translateX(-10px);}
   to{opacity:1;transform:none;}
 }
-body.view-code .bar{animation:bar-in var(--in) 60ms backwards;}
+body.view-code .bar{animation:bar-in 300ms var(--ease) 40ms backwards;}
 
 @keyframes coin-in{
   from{opacity:0;transform:scale(.90);}
