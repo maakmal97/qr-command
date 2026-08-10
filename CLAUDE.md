@@ -1,10 +1,9 @@
 # QR Command
 
 The payment-QR consolidator, read-only, on the phone. A Cloudflare Worker serving a static
-bundle built from the Cow-Fin06 master. One screen: a provider name and its code, drawn on the
-device as a struck coin. The name opens a grid of every account, a row of dots along the bottom
-jumps to any of them, and tapping the code saves it to the gallery. Nothing else is shown and
-nothing else is shipped.
+bundle built from the Cow-Fin06 master. Two screens: the accounts, which is where it opens, and
+one code drawn on the device as a struck coin. Nothing else is shown and nothing else is
+shipped.
 
 ## Hard rules
 
@@ -125,7 +124,7 @@ which is under a pixel once snapped, and flipped those corners on ten of the thi
 
 ```
 npm run build     # master -> public/
-npm test          # 82 assertions, a couple of minutes, no network
+npm test          # 90 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
@@ -145,8 +144,17 @@ Four things that will bite:
   never appears. `cardOf()` is synchronous and cached for that reason, and the suite asserts
   `toBlob` does not come back.
 - **The grid's `minmax` is 132px and must not grow.** At 148px, `auto-fill` dropped to a single
-  column on a 375px phone, which made the grid scroll and reinstated the very problem the grid
-  replaced. Two columns must fit the narrowest phone so all thirteen are on screen at once.
+  column on a 375px phone, which made the list scroll. Two columns must fit the narrowest phone
+  so all thirteen accounts are on screen at once with nothing to hunt for.
+- **There is no Save button, and that is a decision to defend rather than an omission.** The
+  affordance carries it: the coin is drawn as a physical token, with a contact shadow, a lit rim
+  and a press state, and the action is press-and-hold, which is the gesture a phone has already
+  taught for keeping a picture. A tap does the same for the other instinct, and `.tuck` plays on
+  save so the motion explains itself the first time. Three attempts got here: a rail nobody could
+  reach the end of, then a grid hidden behind the title with a row of colour dots, which was
+  worse because five of the thirteen brands are near-identical reds and two are exactly the same
+  colour, so the dots could never say which was which. Colour was the only signal, and it was not
+  enough to be one.
 
 ## Deploying
 

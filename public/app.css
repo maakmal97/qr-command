@@ -2,7 +2,7 @@
  *
  * The tuning is derived per account from the provider's own brand colour and written onto
  * :root by app.js as --brand, --brand-soft and the three aurora anchors. The material and the
- * ink never move; only the light does. Switching account moves the whole page.
+ * ink never move; only the light does. Opening an account moves the whole page.
  */
 
 :root{
@@ -30,7 +30,7 @@
 
   /* geometry */
   --r:22px;
-  --r-sm:14px;
+  --r-sm:16px;
   --pill:999px;
   --sh:0 8px 40px rgba(0,0,0,0.35);
   --t:520ms cubic-bezier(.4,0,.2,1);
@@ -40,7 +40,6 @@
 }
 
 *{box-sizing:border-box;}
-
 html,body{height:100%;}
 
 body{
@@ -53,17 +52,19 @@ body{
   background:linear-gradient(160deg,#14121f 0%,#0d1020 60%,#0a0d18 100%);
   background-attachment:fixed;
   overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  /* The home indicator and the notch. The rail must clear both. */
   padding:env(safe-area-inset-top) env(safe-area-inset-right)
           env(safe-area-inset-bottom) env(safe-area-inset-left);
   overscroll-behavior:none;
   -webkit-tap-highlight-color:transparent;
 }
 
+/* Two views, one at a time. */
+.accounts,.codeview{display:none;}
+body.view-list .accounts{display:flex;}
+body.view-code .codeview{display:flex;}
+
 /* The aurora. Orbs rather than a layered background-image, because background-image cannot
- * transition and the colour move on switching account is half the point. */
+ * transition and the colour move on opening an account is half the point. */
 .orb{
   position:fixed;
   border-radius:50%;
@@ -78,44 +79,110 @@ body{
 .orb.b{width:56vmax;height:56vmax;right:-22vmax;top:-14vmax;background-color:var(--a2);}
 .orb.c{width:70vmax;height:70vmax;left:12vmax;bottom:-40vmax;background-color:var(--a3);}
 
-/* ------------------------------------------------------------------------ stage */
+/* ==================================================================== accounts */
 
-.stage{
+.accounts{
   position:relative;
   z-index:1;
+  height:100%;
+  flex-direction:column;
+  gap:14px;
+  padding:clamp(16px,3.4vh,30px) 16px 16px;
+}
+
+.atitle{
+  margin:0;
+  flex:0 0 auto;
+  font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--ink-3);
+}
+
+/* Two columns on the narrowest phone, so all thirteen accounts are on screen at once with no
+ * scrolling and no hunting. 132px, not more: at 148px auto-fill dropped to a single column on
+ * a 375px phone and the list started to scroll, which is the problem this replaced. */
+.grid{
+  flex:1 1 auto;
+  min-height:0;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+  grid-auto-rows:minmax(56px,1fr);
+  gap:9px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  align-content:start;
+}
+
+.tile{
+  appearance:none;-webkit-appearance:none;
+  font:inherit;cursor:pointer;text-align:left;
+  display:flex;align-items:center;gap:11px;
+  min-height:56px;
+  padding:10px 13px;
+  border:1px solid var(--brd);
+  border-radius:var(--r-sm);
+  background:rgba(255,255,255,0.05);
+  color:var(--ink);
+  transition:background-color 180ms,border-color 180ms,transform 120ms;
+}
+.tile:hover{background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
+.tile:active{transform:scale(.975);}
+.tile:focus-visible{outline:2px solid var(--soft,#fff);outline-offset:2px;}
+.tiledot{
+  flex:0 0 auto;width:15px;height:15px;border-radius:50%;
+  background:var(--dot,#888);
+  box-shadow:0 0 12px -1px var(--dot,#888);
+}
+.tiletext{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word;min-width:0;}
+
+/* ==================================================================== the code */
+
+.codeview{
+  position:relative;
+  z-index:1;
+  height:100%;
+  flex-direction:column;
+}
+
+.bar{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  padding:8px 10px 0;
+}
+
+.back{
+  appearance:none;-webkit-appearance:none;
+  font:inherit;font-size:15px;font-weight:600;
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+  min-height:var(--tap);
+  padding:0 14px 0 10px;
+  border:1px solid transparent;
+  border-radius:var(--pill);
+  background:none;
+  color:var(--brand-soft);
+  transition:background-color 180ms,color var(--t);
+}
+.back:hover{background-color:rgba(255,255,255,0.08);}
+.back:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
+.back .chev{width:15px;height:15px;flex:0 0 auto;}
+
+.stage{
   flex:1 1 auto;
   min-height:0;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:clamp(10px,2.2vh,22px);
-  padding:clamp(12px,3vh,28px) 16px 4px;
+  gap:clamp(8px,2vh,18px);
+  padding:0 16px clamp(8px,2vh,18px);
   text-align:center;
 }
 
-/* The name is the way in to the grid, so it is a button and looks like one you can press. */
-.namewrap{margin:0;display:flex;justify-content:center;width:100%;}
-
-.namebtn{
-  appearance:none;-webkit-appearance:none;
-  font:inherit;cursor:pointer;
-  display:inline-flex;align-items:center;gap:10px;
-  max-width:100%;
-  padding:8px 16px 8px 18px;
-  min-height:var(--tap);
-  border:1px solid var(--brd);
-  border-radius:var(--pill);
-  background:rgba(255,255,255,0.05);
-  color:var(--brand-soft);
-  transition:background-color 200ms cubic-bezier(.4,0,.2,1),border-color 200ms,color var(--t);
-}
-.namebtn:hover{background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
-.namebtn:focus-visible{outline:2px solid var(--brand-soft);outline-offset:3px;}
-.namebtn .chev{width:14px;height:10px;flex:0 0 auto;opacity:.75;}
-
 .name{
-  font-size:clamp(24px,6.6vw,40px);
+  margin:0;
+  flex:0 0 auto;
+  font-size:clamp(24px,6.8vw,40px);
   font-weight:700;
   letter-spacing:-0.8px;
   line-height:1.15;
@@ -131,8 +198,6 @@ body{
   .name{-webkit-text-fill-color:currentColor;}
 }
 
-/* flex:1 with min-height:0 makes this the box that absorbs whatever the title and the rail
- * leave behind. app.js measures it and gives the coin the largest square that fits. */
 .coinwrap{
   flex:1 1 auto;
   min-height:0;
@@ -143,26 +208,50 @@ body{
   width:100%;
 }
 
-/* The coin is a button so it is reachable by keyboard and announced properly. It carries no
- * chrome of its own: the glow is the affordance. */
+/* THE AFFORDANCE.
+ *
+ * There is no Save button, so the shape has to do the telling. The coin is drawn as a physical
+ * token lying on the page rather than a picture printed on it: a tight contact shadow under it,
+ * a wider ambient one beneath that, a lit rim along the top edge and a brand-coloured glow. It
+ * reads as an object, and an object reads as something you can pick up. Pressing pushes it into
+ * the page, which is the confirmation that it is the thing being acted on, and .tuck plays when
+ * a save actually starts, so the motion explains the action the first time it happens. */
 .coinbtn{
-  appearance:none;
-  -webkit-appearance:none;
-  border:0;
-  padding:0;
-  margin:0;
-  background:none;
+  appearance:none;-webkit-appearance:none;
+  border:0;padding:0;margin:0;background:none;
   cursor:pointer;
   border-radius:50%;
   display:block;
   line-height:0;
-  transition:transform 180ms cubic-bezier(.4,0,.2,1),box-shadow var(--t);
-  box-shadow:0 0 0 1px rgba(255,255,255,0.09),
-             0 18px 60px -12px rgba(0,0,0,0.75),
-             0 0 90px -18px var(--brand);
+  -webkit-touch-callout:none;
+  user-select:none;-webkit-user-select:none;
+  touch-action:pan-y;
+  transition:transform 150ms cubic-bezier(.4,0,.2,1),
+             box-shadow 150ms cubic-bezier(.4,0,.2,1),
+             filter var(--t);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.30),
+    0 3px 6px -2px rgba(0,0,0,0.72),
+    0 20px 38px -14px rgba(0,0,0,0.88),
+    0 0 88px -22px var(--brand);
 }
-.coinbtn:active{transform:scale(.985);}
-.coinbtn:focus-visible{outline:3px solid var(--brand-soft);outline-offset:6px;}
+.coinbtn:hover{
+  transform:translateY(-2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.34),
+    0 5px 9px -2px rgba(0,0,0,0.7),
+    0 28px 48px -16px rgba(0,0,0,0.9),
+    0 0 104px -20px var(--brand);
+}
+.coinbtn:active{
+  transform:translateY(3px) scale(.982);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.22),
+    0 1px 3px -1px rgba(0,0,0,0.8),
+    0 8px 18px -10px rgba(0,0,0,0.85),
+    0 0 60px -24px var(--brand);
+}
+.coinbtn:focus-visible{outline:3px solid var(--brand-soft);outline-offset:7px;}
 .coinbtn:focus:not(:focus-visible){outline:none;}
 .coinbtn.plainmode{border-radius:18px;}
 
@@ -171,22 +260,31 @@ body{
   border-radius:50%;
   width:100%;
   height:100%;
-  /* The code must never be resampled by the compositor in a way that softens a module edge. */
+  pointer-events:none;
   image-rendering:auto;
 }
 .coinbtn.plainmode .coin{border-radius:14px;}
+
+/* Taken off the page and put away. */
+@keyframes tuck{
+  0%   {transform:translateY(0) scale(1);}
+  28%  {transform:translateY(16px) scale(.90);}
+  60%  {transform:translateY(-4px) scale(1.01);}
+  100% {transform:translateY(0) scale(1);}
+}
+.coinbtn.tuck{animation:tuck 520ms cubic-bezier(.4,0,.2,1);}
 
 .tools{
   flex:0 0 auto;
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:6px;
+  gap:7px;
 }
 
 .say{
   margin:0;
-  min-height:1.2em;
+  min-height:1.1em;
   font-size:12px;
   font-weight:600;
   letter-spacing:1.2px;
@@ -198,143 +296,20 @@ body{
   appearance:none;-webkit-appearance:none;
   font:inherit;font-size:12.5px;font-weight:600;
   cursor:pointer;
-  color:var(--ink-2);
-  background:rgba(255,255,255,0.05);
+  color:var(--ink-3);
+  background:rgba(255,255,255,0.04);
   border:1px solid var(--brd);
   border-radius:var(--pill);
   padding:0 14px;
-  min-height:36px;
-  transition:background-color 200ms cubic-bezier(.4,0,.2,1),border-color 200ms,color 200ms;
+  min-height:34px;
+  transition:background-color 200ms,border-color 200ms,color 200ms;
 }
-.pill:hover:not(:disabled){background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
+.pill:hover:not(:disabled){background-color:rgba(255,255,255,0.10);color:var(--ink-2);}
 .pill:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
-.pill:disabled{opacity:.45;cursor:not-allowed;}
+.pill:disabled{opacity:.4;cursor:not-allowed;}
 .pill[aria-pressed="true"]{color:var(--ink);background-color:rgba(255,255,255,0.16);border-color:var(--brd-2);}
-.pill.wide{width:100%;min-height:var(--tap);font-size:14px;}
-
-/* ------------------------------------------------------------------------- dots */
-
-/* One dot per account, all visible at once, no scrolling. The old scrolling rail meant
- * reaching the last account took a drag and a hunt; here every account is one tap away and
- * the row doubles as the position indicator. */
-.dots{
-  position:relative;
-  z-index:1;
-  flex:0 0 auto;
-  display:flex;
-  align-items:stretch;
-  gap:2px;
-  padding:4px 12px max(10px,env(safe-area-inset-bottom));
-}
-
-.dot{
-  appearance:none;-webkit-appearance:none;
-  flex:1 1 0;
-  min-width:0;
-  min-height:var(--tap);
-  border:0;
-  background:none;
-  cursor:pointer;
-  padding:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:12px;
-}
-.dot::before{
-  content:"";
-  width:10px;height:10px;border-radius:50%;
-  background:var(--dot,#888);
-  opacity:.42;
-  transition:opacity 200ms,transform 200ms,box-shadow 200ms;
-}
-.dot:hover::before{opacity:.8;}
-.dot:focus-visible{outline:2px solid var(--brand-soft);outline-offset:-2px;}
-.dot[aria-current="true"]::before{
-  opacity:1;
-  transform:scale(1.55);
-  box-shadow:0 0 0 3px rgba(255,255,255,0.14), 0 0 14px -2px var(--dot,#888);
-}
-
-/* ------------------------------------------------------------------------ sheet */
-
-.sheet{
-  border:0;padding:0;margin:auto;
-  width:min(560px,calc(100vw - 24px));
-  max-height:min(84vh,720px);
-  background:none;
-  color:var(--ink);
-  overflow:visible;
-}
-.sheet::backdrop{background:rgba(8,7,14,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
-
-.sheetin{
-  background:var(--veil);
-  -webkit-backdrop-filter:blur(24px) saturate(160%);
-  backdrop-filter:blur(24px) saturate(160%);
-  border:1px solid var(--brd-2);
-  border-radius:var(--r);
-  box-shadow:var(--sh);
-  padding:18px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  max-height:inherit;
-}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .sheetin{background:#1c1a2a;}
-}
-
-.sheettitle{
-  margin:0;
-  font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
-  color:var(--ink-3);
-}
-
-/* 132px, not more. On a 375px phone the sheet leaves about 300px of content, and at 148px
- * auto-fill dropped to a SINGLE column, which made the grid scroll and gave back the very
- * problem it replaced. At 132 two columns fit the narrowest phone and all thirteen accounts
- * are on screen at once, which is the whole point of the grid. */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
-  gap:8px;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-}
-
-.tile{
-  appearance:none;-webkit-appearance:none;
-  font:inherit;cursor:pointer;text-align:left;
-  display:flex;align-items:center;gap:10px;
-  min-height:54px;
-  padding:10px 12px;
-  border:1px solid var(--brd);
-  border-radius:var(--r-sm);
-  background:rgba(255,255,255,0.05);
-  color:var(--ink-2);
-  transition:background-color 180ms,border-color 180ms,color 180ms;
-}
-.tile:hover{background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
-.tile:focus-visible{outline:2px solid var(--soft,#fff);outline-offset:2px;}
-.tile[aria-current="true"]{
-  color:var(--ink);
-  background-color:rgba(255,255,255,0.14);
-  border-color:var(--brd-2);
-}
-.tiledot{
-  flex:0 0 auto;width:14px;height:14px;border-radius:50%;
-  background:var(--dot,#888);
-  box-shadow:0 0 12px -2px var(--dot,#888);
-}
-.tiletext{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word;min-width:0;}
 
 /* --------------------------------------------------------------------- fallbacks */
-
-.sr-only{
-  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
-  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
-}
 
 .noscript{
   position:relative;z-index:2;margin:0;padding:16px;text-align:center;
@@ -346,27 +321,27 @@ body{
 }
 @media (prefers-reduced-motion:reduce){
   *{animation:none !important;transition:none !important;scroll-behavior:auto !important;}
+  .coinbtn.tuck{animation:none !important;}
 }
 @media (forced-colors:active){
   .name{-webkit-text-fill-color:currentColor;color:CanvasText;}
   .orb{display:none;}
-  .tile,.pill,.namebtn{border-color:CanvasText;}
-  .dot::before{opacity:1;}
+  .tile,.pill,.back{border-color:CanvasText;}
+  .coinbtn{box-shadow:none;border:1px solid CanvasText;}
 }
 
-/* Landscape on a phone: the dot row and the title would squeeze the coin to nothing, so the
- * coin keeps its height and everything else moves beside it. */
+/* Landscape on a phone: the title would squeeze the coin to nothing, so everything else moves
+ * beside it and the coin keeps its height. */
 @media (orientation:landscape) and (max-height:520px){
-  .stage{flex-direction:row;gap:18px;padding:8px 14px 0;align-items:center;}
-  .namewrap{width:auto;}
+  .stage{flex-direction:row;gap:18px;padding:0 14px 8px;align-items:center;}
   .name{font-size:clamp(18px,3.4vw,28px);max-width:30vw;}
-  .tools{position:absolute;right:14px;bottom:8px;}
+  .tools{position:absolute;right:14px;bottom:10px;}
+  .bar{position:absolute;top:4px;left:4px;padding:0;}
 }
 
 @media print{
-  .orb,.dots,.tools,.sheet{display:none !important;}
+  .orb,.tools,.bar,.accounts{display:none !important;}
   body{background:#fff;color:#000;}
   .name{-webkit-text-fill-color:currentColor;color:#000;}
-  .namebtn{border-color:#ccc;}
   .coinbtn{box-shadow:none;}
 }

@@ -2,8 +2,8 @@
 
 Your payment codes, on your phone, drawn on the device and working with the radio off.
 
-One screen. The provider's name, its code as a brand-coloured coin, and a rail along the bottom
-to change provider. Nothing else is on the page and nothing else is in the bundle.
+Two screens. Your accounts, and one code. Nothing else is on the page and nothing else is in
+the bundle.
 
 ---
 
@@ -17,18 +17,19 @@ fetched when you open it.
 
 ## Using it
 
+**The app opens on your accounts.** All thirteen, named, on one screen, nothing hidden and
+nothing to scroll. Tap one and its code fills the screen. **Accounts** at the top left goes
+back, and so does your phone's own back gesture.
+
 | | |
 |---|---|
-| Change provider | **Tap the name at the top.** Every account opens as a grid, all thirteen on screen at once, and one more tap picks one. |
-| Quick jump | The row of coloured dots along the bottom, one per account, in brand order. No scrolling. |
-| Next or previous | Swipe left and right across the code. |
-| **Save to your photos** | **Tap the code.** On iPhone the share sheet opens with Save Image; on Android and desktop it downloads. The picture is the coin at 1,200 pixels with the provider's name under it. |
-| Plain code | The small pill under the code. It swaps to an ordinary black and white code and stays that way until you press it again. Use it if a scanner is struggling. |
-| Keyboard | Left and right arrows step through. Number keys jump. `G` opens the grid, `S` saves, `P` toggles plain, `Esc` closes the grid. |
-| One provider | The address ends in the provider's key, so `.../#maybank` opens straight onto that code. Point the home-screen icon at it and the app opens there every time. |
+| **Save the code to your photos** | **Press and hold it**, the same way you would keep any picture on a phone. A plain tap does it too. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
+| Next or previous | Swipe left and right across the code. A swipe never counts as a tap, so changing code cannot save one by accident. |
+| Plain code | The small pill under the code, for a scanner that is struggling. |
+| Keyboard | Left and right arrows step through, `Enter` or `S` saves, `P` toggles plain, `Esc` goes back. |
+| One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
 
-The app remembers which provider you were on and whether you left it in plain mode. A swipe never
-counts as a tap, so changing code cannot save one by accident.
+The app remembers whether you left it in plain mode.
 
 ## Changing the list of codes
 
@@ -72,7 +73,7 @@ private and must stay private**, which is a stricter bar than the site itself: a
 unadvertised address is not the same exposure as a file that GitHub scrapes, indexes and
 archives permanently.
 
-## The coin
+## The coin, and why there is no Save button
 
 The code is drawn as a struck coin in the provider's own colour: a scalloped edge, the
 provider's name around the rim, a tinted paper field and rounded eyes, and the whole page
@@ -82,6 +83,13 @@ capsule, a block is a rounded slab.
 **Every provider's coin has its own outline.** The number of scallops and where they fall come
 from a hash of the provider's key, so Maybank is always the same shape and never ShopeePay's,
 on every device, for ever, with nothing stored anywhere to remember it.
+
+**The shape is the instruction.** The coin sits on the page as a physical thing: a contact
+shadow beneath it, a lit rim along the top, and it presses in under a finger. There is no
+button and no caption telling you what to do with it, because the gesture is the one your phone
+has already taught you for keeping any picture. Press and hold. The coin dips as it goes, which
+is the only explanation the action ever needs, and a tap does the same for anyone whose instinct
+runs that way.
 
 It is decoration over an exact code, never a redrawing of one. Every module sits at its precise
 grid position; only the shape, the colour and the frame change, and a decoder samples none of
@@ -96,7 +104,7 @@ against the matrix.
 
 Two measured numbers govern it:
 
-- **370 pixels** is the smallest the worst code will still read at.
+- **360 pixels** is the smallest the worst code will still read at.
 - **560 pixels** is the size below which the app stops drawing coins and shows the plain code
   instead, which reads down to 230. On a phone the coin is two to three times that, so you will
   not meet the threshold in normal use.

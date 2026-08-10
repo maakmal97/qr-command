@@ -468,19 +468,42 @@ section("2. The bundle carries the codes and nothing else");
    * than from memory of having written them. */
   const appJs = read(path.join(PUB, "app.js"));
 
-  ok("the grid picker exists, as a dialog with a tile per account",
-    /<dialog[^>]*id="sheet"/.test(indexHtml) && /id="grid"/.test(indexHtml) &&
-    /showModal/.test(appJs) && /className = "tile"/.test(appJs));
-  ok("the name opens the grid and says so to a screen reader",
-    /aria-haspopup="dialog"/.test(indexHtml) && /aria-expanded/.test(indexHtml));
-  ok("there is a dot per account rather than a scrolling rail",
-    /id="dots"/.test(indexHtml) && /className = "dot"/.test(appJs) && !/overflow-x:auto/.test(read(path.join(PUB, "app.css"))));
+  const appCss = read(path.join(PUB, "app.css"));
 
-  ok("tapping the code saves it, by share sheet where that exists and by download otherwise",
+  ok("the app opens on the accounts, not on a code",
+    /<body class="view-list">/.test(indexHtml) &&
+    /body\.view-list \.accounts\{display:flex;\}/.test(appCss));
+  ok("every account is a named tile on that first screen",
+    /id="grid"/.test(indexHtml) && /className = "tile"/.test(appJs) && /tiletext/.test(appJs));
+  ok("a code has an explicit way back to the accounts",
+    /id="back"/.test(indexHtml) && /elBack\.addEventListener\("click", goBack\)/.test(appJs));
+  ok("the two views are addressed by the hash, so back and a home-screen link both work",
+    /function route\(\)/.test(appJs) && /popstate/.test(appJs) && /history\.pushState/.test(appJs));
+  ok("stepping between codes replaces rather than pushes, so back is never a walk backwards " +
+     "through everything swiped past", /history\.replaceState\(history\.state/.test(appJs));
+  ok("nothing scrolls sideways any more",
+    !/overflow-x:auto/.test(appCss) && !/id="dots"/.test(indexHtml));
+
+  ok("the code saves by share sheet where that exists and by download otherwise",
     /navigator\.canShare\(\s*\{\s*files/.test(appJs) && /navigator\.share\(/.test(appJs) &&
     /a\.download = card\.name/.test(appJs));
   ok("a cancelled share sheet is not reported as a failure",
     /AbortError/.test(appJs));
+
+  /* The save has no label, so the affordance is doing the work and is therefore load-bearing
+   * rather than decoration. Press and hold is the gesture a phone has already taught for
+   * keeping a picture; the coin has to look like an object worth pressing; and the motion on
+   * save is the only explanation the action ever gets. */
+  ok("press and hold saves, which is the gesture phones already teach for keeping a picture",
+    /pointerdown/.test(appJs) && /setTimeout\(function \(\) \{[\s\S]{0,200}?save\(\);/.test(appJs));
+  ok("a hold does not then also fire the tap, so one press never saves twice",
+    /if \(held\)/.test(appJs));
+  ok("the coin is drawn as a physical object: a contact shadow, a lit rim and a press state",
+    /inset 0 2px 0 rgba\(255,255,255/.test(appCss) && /\.coinbtn:active\{/.test(appCss));
+  ok("saving plays a motion, so the action explains itself the first time",
+    /@keyframes tuck/.test(appCss) && /classList\.add\("tuck"\)/.test(appJs));
+  ok("the long press cannot raise the system copy menu over the top of it",
+    /-webkit-touch-callout:none/.test(appCss) && /contextmenu/.test(appJs));
 
   /* The saved image is built with toDataURL, not toBlob, and that is load-bearing rather than
    * a style choice: iOS only allows navigator.share from inside the gesture that triggered it,
@@ -490,7 +513,8 @@ section("2. The bundle carries the codes and nothing else");
     /toDataURL\(/.test(appJs) && !/toBlob\(/.test(appJs));
 
   ok("a swipe cannot also register as a tap and save by accident",
-    /swiped/.test(appJs) && /stopImmediatePropagation/.test(appJs));
+    /if \(swiped\) \{ swiped = false; return; \}/.test(appJs) &&
+    /Math\.abs\(e\.touches\[0\]\.clientX - x0\) > 20\) \{ swiped = true/.test(appJs));
 }
 
 {

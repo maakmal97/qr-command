@@ -71,18 +71,30 @@ ok("the page is not cached at the edge", (root.r.headers.get("cache-control") ||
 
 /* -------------------------------------------------- the deployed build itself */
 
+/* Wait for the new build to reach the edge before asserting anything about its contents.
+ *
+ * Both halves are checked, and that is the lesson from getting this wrong twice: rev.json is
+ * a separate cache entry from the page, so the manifest can be current while `/` is still the
+ * previous release. Gating on the manifest alone passed the build-id check and then failed the
+ * byte comparison underneath it, on a deploy that had worked perfectly. Gate on the thing you
+ * are about to make assertions about. */
 const local = JSON.parse(fs.readFileSync(path.join(REPO, "public", "rev.json"), "utf8"));
-let rev = null, waited = 0;
+let rev = null, rootText = root.text, waited = 0;
 for (;;) {
   rev = JSON.parse((await get("/rev.json")).text);
-  if (rev.id === local.id || waited >= 90000) break;
+  const pageIsCurrent = rootText.includes("?v=" + local.id);
+  if ((rev.id === local.id && pageIsCurrent) || waited >= 90000) break;
   if (!waited) console.log("  ...  waiting for " + local.id + " to reach the edge");
   await sleep(5000);
   waited += 5000;
+  rootText = (await get("/")).text;
 }
 ok("the deployed build id matches the one on disk (" + rev.id + ")" +
-   (waited ? ", after " + waited / 1000 + "s" : ""), rev.id === local.id,
-  "live " + rev.id + " against local " + local.id + ". Run npm run deploy.");
+   (waited ? ", after " + waited / 1000 + "s" : ""),
+  rev.id === local.id && rootText.includes("?v=" + local.id),
+  "live " + rev.id + " against local " + local.id +
+  ", page current: " + rootText.includes("?v=" + local.id) + ". Run npm run deploy.");
+root.text = rootText;
 
 const files = ["app.js", "app.css", "qr-art.js", "qrcode.js", "data.js", "sw.js", "manifest.webmanifest"];
 const fetched = {};

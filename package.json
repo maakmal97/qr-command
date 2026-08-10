@@ -9,7 +9,7 @@
     "test": "node test/verify.mjs",
     "live": "node test/live.mjs",
     "check": "npm run build && npm test",
-    "dev": "npm run build && wrangler dev",
+    "dev": "npm run build && wrangler dev --port 8788",
     "deploy": "npm run build && npm test && wrangler deploy"
   },
   "devDependencies": {

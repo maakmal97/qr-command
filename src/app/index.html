@@ -16,44 +16,45 @@
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="stylesheet" href="./app.css?v=__BUILD__">
 </head>
-<body>
+<body class="view-list">
 
 <div class="orb a" aria-hidden="true"></div>
 <div class="orb b" aria-hidden="true"></div>
 <div class="orb c" aria-hidden="true"></div>
 
-<main class="stage">
-  <h1 class="namewrap">
-    <button type="button" id="namebtn" class="namebtn" aria-haspopup="dialog" aria-expanded="false">
-      <span id="name" class="name">&nbsp;</span>
-      <svg class="chev" viewBox="0 0 12 8" aria-hidden="true" focusable="false">
-        <path d="M1.4 1.6 6 6.2l4.6-4.6" fill="none" stroke="currentColor"
+<!-- The home screen. Every account, named, one tap away, nothing hidden. -->
+<section id="accounts" class="accounts" aria-label="Accounts">
+  <h1 class="atitle">Accounts</h1>
+  <div class="grid" id="grid"></div>
+</section>
+
+<!-- The code. Reached by tapping an account, and left by the button top left. -->
+<section id="codeview" class="codeview" aria-label="Payment code">
+  <div class="bar">
+    <button type="button" id="back" class="back">
+      <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false" class="chev">
+        <path d="M7.6 1.6 3.2 6l4.4 4.4" fill="none" stroke="currentColor"
               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-    </button>
-  </h1>
-
-  <div class="coinwrap">
-    <button type="button" id="coinbtn" class="coinbtn">
-      <canvas id="coin" class="coin" role="img" aria-label="Payment code"></canvas>
+      Accounts
     </button>
   </div>
 
-  <div class="tools">
-    <button type="button" id="plainbtn" class="pill" aria-pressed="false">Plain code</button>
-    <p id="say" class="say" role="status" aria-live="polite"></p>
-  </div>
-</main>
+  <main class="stage">
+    <h2 id="name" class="name">&nbsp;</h2>
 
-<nav class="dots" id="dots" aria-label="Jump to an account"></nav>
+    <div class="coinwrap">
+      <button type="button" id="coinbtn" class="coinbtn">
+        <canvas id="coin" class="coin" role="img" aria-label="Payment code"></canvas>
+      </button>
+    </div>
 
-<dialog id="sheet" class="sheet" aria-label="Choose an account">
-  <div class="sheetin">
-    <p class="sheettitle">Accounts</p>
-    <div class="grid" id="grid"></div>
-    <button type="button" id="sheetclose" class="pill wide">Close</button>
-  </div>
-</dialog>
+    <div class="tools">
+      <p id="say" class="say" role="status" aria-live="polite"></p>
+      <button type="button" id="plainbtn" class="pill" aria-pressed="false">Plain code</button>
+    </div>
+  </main>
+</section>
 
 <noscript>
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
