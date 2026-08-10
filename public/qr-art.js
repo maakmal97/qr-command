@@ -64,7 +64,16 @@ self.QRArt = (function () {
      * Below it the app draws the plain code instead, which reads down to 230. The two numbers
      * are re-measured by test/verify.mjs on every run, so this one cannot quietly go stale. */
     safePhysicalPx: 560,
-    plain: false         // true draws an ordinary square code on a white square
+    plain: false,        // true draws an ordinary square code on a white square
+    /* DECORATIVE: draw the coin at any size, as an icon, and do not fall back to the plain
+     * code when it is too small to scan.
+     *
+     * This is the one door out of the safe-size rule and it exists for exactly one caller: the
+     * thumbnail on an account tile, which is 38 pixels across and is a picture of a coin
+     * rather than a code anybody could point a camera at. It also drops the rim legend, which
+     * at that size is mush. Never pass it for anything a person might actually scan; the suite
+     * asserts that the code view does not. */
+    decorative: false
   };
 
   /* A shape needs pixels to be a shape. Measured with jsQR against all thirteen real
@@ -517,10 +526,11 @@ self.QRArt = (function () {
      * coin is not drawn at all and the plain code goes out instead, because a code that
      * cannot be scanned is not a design decision, it is a broken page. */
     var physical = Math.round(cssSize * dpr);
-    var fellBack = !opts.plain && physical < opts.safePhysicalPx;
+    var fellBack = !opts.plain && !opts.decorative && physical < opts.safePhysicalPx;
     var plainNow = opts.plain || fellBack;
+    if (opts.decorative) opts = Object.assign({}, opts, { legend: false });
 
-    var device = Math.max(minDeviceFor(p.n, opts), physical);
+    var device = opts.decorative ? physical : Math.max(minDeviceFor(p.n, opts), physical);
     canvas.width = device;
     canvas.height = device;
     var g = canvas.getContext("2d");

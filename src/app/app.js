@@ -29,6 +29,10 @@
   var skies = [document.getElementById("sky1"), document.getElementById("sky2")];
   var skyOn = 0;
 
+  // The miniature on a tile, in CSS pixels. Must match --thumb in app.css: the zoom measures
+  // the real element, but the renderer needs the same number to draw a square one.
+  var THUMB = 36;
+
   var idx = -1;
   var plain = false;
   var tiles = [];
@@ -179,58 +183,65 @@
     setTimeout(function () { el.classList.remove(cls); }, ms || 420);
   }
 
-  /* The tapped tile's dot swells into the coin. Measured from the real geometry both ends, so
-   * it lands on the coin exactly, whatever the screen. The coin is held invisible until the
-   * swell is nearly home and then fades in underneath it, which is what makes the two read as
-   * one object rather than two. */
-  /* Takes a RECT, not the tile, and that signature is the fix for a bug rather than a
-   * preference: the tile has to be measured before the view switches, because the moment the
-   * code view is shown the accounts are `display:none` and every rect on them reads zero. It
-   * failed silently, the morph simply never appearing, which is why the measurement now
-   * happens in open() and cannot be moved back in here. */
-  function morph(from, brand) {
-    if (still() || !from || !elBtn) { if (elBtn) elBtn.style.opacity = ""; return false; }
-    var to = elBtn.getBoundingClientRect();
-    if (!from.width || !to.width) return false;
+  /* THE ZOOM. One object, two places.
+   *
+   * The thumbnail on a tile is the same coin, drawn small, so opening an account is not a
+   * circle standing in for a coin and then a coin appearing: it is the coin itself growing
+   * from where it sat to where it lands, and shrinking back into the list on the way out.
+   *
+   * The flier is a canvas carrying the FULL-SIZE render, positioned and sized at the large
+   * end and scaled DOWN to the small end, never the other way about. Scaling a 38 pixel raster
+   * up nine times gives a soft, blocky thing; scaling a full-size one down stays crisp at every
+   * frame. It costs no extra drawing at all, because the full-size render already exists: the
+   * step that opens the account has to make it anyway.
+   *
+   * It takes RECTS rather than elements, because whichever view is hidden reports zeros for
+   * everything in it. Both ends are measured by the caller, each while its own view is on
+   * screen. That ordering is not a detail; getting it wrong made the previous version of this
+   * do nothing at all, silently. */
+  function fly(fromRect, toRect, image, opts) {
+    opts = opts || {};
+    if (still() || !fromRect || !toRect || !image) return false;
+    if (!fromRect.width || !toRect.width) return false;
 
-    /* Built at the TARGET size and scaled DOWN to start, never the other way about. Starting
-      * at the tile's fifteen pixels and scaling up twenty-two times would upscale a fifteen
-      * pixel raster, which arrives soft and blocky; this way the layer is rasterised once at
-      * full size and only ever shrinks. */
-    var m = document.createElement("div");
-    m.className = "morph";
-    m.style.left = to.left + "px";
-    m.style.top = to.top + "px";
-    m.style.width = to.width + "px";
-    m.style.height = to.height + "px";
-    m.style.background = brand;
-    m.style.boxShadow = "0 0 40px -6px " + brand;
-    document.body.appendChild(m);
+    var big = opts.reverse ? fromRect : toRect;      // the end drawn at full size
+    var small = opts.reverse ? toRect : fromRect;
 
-    var s0 = from.width / to.width;
-    var dx = (from.left + from.width / 2) - (to.left + to.width / 2);
-    var dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+    var c = document.createElement("canvas");
+    c.className = "flier";
+    c.width = image.width;
+    c.height = image.height;
+    c.getContext("2d").drawImage(image, 0, 0);
+    c.style.left = big.left + "px";
+    c.style.top = big.top + "px";
+    c.style.width = big.width + "px";
+    c.style.height = big.height + "px";
+    document.body.appendChild(c);
 
-    elBtn.style.opacity = "0";
+    var s = small.width / big.width;
+    var dx = (small.left + small.width / 2) - (big.left + big.width / 2);
+    var dy = (small.top + small.height / 2) - (big.top + big.height / 2);
+    var atSmall = "translate(" + dx + "px," + dy + "px) scale(" + s + ")";
+    var atBig = "translate(0,0) scale(1)";
+
+    var frames = opts.reverse
+      ? [{ transform: atBig, opacity: 1 }, { transform: atSmall, opacity: 1 }]
+      : [{ transform: atSmall, opacity: 1 }, { transform: atBig, opacity: 1 }];
+
     var done = false;
     var finish = function () {
       if (done) return;
       done = true;
-      if (m.parentNode) m.parentNode.removeChild(m);
-      elBtn.style.opacity = "";
+      if (c.parentNode) c.parentNode.removeChild(c);
+      if (opts.onDone) opts.onDone();
     };
 
-    if (m.animate) {
-      var a = m.animate([
-        { transform: "translate(" + dx + "px," + dy + "px) scale(" + s0 + ")", opacity: 1 },
-        { transform: "translate(0,0) scale(1)", opacity: 0.85, offset: 0.72 },
-        { transform: "translate(0,0) scale(1)", opacity: 0 }
-      ], { duration: 430, easing: "cubic-bezier(.2,.8,.2,1)" });
+    var ms = opts.duration || 420;
+    if (c.animate) {
+      var a = c.animate(frames, { duration: ms, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
       if (a.finished && a.finished.then) a.finished.then(finish, finish);
     }
-    // The belt to that braces: whatever the animation does or fails to do, the coin comes back.
-    setTimeout(function () { elBtn.style.opacity = ""; oneShot(elBtn, "enter", 320); }, 250);
-    setTimeout(finish, 520);
+    setTimeout(finish, ms + 90);   // whatever the animation does or fails to do, this cleans up
     return true;
   }
 
@@ -252,7 +263,11 @@
 
   /* Two views, addressed by the hash, so the phone's own back gesture and a home-screen icon
    * pointing at one account both work without any of it being special-cased. */
+  /* Idempotent, because goBack() shows the list itself and the popstate that follows calls
+   * route() again a moment later. Re-running it would restart the stagger halfway through the
+   * zoom out. */
   function renderList() {
+    if (document.body.className === "view-list") return;
     document.body.className = "view-list";
     idx = -1;
     tune(null);
@@ -287,17 +302,23 @@
   }
 
   function open(i, tile) {
-    /* Measure the tile FIRST. Once renderCode has run, the accounts are display:none and this
-     * rect would read zero, which is how the morph came to do nothing at all the first time. */
-    var dot = (!still() && tile) ? tile.querySelector(".tiledot") : null;
-    var from = dot ? dot.getBoundingClientRect() : null;
+    /* Measure the thumbnail FIRST, while the list is still on screen. Once renderCode has run
+     * the accounts are display:none and this rect reads zero. */
+    var thumb = (!still() && tile) ? tile.querySelector(".tiledot") : null;
+    var from = thumb ? thumb.getBoundingClientRect() : null;
 
     history.pushState({ fromList: true }, "", "#" + CODES[i].key);
-    // stepping:true suppresses the coin's own entrance, because the morph is the entrance: the
-    // tile's dot swells into it and the coin fades in underneath. If there is no morph to play,
-    // the coin needs that entrance back.
-    renderCode(i, true);
-    if (!morph(from, CODES[i].brand)) oneShot(elBtn, "enter", 320);
+    // The full-size render, which the flier borrows so the zoom costs no extra drawing.
+    var pre = still() ? null : prerender(i);
+    // stepping:true suppresses the coin's own entrance: the zoom IS the entrance.
+    renderCode(i, true, pre);
+
+    var to = elBtn.getBoundingClientRect();
+    elBtn.style.opacity = "0";
+    var restore = function () { elBtn.style.opacity = ""; };
+    var flew = pre && fly(from, to, pre.canvas, { onDone: restore });
+    if (!flew) { restore(); oneShot(elBtn, "enter", 320); }
+    else setTimeout(restore, 400);   // the coin is back under the flier just before it goes
   }
 
   /* Stepping between codes REPLACES rather than pushes, so back always returns to the list
@@ -319,8 +340,37 @@
   }
 
   function goBack() {
+    /* Measure the coin while it is still on screen, keep a copy of what it looks like, then
+     * switch and measure the tile it belongs to. Both ends measured in their own view. */
+    var was = idx;
+    var from = (!still() && document.body.className.indexOf("view-code") >= 0)
+      ? elBtn.getBoundingClientRect() : null;
+    var shot = null;
+    if (from && elCoin.width) {
+      shot = document.createElement("canvas");
+      shot.width = elCoin.width; shot.height = elCoin.height;
+      shot.getContext("2d").drawImage(elCoin, 0, 0);
+    }
+
+    /* Show the list NOW rather than waiting for the history to do it. history.back() is
+     * asynchronous: popstate has not fired by the time the next line runs, so the accounts
+     * would still be display:none and the tile would measure zero, which silently cancels the
+     * zoom. route() is idempotent, so the popstate that follows changes nothing. */
+    renderList();
     if (history.state && history.state.fromList) history.back();
-    else { history.replaceState(null, "", "#"); renderList(); }
+    else history.replaceState(null, "", "#");
+
+    var tile = tiles[was];
+    var thumb = tile ? tile.querySelector(".tiledot") : null;
+    var to = thumb ? thumb.getBoundingClientRect() : null;
+    if (!shot || !to) return;
+    // Hide the thumbnail only once the flier is actually going, or a cancelled zoom would
+    // leave a hole in the list.
+    var flew = fly(from, to, shot, {
+      reverse: true,
+      onDone: function () { if (thumb) thumb.style.visibility = ""; }
+    });
+    if (flew && thumb) thumb.style.visibility = "hidden";
   }
 
   function idle(fn) {
@@ -410,8 +460,11 @@
       b.style.setProperty("--soft", softOf(a.brand));
       b.style.setProperty("--i", String(i));
       b.setAttribute("aria-current", "false");
-      var sw = document.createElement("span");
+      var sw = document.createElement("canvas");
       sw.className = "tiledot";
+      sw.setAttribute("aria-hidden", "true");
+      // A solid brand disc until the miniature is drawn, so a tile is never a hole.
+      sw.style.background = a.brand;
       var tx = document.createElement("span");
       tx.className = "tiletext";
       tx.textContent = a.name;
@@ -422,6 +475,34 @@
       tiles.push(b);
     });
     elGrid.appendChild(frag);
+    drawThumbs();
+  }
+
+  /* The thumbnails, drawn once and lazily.
+   *
+   * Thirteen miniature coins is real work, so they go in one at a time on idle rather than in
+   * one lump at startup, and until each arrives its tile shows a plain brand disc. They are
+   * DECORATIVE: at 38 pixels a code is a texture, not something anyone could scan, so the
+   * renderer is told so explicitly and skips the safe-size fallback that would otherwise put a
+   * tiny plain black square on every tile. */
+  function drawThumbs() {
+    var i = 0;
+    var step = function () {
+      if (i >= CODES.length) return;
+      var a = CODES[i], el = tiles[i].querySelector(".tiledot");
+      i++;
+      if (el && el.getContext) {
+        try {
+          self.QRArt.draw(el, a.payload, artFor(a, {
+            size: THUMB, pixelRatio: self.devicePixelRatio || 1,
+            plain: false, decorative: true
+          }));
+          el.style.background = "none";
+        } catch (e) { /* the brand disc stays; nothing is lost */ }
+      }
+      idle(step);
+    };
+    idle(step);
   }
 
   function indexOfKey(key) {

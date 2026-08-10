@@ -480,6 +480,10 @@ section("2. The bundle carries the codes and nothing else");
   const appJs = read(path.join(PUB, "app.js"));
 
   const appCss = read(path.join(PUB, "app.css"));
+  /* Strip the comments first. An assertion that something is ABSENT will otherwise be defeated
+   * by the comment explaining why it was removed, which is exactly what happened here and
+   * happened once already with animationend. Assert against the code, not the prose. */
+  const cssCode = appCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
   ok("the app opens on the accounts, not on a code",
     /<body class="view-list">/.test(indexHtml) &&
@@ -522,15 +526,28 @@ section("2. The bundle carries the codes and nothing else");
   ok("the list deals itself in, the coin arrives, and stepping between codes travels",
     /@keyframes tile-in/.test(appCss) && /@keyframes coin-in\b/.test(appCss) &&
     /@keyframes coin-out-left/.test(appCss) && /@keyframes coin-in-right/.test(appCss));
-  /* morph takes a RECT, not the tile. Measuring inside it would mean measuring after the view
-   * had switched, at which point the accounts are display:none and every rect reads zero; the
-   * morph then does nothing at all, silently. The signature is what stops that coming back. */
-  ok("the tapped tile swells into the coin, measured before the view switches",
-    /function morph\(from, brand\)/.test(appJs) &&
-    /var from = dot \? dot\.getBoundingClientRect\(\) : null;/.test(appJs) &&
-    /m\.animate\(/.test(appJs) && /\.morph\{/.test(appCss));
-  ok("if the morph cannot play, the coin still gets an entrance",
-    /if \(!morph\(from, CODES\[i\]\.brand\)\) oneShot\(elBtn, "enter"/.test(appJs));
+  /* The zoom. The thumbnail on a tile is the same coin drawn small, and opening an account
+   * flies that very image up to full size, so it reads as one object moving rather than a dot
+   * being swapped for a coin. Both ends are measured while their own view is on screen, which
+   * is why fly() takes rects: whichever view is hidden reports zeros for everything in it, and
+   * measuring after the switch made the previous version do nothing at all, silently. */
+  ok("a tile's thumbnail is the real coin, drawn small",
+    /className = "tiledot"/.test(appJs) && /decorative: true/.test(appJs) &&
+    /function drawThumbs\(\)/.test(appJs) && /\.tiledot\{/.test(cssCode));
+  ok("opening an account flies that same image up to full size",
+    /function fly\(fromRect, toRect, image, opts\)/.test(appJs) &&
+    /fly\(from, to, pre\.canvas/.test(appJs) && /\.flier\{/.test(cssCode));
+  ok("going back flies it down into its tile again",
+    /reverse: true/.test(appJs) && /fly\(from, to, shot/.test(appJs));
+  ok("both ends are measured while their own view is on screen",
+    /var from = thumb \? thumb\.getBoundingClientRect\(\) : null;/.test(appJs) &&
+    /var to = elBtn\.getBoundingClientRect\(\);/.test(appJs));
+  ok("the flier carries the full-size render and is only ever scaled down",
+    /c\.width = image\.width;/.test(appJs) && /var s = small\.width \/ big\.width;/.test(appJs));
+  ok("if the zoom cannot play, the coin still gets an entrance",
+    /if \(!flew\) \{ restore\(\); oneShot\(elBtn, "enter"/.test(appJs));
+  ok("the decorative escape from the safe-size rule is used for thumbnails only",
+    (appJs.match(/decorative: true/g) || []).length === 1);
   ok("saving throws a ring off the coin", /@keyframes flash/.test(appCss) && /function flash\(/.test(appJs));
   ok("nothing waits on an animation event, so reduced motion cannot strand the app",
     !/addEventListener\(\s*"animationend"/.test(appJs) && /function after\(ms, fn\) \{ if \(still\(\)\) fn\(\); else setTimeout/.test(appJs));
@@ -538,8 +555,14 @@ section("2. The bundle carries the codes and nothing else");
     /prefers-reduced-motion:reduce/.test(appCss) &&
     /animation:none !important/.test(appCss) &&
     /prefers-reduced-motion: reduce/.test(appJs) && /function still\(\)/.test(appJs));
-  ok("the morph always cleans up, whatever the animation does",
-    /setTimeout\(finish, \d+\)/.test(appJs) && /elBtn\.style\.opacity = ""/.test(appJs));
+  /* The flier is injected into the page, so it must come out again whatever the animation
+   * does: a rejected or cancelled Web Animation must not leave a coin stuck over the app. It
+   * cleans up on the animation's own promise AND on a timer, and the coin it was covering is
+   * restored the same way. */
+  ok("the flier always cleans up, whatever the animation does",
+    /setTimeout\(finish, ms \+ \d+\)/.test(appJs) &&
+    /a\.finished\.then\(finish, finish\)/.test(appJs) &&
+    /setTimeout\(restore, \d+\)/.test(appJs));
 
   /* One-shot animation classes must remove themselves. They all set `animation` on the same
    * element, so one left behind out-ranks the next by nothing more than being further down the
@@ -550,10 +573,6 @@ section("2. The bundle carries the codes and nothing else");
     /setTimeout\(function \(\) \{ el\.classList\.remove\(cls\); \}/.test(appJs));
   /* Three costs that jitter an animation without erroring, all of them found by measuring
    * rather than by reading. Each is now forbidden by assertion. */
-  /* Strip the comments first. An assertion that something is ABSENT will otherwise be defeated
-   * by the comment explaining why it was removed, which is exactly what happened here and
-   * happened once already with animationend. Assert against the code, not the prose. */
-  const cssCode = appCss.replace(/\/\*[\s\S]*?\*\//g, "");
   ok("the aurora uses no filter, so changing it cannot re-blur a full-screen layer per frame",
     !/filter:\s*blur/.test(cssCode) && /\.sky\{/.test(cssCode));
   ok("the aurora changes by cross-fading opacity, which the compositor does on its own",

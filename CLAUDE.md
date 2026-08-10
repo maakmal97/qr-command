@@ -123,6 +123,33 @@ Three rules, and all three are asserted:
    reads zero, so the morph does nothing at all and says nothing about it. That is a bug this
    code has already had once.
 
+## The zoom, and the thumbnails
+
+A tile's badge is the real coin at 36px, drawn by the same renderer. Opening an account flies
+that very image up to full size and going back flies it down again, so the two screens are one
+object moving rather than a dot being replaced by a picture.
+
+Four things make it work, and each is asserted:
+
+1. **The flier carries the FULL-SIZE render and is only ever scaled DOWN.** It borrows the
+   canvas `prerender()` already produced for the swap, so the zoom costs no extra drawing at
+   all. Scaling a 36px raster up ten times arrives soft and blocky; scaling a full-size one
+   down stays crisp at every frame.
+2. **`fly()` takes RECTS, never elements.** Whichever view is hidden reports zeros for
+   everything in it, so each end is measured by the caller while its own view is on screen.
+   This is the bug the previous version had, and it fails silently: no error, no animation.
+3. **`goBack()` shows the list itself before measuring.** `history.back()` is asynchronous, so
+   popstate has not fired yet and the tile would still measure zero. `renderList()` is
+   idempotent for that reason, or the popstate that follows would restart the stagger halfway
+   through the zoom.
+4. **The thumbnails are `decorative: true`.** That is the one door out of the safe-size rule:
+   at 36px a code is a texture, not something anyone can scan, so the renderer skips the
+   fallback that would otherwise put a tiny plain black square on every tile. The suite asserts
+   the option appears exactly once, so it cannot spread to the code view.
+
+Thumbnails are drawn one per idle callback rather than in one lump, and each tile shows a plain
+brand disc until its own arrives, so the list is never a set of holes.
+
 ## What was measured, and what it cost
 
 Three things were making the animation jitter, all found by measuring in the browser rather
@@ -173,7 +200,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 106 assertions, a couple of minutes, no network
+npm test          # 111 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
