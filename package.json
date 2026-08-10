@@ -1,0 +1,19 @@
+{
+  "name": "qr-command",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The payment-QR consolidator, read-only, on the phone. Built from the Cow-Fin06 master and deployed as a Cloudflare Worker with static assets. Ships provider names and payloads only: no legal name, no account numbers, no edit path.",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "test": "node test/verify.mjs",
+    "live": "node test/live.mjs",
+    "check": "npm run build && npm test",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && npm test && wrangler deploy"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.80",
+    "wrangler": "^4.120.0"
+  }
+}

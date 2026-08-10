@@ -1,0 +1,29 @@
+# core.autocrlf is true on this machine, which means git rewrites line endings on checkout
+# unless it is told not to. On the master repo that silently classified two PDFs as text and
+# would have corrupted them. Take the principle, not that file: declare the binaries, and pin
+# the line endings of anything a machine parses.
+
+* text=auto eol=lf
+
+# Binary. Never touched, never diffed, never line-ending converted.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.ico binary
+
+# The build writes these LF from Node. Pinning them stops a checkout showing the whole build
+# output as modified purely because git converted it.
+*.html text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.json text eol=lf
+*.jsonc text eol=lf
+*.css  text eol=lf
+*.webmanifest text eol=lf
+_headers text eol=lf
+
+# Windows batch files must keep CRLF or cmd.exe mis-parses them.
+*.bat text eol=crlf
+# macOS shell wrappers must keep LF or the shell reads the carriage return as part of the command.
+*.command text eol=lf
+*.sh text eol=lf

@@ -1,0 +1,33 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "qr-command",
+	"main": "src/worker.js",
+	// Do not raise this past what the installed workers runtime supports: wrangler 4.120.0
+	// tops out at 2026-08-08 and refuses to start on anything later, locally and on deploy.
+	"compatibility_date": "2026-08-08",
+
+	// A Worker with static assets. public/ is the entire shipping surface and it is a build
+	// output: tools/build.mjs writes it and refuses to finish if anything from the master's
+	// private fields has leaked into it. Nothing outside public/ is deployed, which is why
+	// the docs, the PDFs, the local server and the master's own store cannot ship by accident.
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS",
+		// NOT "single-page-application". That would answer a missing asset with index.html,
+		// so a stale service worker asking for a file that no longer exists would be handed
+		// HTML and cache it under a script URL.
+		"not_found_handling": "none",
+		// The Worker runs first on every request so it can set the security headers itself
+		// rather than trusting a _headers file to be applied. X-Robots-Tag is the only thing
+		// keeping this address out of a search index; it is not left to inference.
+		"run_worker_first": true
+	},
+
+	// No KV, no secrets, no vars. The site is read-only: the account list is baked into the
+	// bundle at build time and changed by deploying. There is nothing here to write to and
+	// nothing to steal a key for.
+
+	"observability": {
+		"enabled": true
+	}
+}

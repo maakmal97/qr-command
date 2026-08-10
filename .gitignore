@@ -1,0 +1,24 @@
+node_modules/
+.wrangler/
+.dev.vars
+.DS_Store
+*.log
+
+# public/ IS committed on purpose. It is the build output of tools/build.mjs and it is what
+# gets deployed, so the deployed bytes are the reviewed bytes. Never hand-edit it; the build
+# regenerates it and `npm run deploy` rebuilds before shipping.
+
+# The master's own store never lands here. The build reads it from the Cow-Fin06 project
+# folder and writes only the sanitised cut into public/data.js. These are a safety net so a
+# stray copy can never be committed by accident.
+accounts.json
+**/accounts.json
+*.accounts.json
+backups/
+
+# Test scratch
+test/tmp/
+shot-*.png
+
+# Local Claude Code settings, personal to this machine
+.claude/settings.local.json

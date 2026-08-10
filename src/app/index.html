@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0d18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pay">
+<title>Pay</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="stylesheet" href="./app.css?v=__BUILD__">
+</head>
+<body>
+
+<div class="orb a" aria-hidden="true"></div>
+<div class="orb b" aria-hidden="true"></div>
+<div class="orb c" aria-hidden="true"></div>
+
+<main class="stage">
+  <h1 id="name" class="name">&nbsp;</h1>
+  <div class="coinwrap">
+    <button type="button" id="coinbtn" class="coinbtn" aria-describedby="hint">
+      <canvas id="coin" class="coin" role="img" aria-label="Payment code"></canvas>
+    </button>
+    <p id="hint" class="sr-only">Activate to switch between the styled code and a plain
+      black and white one. Left and right arrows change account.</p>
+  </div>
+  <p id="say" class="say" role="status" aria-live="polite"></p>
+</main>
+
+<nav class="rail" id="rail" aria-label="Accounts"></nav>
+
+<noscript>
+  <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
+</noscript>
+
+<script src="./qrcode.js?v=__BUILD__"></script>
+<script src="./qr-art.js?v=__BUILD__"></script>
+<script src="./data.js?v=__BUILD__"></script>
+<script src="./app.js?v=__BUILD__"></script>
+</body>
+</html>
