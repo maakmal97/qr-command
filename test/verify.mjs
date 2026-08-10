@@ -147,6 +147,17 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
     levels[p.ecl] = (levels[p.ecl] || 0) + 1;
   }
+  {
+    /* ONE FILL PER MODULE, asserted so nobody "optimises" it into one big path. That was tried
+     * and measured: fourteen times slower, 25.8ms against 1.84ms for the same 1,172 modules,
+     * because a fill is charged by its path's bounding box and one path spans the whole code.
+     * It turned a 6ms draw into 17ms and was a visible cause of jitter. */
+    const art = read(path.join(PUB, "qr-art.js"));
+    ok("each module is filled on its own, never batched into one path",
+      /blob\(g, dark, n, r, c, geo, opts\.dot\);/.test(art) &&
+      !/new Path2D|newPath\(\)/.test(art));
+  }
+
   ok("every code encodes at M, the level the master page and the printed card use " +
      "(" + JSON.stringify(levels) + ")", levels.M === shipped.length);
 }
@@ -537,6 +548,29 @@ section("2. The bundle carries the codes and nothing else");
     /var ONESHOT = \[/.test(appJs) &&
     /for \(var i = 0; i < ONESHOT\.length; i\+\+\) el\.classList\.remove\(ONESHOT\[i\]\)/.test(appJs) &&
     /setTimeout\(function \(\) \{ el\.classList\.remove\(cls\); \}/.test(appJs));
+  /* Three costs that jitter an animation without erroring, all of them found by measuring
+   * rather than by reading. Each is now forbidden by assertion. */
+  /* Strip the comments first. An assertion that something is ABSENT will otherwise be defeated
+   * by the comment explaining why it was removed, which is exactly what happened here and
+   * happened once already with animationend. Assert against the code, not the prose. */
+  const cssCode = appCss.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok("the aurora uses no filter, so changing it cannot re-blur a full-screen layer per frame",
+    !/filter:\s*blur/.test(cssCode) && /\.sky\{/.test(cssCode));
+  ok("the aurora changes by cross-fading opacity, which the compositor does on its own",
+    /\.sky\.on\{opacity/.test(cssCode) && /transition:opacity/.test(cssCode) &&
+    /classList\.add\("on"\)/.test(appJs) && /classList\.remove\("on"\)/.test(appJs));
+  ok("nothing transitions background-color on a full-screen element",
+    !/\.sky[^{]*\{[^}]*transition:[^;}]*background-color/.test(cssCode));
+  ok("the coin transitions transform only, never its box-shadow",
+    /\.coinbtn\{[\s\S]*?transition:transform [^;]+;/.test(cssCode) &&
+    !/\.coinbtn[^{]*\{[^}]*transition:[^;}]*box-shadow/.test(cssCode));
+  ok("a step pre-renders the incoming coin, so the redraw is not in the middle of the animation",
+    /function prerender\(i\)/.test(appJs) &&
+    /var pre = still\(\) \? null : prerender\(i\);/.test(appJs) &&
+    /drawImage\(pre\.canvas, 0, 0\)/.test(appJs));
+  ok("the coin is promoted to its own layer, so a transform never repaints it",
+    /\.coinbtn\{[\s\S]*?will-change:transform;/.test(cssCode));
+
   ok("no animation moves layout: transform and opacity only",
     (appCss.match(/@keyframes[^}]*\{[\s\S]*?\n\}/g) || []).every((k) =>
       !/(^|[\s;{])(width|height|top|left|right|bottom|margin|padding)\s*:/.test(k)));

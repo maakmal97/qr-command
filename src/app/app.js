@@ -26,6 +26,8 @@
   var elPlain = document.getElementById("plainbtn");
   var elGrid = document.getElementById("grid");
   var elBack = document.getElementById("back");
+  var skies = [document.getElementById("sky1"), document.getElementById("sky2")];
+  var skyOn = 0;
 
   var idx = -1;
   var plain = false;
@@ -67,20 +69,37 @@
     var root = document.documentElement.style;
     root.setProperty("--brand", C.rgb2hex(base));
     root.setProperty("--brand-soft", brand ? softOf(brand) : "#c3cbdb");
-    root.setProperty("--a1", anchor(0, 0.26));
-    root.setProperty("--a2", anchor(-0.09, 0.20));
-    root.setProperty("--a3", anchor(0.30, 0.22));
+
+    /* The aurora cross-fades rather than transitioning its colours. The incoming washes are
+     * written to whichever layer is currently hidden, which paints it once, and then the two
+     * swap opacity, which the compositor handles without the main thread. Transitioning the
+     * colours instead meant repainting the whole background on every frame of the change. */
+    var next = skies[1 - skyOn], cur = skies[skyOn];
+    if (next && cur) {
+      next.style.setProperty("--s1", anchor(0, 0.26));
+      next.style.setProperty("--s2", anchor(-0.09, 0.20));
+      next.style.setProperty("--s3", anchor(0.30, 0.22));
+      next.classList.add("on");
+      cur.classList.remove("on");
+      skyOn = 1 - skyOn;
+    }
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", C.rgb2hex(C.mix([10, 13, 24], base, 0.10)));
   }
 
   /* --------------------------------------------------------------------- paint */
 
+  var lastFit = 0;
   function fit() {
     var box = elBtn.parentNode;
     var size = Math.max(160, Math.floor(Math.min(box.clientWidth, box.clientHeight)));
-    elBtn.style.width = size + "px";
-    elBtn.style.height = size + "px";
+    // Only write when it has actually changed. Writing every paint made each redraw a forced
+    // reflow as well, which is the last thing wanted in the middle of an animation.
+    if (size !== lastFit) {
+      elBtn.style.width = size + "px";
+      elBtn.style.height = size + "px";
+      lastFit = size;
+    }
     return size;
   }
 
@@ -90,12 +109,38 @@
     }, extra || {});
   }
 
-  function paint() {
-    var a = CODES[idx];
-    if (!a || document.body.className.indexOf("view-code") < 0) return;
-    var meta = self.QRArt.draw(elCoin, a.payload, artFor(a, {
+  /* Draw the coin for an account into a canvas of its own, without touching the page.
+   *
+   * Used to move the cost of a redraw OFF the animation. Drawing takes six to fourteen
+   * milliseconds, which is most of a frame, and doing it at the halfway point of a step meant
+   * dropping one right where the eye is following the coin across. Rendered up front instead,
+   * before the exit animation starts, the hitch lands in the gap between the thumb moving and
+   * anything appearing, where nobody can see it, and the swap itself becomes a drawImage of
+   * about a millisecond. */
+  function prerender(i) {
+    var a = CODES[i];
+    if (!a) return null;
+    var off = document.createElement("canvas");
+    var meta = self.QRArt.draw(off, a.payload, artFor(a, {
       size: fit(), pixelRatio: self.devicePixelRatio || 1
     }));
+    return { canvas: off, meta: meta };
+  }
+
+  function paint(pre) {
+    var a = CODES[idx];
+    if (!a || document.body.className.indexOf("view-code") < 0) return;
+    var meta;
+    if (pre && pre.canvas) {
+      elCoin.width = pre.canvas.width;
+      elCoin.height = pre.canvas.height;
+      elCoin.getContext("2d").drawImage(pre.canvas, 0, 0);
+      meta = pre.meta;
+    } else {
+      meta = self.QRArt.draw(elCoin, a.payload, artFor(a, {
+        size: fit(), pixelRatio: self.devicePixelRatio || 1
+      }));
+    }
     // meta.plain, not the local flag: the renderer drops to the plain code by itself when the
     // screen is too small to draw a coin anyone could scan, and the page must follow it.
     elCoin.setAttribute("aria-label", a.name + " payment code");
@@ -148,19 +193,23 @@
     var to = elBtn.getBoundingClientRect();
     if (!from.width || !to.width) return false;
 
+    /* Built at the TARGET size and scaled DOWN to start, never the other way about. Starting
+      * at the tile's fifteen pixels and scaling up twenty-two times would upscale a fifteen
+      * pixel raster, which arrives soft and blocky; this way the layer is rasterised once at
+      * full size and only ever shrinks. */
     var m = document.createElement("div");
     m.className = "morph";
-    m.style.left = from.left + "px";
-    m.style.top = from.top + "px";
-    m.style.width = from.width + "px";
-    m.style.height = from.height + "px";
+    m.style.left = to.left + "px";
+    m.style.top = to.top + "px";
+    m.style.width = to.width + "px";
+    m.style.height = to.height + "px";
     m.style.background = brand;
     m.style.boxShadow = "0 0 40px -6px " + brand;
     document.body.appendChild(m);
 
-    var sx = to.width / from.width, sy = to.height / from.height;
-    var dx = (to.left + to.width / 2) - (from.left + from.width / 2);
-    var dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+    var s0 = from.width / to.width;
+    var dx = (from.left + from.width / 2) - (to.left + to.width / 2);
+    var dy = (from.top + from.height / 2) - (to.top + to.height / 2);
 
     elBtn.style.opacity = "0";
     var done = false;
@@ -173,11 +222,9 @@
 
     if (m.animate) {
       var a = m.animate([
-        { transform: "translate(0,0) scale(1)", opacity: 1 },
-        { transform: "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")",
-          opacity: 0.85, offset: 0.72 },
-        { transform: "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")",
-          opacity: 0 }
+        { transform: "translate(" + dx + "px," + dy + "px) scale(" + s0 + ")", opacity: 1 },
+        { transform: "translate(0,0) scale(1)", opacity: 0.85, offset: 0.72 },
+        { transform: "translate(0,0) scale(1)", opacity: 0 }
       ], { duration: 430, easing: "cubic-bezier(.2,.8,.2,1)" });
       if (a.finished && a.finished.then) a.finished.then(finish, finish);
     }
@@ -212,7 +259,7 @@
     document.title = "Pay";
   }
 
-  function renderCode(i, stepping) {
+  function renderCode(i, stepping, pre) {
     idx = (i + CODES.length) % CODES.length;
     var a = CODES[idx];
     var arriving = document.body.className !== "view-code";
@@ -224,7 +271,7 @@
       tiles[k].setAttribute("aria-current", k === idx ? "true" : "false");
     }
     say("");
-    paint();
+    paint(pre);
     // The name lifts in whenever it changes; the coin only on arrival, because when stepping
     // between accounts the slide is already carrying it.
     oneShot(elName, "enter", 360);
@@ -261,10 +308,12 @@
     if (i === idx) return;
     var out = dir < 0 ? "out-left" : "out-right";
     var into = dir < 0 ? "in-right" : "in-left";
+    // Draw the incoming coin BEFORE anything starts moving, so the animation itself is free.
+    var pre = still() ? null : prerender(i);
     if (dir) oneShot(elBtn, out, 170);
     after(dir && !still() ? 150 : 0, function () {
       history.replaceState(history.state, "", "#" + CODES[i].key);
-      renderCode(i, true);
+      renderCode(i, true, pre);
       if (dir) oneShot(elBtn, into, 280);
     });
   }

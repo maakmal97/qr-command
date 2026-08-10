@@ -123,6 +123,35 @@ Three rules, and all three are asserted:
    reads zero, so the morph does nothing at all and says nothing about it. That is a bug this
    code has already had once.
 
+## What was measured, and what it cost
+
+Three things were making the animation jitter, all found by measuring in the browser rather
+than by reading the code. None of them raised an error.
+
+**The aurora was the worst of it.** Three fixed 568px circles with `filter: blur(74px)`, whose
+`background-color` was transitioned on every account change. A colour transition cannot be
+composited, so all three were re-blurred on every frame for half a second, at exactly the moment
+the coin was animating. It is now two stacked layers of radial gradients with no filter at all,
+cross-faded by opacity, which the compositor does on its own.
+
+**The coin transitioned its `box-shadow`,** which carries blur radii up to 88px. That is a full
+repaint per frame, landing precisely on the press. Transform only now, plus `will-change` so it
+sits on its own layer.
+
+**BATCHING THE MODULES INTO ONE PATH IS FOURTEEN TIMES SLOWER, and it is worth knowing why.**
+The obvious optimisation is to accumulate every module into one `Path2D` and fill once rather
+than fifteen hundred times. Measured on the same 1,172 modules in the same browser: 25.8ms for
+one path against 1.84ms for individual fills. A fill is charged by the bounding box of its path,
+so one path spanning the whole 686px code makes the rasteriser walk every scanline of the box
+and sort thousands of edges, where each small fill touches only its own nine pixels. It turned a
+6ms draw into 17ms. It was tried, measured and reverted; `test/verify.mjs` now asserts against
+it so it cannot come back on the same reasoning.
+
+**A step pre-renders.** A draw is six to fourteen milliseconds, most of a frame, and doing it at
+the halfway point of a step dropped one right where the eye was following the coin. The incoming
+coin is now rendered to an offscreen canvas before the exit animation starts, so the swap is a
+`drawImage` of about 0.01ms and the hitch lands in the gap before anything moves.
+
 ## Files
 
 | Path | What it is |
@@ -144,7 +173,7 @@ Three rules, and all three are asserted:
 
 ```
 npm run build     # master -> public/
-npm test          # 99 assertions, a couple of minutes, no network
+npm test          # 106 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.

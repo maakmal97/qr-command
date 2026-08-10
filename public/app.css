@@ -63,21 +63,36 @@ body{
 body.view-list .accounts{display:flex;}
 body.view-code .codeview{display:flex;}
 
-/* The aurora. Orbs rather than a layered background-image, because background-image cannot
- * transition and the colour move on opening an account is half the point. */
-.orb{
+/* The aurora, and the one thing in this file that had to be rebuilt for speed.
+ *
+ * It was three fixed circles carrying `filter: blur(74px)`, with their `background-color`
+ * transitioned when the account changed. That is the most expensive shape a change can take:
+ * a colour transition is not compositable, so each of three 568px layers was re-blurred on
+ * every frame for the whole half second, at exactly the moment the coin was also animating.
+ * `will-change: background-color` bought nothing, because there is no layer a colour change
+ * can be promoted to.
+ *
+ * Now there is no filter at all. Two stacked layers each paint the same three washes as
+ * radial gradients, which is what a blurred circle was approximating anyway and costs one
+ * ordinary paint; the change is a cross-fade of OPACITY between them, which the compositor
+ * does on its own without touching the main thread. app.js writes the incoming colours to
+ * whichever layer is hidden and then swaps them. */
+.sky{
   position:fixed;
-  border-radius:50%;
-  filter:blur(74px);
+  inset:-10%;
   z-index:0;
   pointer-events:none;
-  opacity:.46;
-  transition:background-color var(--t);
-  will-change:background-color;
+  opacity:0;
+  transition:opacity var(--t);
+  background-repeat:no-repeat;
+  background-image:
+    radial-gradient(closest-side circle at 18% 12%, var(--s1,#3a2f6b), transparent),
+    radial-gradient(closest-side circle at 88% 20%, var(--s2,#7a2f4f), transparent),
+    radial-gradient(closest-side circle at 46% 96%, var(--s3,#15506b), transparent);
+  background-size:130% 130%, 118% 118%, 145% 145%;
+  background-position:18% 12%, 88% 20%, 46% 96%;
 }
-.orb.a{width:62vmax;height:62vmax;left:-24vmax;top:-26vmax;background-color:var(--a1);}
-.orb.b{width:56vmax;height:56vmax;right:-22vmax;top:-14vmax;background-color:var(--a2);}
-.orb.c{width:70vmax;height:70vmax;left:12vmax;bottom:-40vmax;background-color:var(--a3);}
+.sky.on{opacity:.5;}
 
 /* ==================================================================== accounts */
 
@@ -226,31 +241,20 @@ body.view-code .codeview{display:flex;}
   -webkit-touch-callout:none;
   user-select:none;-webkit-user-select:none;
   touch-action:pan-y;
-  transition:transform 150ms cubic-bezier(.4,0,.2,1),
-             box-shadow 150ms cubic-bezier(.4,0,.2,1),
-             filter var(--t);
+  /* TRANSFORM ONLY. The shadow below carries blur radii up to 88px over a 343px element, and
+   * a box-shadow transition is a full repaint of all of it on every frame, which landed
+   * precisely on the press. The press still reads, because the transform is doing the work.
+   * will-change puts the coin on its own layer so the transform never repaints anything. */
+  transition:transform 150ms cubic-bezier(.4,0,.2,1);
+  will-change:transform;
   box-shadow:
     inset 0 2px 0 rgba(255,255,255,0.30),
     0 3px 6px -2px rgba(0,0,0,0.72),
     0 20px 38px -14px rgba(0,0,0,0.88),
     0 0 88px -22px var(--brand);
 }
-.coinbtn:hover{
-  transform:translateY(-2px);
-  box-shadow:
-    inset 0 2px 0 rgba(255,255,255,0.34),
-    0 5px 9px -2px rgba(0,0,0,0.7),
-    0 28px 48px -16px rgba(0,0,0,0.9),
-    0 0 104px -20px var(--brand);
-}
-.coinbtn:active{
-  transform:translateY(3px) scale(.982);
-  box-shadow:
-    inset 0 2px 0 rgba(255,255,255,0.22),
-    0 1px 3px -1px rgba(0,0,0,0.8),
-    0 8px 18px -10px rgba(0,0,0,0.85),
-    0 0 60px -24px var(--brand);
-}
+.coinbtn:hover{transform:translateY(-2px);}
+.coinbtn:active{transform:translateY(3px) scale(.982);}
 .coinbtn:focus-visible{outline:3px solid var(--brand-soft);outline-offset:7px;}
 .coinbtn:focus:not(:focus-visible){outline:none;}
 .coinbtn.plainmode{border-radius:18px;}
@@ -397,7 +401,7 @@ body.view-code .bar{animation:bar-in var(--in) 60ms backwards;}
 }
 
 @media (prefers-reduced-transparency:reduce){
-  .orb{opacity:.28;}
+  .sky.on{opacity:.3;}
 }
 /* Everything above goes, in one rule. app.js checks the same query before it starts any
  * animation of its own, so the morph and the flash never appear either. */
@@ -408,7 +412,7 @@ body.view-code .bar{animation:bar-in var(--in) 60ms backwards;}
 }
 @media (forced-colors:active){
   .name{-webkit-text-fill-color:currentColor;color:CanvasText;}
-  .orb{display:none;}
+  .sky{display:none;}
   .tile,.pill,.back{border-color:CanvasText;}
   .coinbtn{box-shadow:none;border:1px solid CanvasText;}
 }
@@ -423,7 +427,7 @@ body.view-code .bar{animation:bar-in var(--in) 60ms backwards;}
 }
 
 @media print{
-  .orb,.tools,.bar,.accounts{display:none !important;}
+  .sky,.tools,.bar,.accounts{display:none !important;}
   body{background:#fff;color:#000;}
   .name{-webkit-text-fill-color:currentColor;color:#000;}
   .coinbtn{box-shadow:none;}
