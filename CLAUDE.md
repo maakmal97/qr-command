@@ -103,6 +103,26 @@ through the middle so the ratio still measures 3. 1.5 satisfied both by a twenti
 which is under a pixel once snapped, and flipped those corners on ten of the thirteen codes;
 1.68 fixed the corners and stretched the middle run to 3.8.
 
+## Motion
+
+One arrival curve, `cubic-bezier(.2,.8,.2,1)`, and one shorter exit curve. Every animation is
+transform and opacity only, so none of it can cost a reflow on a phone.
+
+Three rules, and all three are asserted:
+
+1. **Nothing may be load-bearing.** `prefers-reduced-motion` switches the lot off, in the sheet
+   and in `app.js`, so any step that waited on `animationend` would wait for ever on a phone
+   that had it set. Every step runs on a timer that collapses to zero instead (`after()`).
+2. **One-shot classes remove themselves.** `enter`, `tuck`, `in-*` and `out-*` all set
+   `animation` on the same element, so one left behind out-ranks the next by nothing more than
+   sitting further down the stylesheet. Leave `enter` on the coin and `tuck` never plays again,
+   silently, because the save still works and only the motion is missing. `oneShot()` clears the
+   others and then removes itself.
+3. **`morph()` takes a rect, not the tile.** The tile must be measured BEFORE the view switches:
+   the moment the code view is shown the accounts are `display:none` and every rect on them
+   reads zero, so the morph does nothing at all and says nothing about it. That is a bug this
+   code has already had once.
+
 ## Files
 
 | Path | What it is |
@@ -124,7 +144,7 @@ which is under a pixel once snapped, and flipped those corners on ten of the thi
 
 ```
 npm run build     # master -> public/
-npm test          # 90 assertions, a couple of minutes, no network
+npm test          # 99 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.

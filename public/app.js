@@ -107,6 +107,100 @@
     return meta;
   }
 
+  /* -------------------------------------------------------------------- motion */
+
+  /* Nothing here may be load-bearing. Every step that changes what is on screen runs on a
+   * timer, and that timer is zero when motion is off, rather than waiting for an animationend
+   * that a reduced-motion phone will never send. If the animation does not play, the app
+   * behaves identically, just instantly. */
+  var reduced = self.matchMedia ? self.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
+  function still() { return !!reduced.matches; }
+  function after(ms, fn) { if (still()) fn(); else setTimeout(fn, ms); }
+
+  /* Play a class once and take it off again.
+   *
+   * The removal is not tidiness. Every one of these sets the `animation` property on the same
+   * element, so a class left behind stays in the cascade and out-ranks the next one by nothing
+   * more than being further down the stylesheet: leave `enter` on the coin and `tuck` never
+   * plays again after the first navigation, silently, because the save still works and only
+   * the motion is missing. They are mutually exclusive by nature, so adding one clears the
+   * rest. */
+  var ONESHOT = ["enter", "tuck", "in-left", "in-right", "out-left", "out-right"];
+  function oneShot(el, cls, ms) {
+    if (still() || !el) return;
+    for (var i = 0; i < ONESHOT.length; i++) el.classList.remove(ONESHOT[i]);
+    void el.offsetWidth;                       // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, ms || 420);
+  }
+
+  /* The tapped tile's dot swells into the coin. Measured from the real geometry both ends, so
+   * it lands on the coin exactly, whatever the screen. The coin is held invisible until the
+   * swell is nearly home and then fades in underneath it, which is what makes the two read as
+   * one object rather than two. */
+  /* Takes a RECT, not the tile, and that signature is the fix for a bug rather than a
+   * preference: the tile has to be measured before the view switches, because the moment the
+   * code view is shown the accounts are `display:none` and every rect on them reads zero. It
+   * failed silently, the morph simply never appearing, which is why the measurement now
+   * happens in open() and cannot be moved back in here. */
+  function morph(from, brand) {
+    if (still() || !from || !elBtn) { if (elBtn) elBtn.style.opacity = ""; return false; }
+    var to = elBtn.getBoundingClientRect();
+    if (!from.width || !to.width) return false;
+
+    var m = document.createElement("div");
+    m.className = "morph";
+    m.style.left = from.left + "px";
+    m.style.top = from.top + "px";
+    m.style.width = from.width + "px";
+    m.style.height = from.height + "px";
+    m.style.background = brand;
+    m.style.boxShadow = "0 0 40px -6px " + brand;
+    document.body.appendChild(m);
+
+    var sx = to.width / from.width, sy = to.height / from.height;
+    var dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+    var dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+
+    elBtn.style.opacity = "0";
+    var done = false;
+    var finish = function () {
+      if (done) return;
+      done = true;
+      if (m.parentNode) m.parentNode.removeChild(m);
+      elBtn.style.opacity = "";
+    };
+
+    if (m.animate) {
+      var a = m.animate([
+        { transform: "translate(0,0) scale(1)", opacity: 1 },
+        { transform: "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")",
+          opacity: 0.85, offset: 0.72 },
+        { transform: "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")",
+          opacity: 0 }
+      ], { duration: 430, easing: "cubic-bezier(.2,.8,.2,1)" });
+      if (a.finished && a.finished.then) a.finished.then(finish, finish);
+    }
+    // The belt to that braces: whatever the animation does or fails to do, the coin comes back.
+    setTimeout(function () { elBtn.style.opacity = ""; oneShot(elBtn, "enter", 320); }, 250);
+    setTimeout(finish, 520);
+    return true;
+  }
+
+  function flash() {
+    if (still() || !elBtn) return;
+    var r = elBtn.getBoundingClientRect();
+    if (!r.width) return;
+    var f = document.createElement("div");
+    f.className = "flash";
+    f.style.left = r.left + "px";
+    f.style.top = r.top + "px";
+    f.style.width = r.width + "px";
+    f.style.height = r.height + "px";
+    document.body.appendChild(f);
+    setTimeout(function () { if (f.parentNode) f.parentNode.removeChild(f); }, 620);
+  }
+
   /* -------------------------------------------------------------------- routing */
 
   /* Two views, addressed by the hash, so the phone's own back gesture and a home-screen icon
@@ -118,9 +212,10 @@
     document.title = "Pay";
   }
 
-  function renderCode(i) {
+  function renderCode(i, stepping) {
     idx = (i + CODES.length) % CODES.length;
     var a = CODES[idx];
+    var arriving = document.body.className !== "view-code";
     document.body.className = "view-code";
     elName.textContent = a.name;
     document.title = a.name;
@@ -130,6 +225,10 @@
     }
     say("");
     paint();
+    // The name lifts in whenever it changes; the coin only on arrival, because when stepping
+    // between accounts the slide is already carrying it.
+    oneShot(elName, "enter", 360);
+    if (arriving && !stepping) oneShot(elBtn, "enter", 320);
     remember("last", a.key);
     idle(function () { cardOf(a); });   // warm the saveable image before it is asked for
   }
@@ -140,17 +239,34 @@
     if (i >= 0) renderCode(i); else renderList();
   }
 
-  function open(i) {
+  function open(i, tile) {
+    /* Measure the tile FIRST. Once renderCode has run, the accounts are display:none and this
+     * rect would read zero, which is how the morph came to do nothing at all the first time. */
+    var dot = (!still() && tile) ? tile.querySelector(".tiledot") : null;
+    var from = dot ? dot.getBoundingClientRect() : null;
+
     history.pushState({ fromList: true }, "", "#" + CODES[i].key);
-    renderCode(i);
+    // stepping:true suppresses the coin's own entrance, because the morph is the entrance: the
+    // tile's dot swells into it and the coin fades in underneath. If there is no morph to play,
+    // the coin needs that entrance back.
+    renderCode(i, true);
+    if (!morph(from, CODES[i].brand)) oneShot(elBtn, "enter", 320);
   }
 
-  function switchTo(i) {
+  /* Stepping between codes REPLACES rather than pushes, so back always returns to the list
+   * rather than walking every code that was swiped past on the way here. The coin leaves the
+   * way the thumb went and the next arrives from the far side, so the direction reads. */
+  function switchTo(i, dir) {
     i = (i + CODES.length) % CODES.length;
-    // Stepping between codes REPLACES rather than pushes, so back always returns to the list
-    // rather than walking every code that was swiped past on the way here.
-    history.replaceState(history.state, "", "#" + CODES[i].key);
-    renderCode(i);
+    if (i === idx) return;
+    var out = dir < 0 ? "out-left" : "out-right";
+    var into = dir < 0 ? "in-right" : "in-left";
+    if (dir) oneShot(elBtn, out, 170);
+    after(dir && !still() ? 150 : 0, function () {
+      history.replaceState(history.state, "", "#" + CODES[i].key);
+      renderCode(i, true);
+      if (dir) oneShot(elBtn, into, 280);
+    });
   }
 
   function goBack() {
@@ -202,9 +318,7 @@
   /* The coin is taken off the page and put away: it dips, then comes back. The motion is the
    * only explanation the action gets, and it only plays once the save has actually started. */
   function tuck() {
-    elBtn.classList.remove("tuck");
-    void elBtn.offsetWidth;                     // restart the animation
-    elBtn.classList.add("tuck");
+    oneShot(elBtn, "tuck", 540);
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
   }
 
@@ -218,6 +332,7 @@
     var canShare = card.file && navigator.share && navigator.canShare &&
                    navigator.canShare({ files: [card.file] });
     tuck();
+    flash();
     if (canShare) {
       navigator.share({ files: [card.file] }).then(
         function () { say("Saved"); },
@@ -244,6 +359,7 @@
       b.className = "tile";
       b.style.setProperty("--dot", a.brand);
       b.style.setProperty("--soft", softOf(a.brand));
+      b.style.setProperty("--i", String(i));
       b.setAttribute("aria-current", "false");
       var sw = document.createElement("span");
       sw.className = "tiledot";
@@ -252,7 +368,7 @@
       tx.textContent = a.name;
       b.appendChild(sw);
       b.appendChild(tx);
-      b.addEventListener("click", function () { open(i); });
+      b.addEventListener("click", function () { open(i, b); });
       frag.appendChild(b);
       tiles.push(b);
     });
@@ -316,8 +432,8 @@
       var onCode = document.body.className.indexOf("view-code") >= 0;
       if (e.key === "Escape") { if (onCode) { goBack(); e.preventDefault(); } return; }
       if (!onCode) return;
-      if (e.key === "ArrowRight") { switchTo(idx + 1); e.preventDefault(); }
-      else if (e.key === "ArrowLeft") { switchTo(idx - 1); e.preventDefault(); }
+      if (e.key === "ArrowRight") { switchTo(idx + 1, 1); e.preventDefault(); }
+      else if (e.key === "ArrowLeft") { switchTo(idx - 1, -1); e.preventDefault(); }
       else if (e.key === "s" || e.key === "Enter") { save(); e.preventDefault(); }
       else if (e.key === "p") { elPlain.click(); e.preventDefault(); }
     });
@@ -339,7 +455,7 @@
       var dx = e.changedTouches[0].clientX - x0;
       var dy = e.changedTouches[0].clientY - y0;
       x0 = null;
-      if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(dy) * 1.6) switchTo(idx + (dx < 0 ? 1 : -1));
+      if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(dy) * 1.6) switchTo(idx + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
     }, { passive: true });
 
     var t = null;

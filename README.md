@@ -31,6 +31,13 @@ back, and so does your phone's own back gesture.
 
 The app remembers whether you left it in plain mode.
 
+**The motion is part of the answer, not decoration.** The list deals itself out when it opens.
+Tapping an account makes its coloured dot swell into the coin, so the thing you pressed is
+visibly the thing you got. Stepping between accounts sends the coin out the way your thumb went
+and brings the next in from the far side, so the direction reads. Saving dips the coin and
+throws a ring off it, which is how the action explains itself the first time you try it. If your
+phone is set to reduce motion, none of it plays and everything still works, instantly.
+
 ## Changing the list of codes
 
 Not here. **Adding, editing and removing codes is a laptop job**, in the master project:

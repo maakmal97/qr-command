@@ -309,6 +309,86 @@ body.view-code .codeview{display:flex;}
 .pill:disabled{opacity:.4;cursor:not-allowed;}
 .pill[aria-pressed="true"]{color:var(--ink);background-color:rgba(255,255,255,0.16);border-color:var(--brd-2);}
 
+/* ====================================================================== motion */
+
+/* One curve for everything that arrives, cubic-bezier(.2,.8,.2,1): quick off the mark, long
+ * settle. One shorter, sharper curve for everything that leaves. Nothing here moves layout;
+ * every animation is transform and opacity only, so none of it can cost a reflow on a phone.
+ *
+ * All of it is switched off wholesale under prefers-reduced-motion below, which means no
+ * animation may ever be load-bearing: the JavaScript drives its steps on timers that collapse
+ * to zero rather than waiting on animationend, or a reduced-motion phone would sit for ever
+ * waiting for an event that is never coming. */
+:root{
+  --in:340ms cubic-bezier(.2,.8,.2,1);
+  --out:150ms cubic-bezier(.4,0,1,1);
+}
+
+@keyframes tile-in{
+  from{opacity:0;transform:translateY(12px) scale(.97);}
+  to{opacity:1;transform:none;}
+}
+/* The list deals itself out, top left to bottom right. Capped at the twelfth so a longer
+ * account list can never turn the stagger into a wait. */
+body.view-list .tile{
+  animation:tile-in 320ms cubic-bezier(.2,.8,.2,1) backwards;
+  animation-delay:calc(min(var(--i,0),12) * 24ms);
+}
+
+@keyframes name-in{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:none;}
+}
+.name.enter{animation:name-in var(--in) backwards;}
+
+@keyframes bar-in{
+  from{opacity:0;transform:translateX(-10px);}
+  to{opacity:1;transform:none;}
+}
+body.view-code .bar{animation:bar-in var(--in) 60ms backwards;}
+
+@keyframes coin-in{
+  from{opacity:0;transform:scale(.90);}
+  to{opacity:1;transform:none;}
+}
+.coinbtn.enter{animation:coin-in 300ms cubic-bezier(.2,.8,.2,1) backwards;}
+
+/* Stepping between accounts: the coin leaves the way the thumb went and the next one comes in
+ * from the far side, so the direction of travel is legible rather than a straight cross-fade. */
+@keyframes coin-out-left{ to{opacity:0;transform:translateX(-34px) scale(.94);} }
+@keyframes coin-out-right{ to{opacity:0;transform:translateX(34px) scale(.94);} }
+@keyframes coin-in-left{ from{opacity:0;transform:translateX(-34px) scale(.94);} to{opacity:1;transform:none;} }
+@keyframes coin-in-right{ from{opacity:0;transform:translateX(34px) scale(.94);} to{opacity:1;transform:none;} }
+.coinbtn.out-left{animation:coin-out-left var(--out) forwards;}
+.coinbtn.out-right{animation:coin-out-right var(--out) forwards;}
+.coinbtn.in-left{animation:coin-in-left 260ms cubic-bezier(.2,.8,.2,1) backwards;}
+.coinbtn.in-right{animation:coin-in-right 260ms cubic-bezier(.2,.8,.2,1) backwards;}
+
+/* The tile swelling into the coin. Positioned and sized from the real geometry by app.js and
+ * driven by the Web Animations API, so it lands exactly on the coin whatever the screen. */
+.morph{
+  position:fixed;
+  border-radius:50%;
+  z-index:6;
+  pointer-events:none;
+  will-change:transform,opacity;
+}
+
+/* The ring that leaves the coin when a save starts: confirmation you can see from the corner
+ * of your eye, gone before it can become clutter. */
+@keyframes flash{
+  from{opacity:.7;transform:scale(1);}
+  to{opacity:0;transform:scale(1.28);}
+}
+.flash{
+  position:fixed;
+  border-radius:50%;
+  border:2px solid var(--brand-soft);
+  pointer-events:none;
+  z-index:5;
+  animation:flash 520ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
 /* --------------------------------------------------------------------- fallbacks */
 
 .noscript{
@@ -319,9 +399,12 @@ body.view-code .codeview{display:flex;}
 @media (prefers-reduced-transparency:reduce){
   .orb{opacity:.28;}
 }
+/* Everything above goes, in one rule. app.js checks the same query before it starts any
+ * animation of its own, so the morph and the flash never appear either. */
 @media (prefers-reduced-motion:reduce){
   *{animation:none !important;transition:none !important;scroll-behavior:auto !important;}
-  .coinbtn.tuck{animation:none !important;}
+  .coinbtn.tuck,.morph,.flash{animation:none !important;}
+  .morph,.flash{display:none !important;}
 }
 @media (forced-colors:active){
   .name{-webkit-text-fill-color:currentColor;color:CanvasText;}

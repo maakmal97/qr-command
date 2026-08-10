@@ -501,9 +501,45 @@ section("2. The bundle carries the codes and nothing else");
   ok("the coin is drawn as a physical object: a contact shadow, a lit rim and a press state",
     /inset 0 2px 0 rgba\(255,255,255/.test(appCss) && /\.coinbtn:active\{/.test(appCss));
   ok("saving plays a motion, so the action explains itself the first time",
-    /@keyframes tuck/.test(appCss) && /classList\.add\("tuck"\)/.test(appJs));
+    /@keyframes tuck/.test(appCss) && /oneShot\(elBtn, "tuck"/.test(appJs));
   ok("the long press cannot raise the system copy menu over the top of it",
     /-webkit-touch-callout:none/.test(appCss) && /contextmenu/.test(appJs));
+
+  /* Motion. The rule that matters is that none of it can be load-bearing: a reduced-motion
+   * phone runs no animations at all, so anything waiting on an animation to finish would wait
+   * for ever. Every step is on a timer that collapses to zero instead. */
+  ok("the list deals itself in, the coin arrives, and stepping between codes travels",
+    /@keyframes tile-in/.test(appCss) && /@keyframes coin-in\b/.test(appCss) &&
+    /@keyframes coin-out-left/.test(appCss) && /@keyframes coin-in-right/.test(appCss));
+  /* morph takes a RECT, not the tile. Measuring inside it would mean measuring after the view
+   * had switched, at which point the accounts are display:none and every rect reads zero; the
+   * morph then does nothing at all, silently. The signature is what stops that coming back. */
+  ok("the tapped tile swells into the coin, measured before the view switches",
+    /function morph\(from, brand\)/.test(appJs) &&
+    /var from = dot \? dot\.getBoundingClientRect\(\) : null;/.test(appJs) &&
+    /m\.animate\(/.test(appJs) && /\.morph\{/.test(appCss));
+  ok("if the morph cannot play, the coin still gets an entrance",
+    /if \(!morph\(from, CODES\[i\]\.brand\)\) oneShot\(elBtn, "enter"/.test(appJs));
+  ok("saving throws a ring off the coin", /@keyframes flash/.test(appCss) && /function flash\(/.test(appJs));
+  ok("nothing waits on an animation event, so reduced motion cannot strand the app",
+    !/addEventListener\(\s*"animationend"/.test(appJs) && /function after\(ms, fn\) \{ if \(still\(\)\) fn\(\); else setTimeout/.test(appJs));
+  ok("reduced motion switches all of it off, in the sheet and in the script",
+    /prefers-reduced-motion:reduce/.test(appCss) &&
+    /animation:none !important/.test(appCss) &&
+    /prefers-reduced-motion: reduce/.test(appJs) && /function still\(\)/.test(appJs));
+  ok("the morph always cleans up, whatever the animation does",
+    /setTimeout\(finish, \d+\)/.test(appJs) && /elBtn\.style\.opacity = ""/.test(appJs));
+
+  /* One-shot animation classes must remove themselves. They all set `animation` on the same
+   * element, so one left behind out-ranks the next by nothing more than being further down the
+   * stylesheet, and the symptom is a missing animation rather than an error. */
+  ok("every one-shot animation class clears the others and then removes itself",
+    /var ONESHOT = \[/.test(appJs) &&
+    /for \(var i = 0; i < ONESHOT\.length; i\+\+\) el\.classList\.remove\(ONESHOT\[i\]\)/.test(appJs) &&
+    /setTimeout\(function \(\) \{ el\.classList\.remove\(cls\); \}/.test(appJs));
+  ok("no animation moves layout: transform and opacity only",
+    (appCss.match(/@keyframes[^}]*\{[\s\S]*?\n\}/g) || []).every((k) =>
+      !/(^|[\s;{])(width|height|top|left|right|bottom|margin|padding)\s*:/.test(k)));
 
   /* The saved image is built with toDataURL, not toBlob, and that is load-bearing rather than
    * a style choice: iOS only allows navigator.share from inside the gesture that triggered it,
@@ -533,8 +569,10 @@ section("2. The bundle carries the codes and nothing else");
   const css = read(path.join(PUB, "app.css"));
   const appJs = read(path.join(PUB, "app.js"));
   const root = new Set();
-  const block = css.match(/:root\s*\{([\s\S]*?)\}/);
-  if (block) for (const m of block[1].matchAll(/(--[a-z0-9-]+)\s*:/gi)) root.add(m[1]);
+  // Every :root block, not just the first: the tokens are declared in more than one place.
+  for (const block of css.matchAll(/:root\s*\{([\s\S]*?)\}/g)) {
+    for (const m of block[1].matchAll(/(--[a-z0-9-]+)\s*:/gi)) root.add(m[1]);
+  }
   // Some are set at runtime, per element or on the document, rather than in the sheet.
   for (const m of appJs.matchAll(/setProperty\(\s*"(--[a-z0-9-]+)"/gi)) root.add(m[1]);
   const used = new Set([...css.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((m) => m[1]));
