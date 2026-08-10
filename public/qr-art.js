@@ -22,6 +22,9 @@
 self.QRArt = (function () {
   "use strict";
 
+  // The system stack, so the rim legend needs no font file and no licence.
+  var FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
   /* ------------------------------------------------------------------ defaults */
 
   var DEFAULTS = {
@@ -46,9 +49,13 @@ self.QRArt = (function () {
     maxModules: 77,      // a sanity ceiling, not a target. Warned about, never silently met.
     dot: 0.5,            // corner radius as a fraction of a module. 0.5 makes a lone module
                          // a circle and a run of them a capsule. This is the liquid look.
-    ringWidth: 0.055,    // ring thickness as a fraction of the coin radius
-    milled: true,        // coin-edge ticks in the ring
-    sheen: true,         // a light sweep across the ring
+    ringWidth: 0.082,    // the lettered band, as a fraction of the coin radius
+    scallop: 0.055,      // depth of the scalloped edge, as a fraction of the radius. 0 is round.
+    legend: true,        // strike the provider's name around the rim
+    depth: true,         // run the ink as a gradient from the middle outwards
+    sheen: true,         // a light sweep across the body
+    label: "",           // what the legend reads
+    seed: "",            // decides the lobe count and phase. The provider key.
     minContrast: 8,      // ink against field. WCAG's ceiling is 21; 8 is comfortably safe.
     minModulePx: 6,      // floor on a module, in device pixels, in the backing store
     /* The smallest the coin may be PHYSICALLY DRAWN and still be trusted to scan. Measured,
@@ -140,20 +147,47 @@ self.QRArt = (function () {
     var base = hex2rgb(brand);
     var field = mix([255, 255, 255], base, 0.035);   // a whisper of brand in the paper
     var hsl = rgb2hsl(base);
-    var ink = null;
-    for (var l = Math.min(hsl[2], 0.3); l >= 0.05; l -= 0.01) {
-      var cand = hsl2rgb([hsl[0], Math.min(hsl[1], 0.9), l]);
-      if (contrast(cand, field) >= minContrast) { ink = cand; break; }
+
+    function darkestAt(cap) {
+      for (var l = Math.min(hsl[2], cap); l >= 0.04; l -= 0.01) {
+        var cand = hsl2rgb([hsl[0], Math.min(hsl[1], 0.9), l]);
+        if (contrast(cand, field) >= minContrast) return cand;
+      }
+      return null;
     }
-    if (!ink) ink = [17, 17, 20];
+    var ink = darkestAt(0.30) || [17, 17, 20];
+    /* The ink runs as a gradient from the middle of the code outwards, which is what gives the
+     * modules their depth. Both ends are checked against the field, not just the lighter one:
+     * a gradient is only decorative if every point of it still reads as dark. */
+    var inkEdge = hsl2rgb([hsl[0], Math.min(hsl[1], 0.95), Math.max(0.05, rgb2hsl(ink)[2] * 0.62)]);
+    if (contrast(inkEdge, field) < minContrast) inkEdge = ink;
+
+    // Rim lettering sits on the brand ring, so it takes whichever of white or near-black
+    // reads against that colour rather than assuming the brand is dark.
+    var onBrandWhite = contrast([255, 255, 255], base);
+    var onBrandDark = contrast([26, 22, 18], base);
+
     return {
       brand: rgb2hex(base),
+      brandLift: rgb2hex(mix(base, [255, 255, 255], 0.34)),
+      brandSink: rgb2hex(mix(base, [0, 0, 0], 0.30)),
       field: rgb2hex(field),
       fieldEdge: rgb2hex(mix([255, 255, 255], base, 0.10)),
       ink: rgb2hex(ink),
+      inkEdge: rgb2hex(inkEdge),
       inkSoft: rgb2hex(mix(ink, base, 0.22)),
-      contrast: contrast(ink, field)
+      rimInk: onBrandWhite >= onBrandDark ? "rgba(255,255,255,0.92)" : "rgba(24,20,16,0.78)",
+      contrast: Math.min(contrast(ink, field), contrast(inkEdge, field))
     };
+  }
+
+  /* A small stable hash, so each provider's coin gets its own edge without anything being
+   * stored per provider. Same key, same coin, on every device and for ever. */
+  function seedOf(s) {
+    var h = 2166136261;
+    s = String(s || "");
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+    return h >>> 0;
   }
 
   /* -------------------------------------------------------------------- encode */
@@ -198,15 +232,16 @@ self.QRArt = (function () {
    * are exact at every size and the decode is stable. A module may vary by one pixel against
    * its neighbour, which is a smaller variation than any printed code carries. */
   function coinGeometry(n, size, opts) {
-    var R = size / 2;
-    var ring = Math.max(3, R * opts.ringWidth);
-    var Rd = R - ring;                                  // radius of the light field
+    var R = size / 2;                                    // the furthest a scallop tip reaches
+    var Rbase = R * (1 - opts.scallop);                  // the circle the scallops sit on
+    var ring = Math.max(4, R * opts.ringWidth);          // the lettered band
+    var Rd = Rbase - ring;                               // radius of the light field
     var unitsAcross = (n + 2 * opts.quiet) * Math.SQRT2; // module units spanning the diameter
     var m = (2 * Rd) / unitsAcross;                      // one module, in pixels
     var S = m * n;
     var x0 = R - S / 2, y0 = R - S / 2;
     return {
-      R: R, ring: ring, Rd: Rd, m: m, S: S, x0: x0, y0: y0,
+      R: R, Rbase: Rbase, ring: ring, Rd: Rd, m: m, S: S, x0: x0, y0: y0,
       gx: function (c) { return Math.round(x0 + c * m); },
       gy: function (r) { return Math.round(y0 + r * m); }
     };
@@ -276,7 +311,7 @@ self.QRArt = (function () {
    * corners. Softer than a hard square, and it agrees with the rounded ring around it. */
   var EYE_PUPIL_R = 1.0;
 
-  function eye(g, geo, row, col, pal) {
+  function eye(g, geo, row, col, pal, inkStyle) {
     var x = geo.gx(col), y = geo.gy(row);
     var x7 = geo.gx(col + 7), y7 = geo.gy(row + 7);
     var x1 = geo.gx(col + 1), y1 = geo.gy(row + 1);
@@ -286,79 +321,148 @@ self.QRArt = (function () {
     var m = geo.m;
 
     var ro = EYE_OUTER * m, ri = EYE_INNER * m, rp = EYE_PUPIL_R * m;
-    g.fillStyle = pal.ink;
+    var ink = inkStyle || pal.ink;
+    g.fillStyle = ink;
     rrect(g, x, y, x7 - x, y7 - y, [ro, ro, ro, ro]); g.fill();
     g.fillStyle = pal.field;
     rrect(g, x1, y1, x6 - x1, y6 - y1, [ri, ri, ri, ri]); g.fill();
-    g.fillStyle = pal.ink;
+    g.fillStyle = ink;
     rrect(g, x2, y2, x5 - x2, y5 - y2, [rp, rp, rp, rp]); g.fill();
+  }
+
+  /* The scalloped silhouette. The radius wobbles between Rbase and R on a raised cosine, so
+   * the edge is a smooth flower rather than a saw. Everything about it is decoration: it lives
+   * entirely outside the light field, so it cannot touch the quiet zone however deep the
+   * lobes go. Lobe count and phase come from a hash of the provider key, which gives each
+   * coin its own outline for nothing and keeps it identical on every device for ever. */
+  function scallopPath(g, cx, cy, rBase, rTip, lobes, phase) {
+    var steps = Math.max(240, lobes * 26);
+    g.beginPath();
+    for (var i = 0; i <= steps; i++) {
+      var a = (i / steps) * Math.PI * 2;
+      var r = rBase + (rTip - rBase) * (0.5 + 0.5 * Math.cos(lobes * a + phase));
+      var x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.closePath();
+  }
+
+  /* The provider's name struck around the rim, the way a coin carries its legend. Repeated
+   * with a diamond between each pass until it closes the circle. Outside the quiet zone, so
+   * it costs the code nothing. */
+  function rimLegend(g, cx, cy, radius, label, pal, px) {
+    var text = String(label || "").toUpperCase().replace(/\s+/g, " ").trim();
+    if (!text) return;
+    g.save();
+    g.fillStyle = pal.rimInk;
+    g.font = "700 " + px.toFixed(1) + "px " + FONT;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+
+    var tracking = px * 0.34;
+    function widthOf(s) {
+      var w = 0;
+      for (var i = 0; i < s.length; i++) w += g.measureText(s[i]).width + tracking;
+      return w;
+    }
+    // A middle dot rather than anything decorative: it is in every system font, and a glyph
+    // the device does not have is struck around the rim as a tofu box.
+    var unit = text + "  ·  ";
+    var uw = widthOf(unit);
+    if (uw <= 0) { g.restore(); return; }
+    var circumference = 2 * Math.PI * radius;
+    var reps = Math.max(1, Math.round(circumference / uw));
+    var full = "";
+    for (var k = 0; k < reps; k++) full += unit;
+
+    var scale = circumference / widthOf(full);
+    var angle = -Math.PI / 2;
+    for (var i2 = 0; i2 < full.length; i2++) {
+      var ch = full[i2];
+      var w = (g.measureText(ch).width + tracking) * scale;
+      var step = w / radius;
+      g.save();
+      g.translate(cx, cy);
+      g.rotate(angle + step / 2);
+      g.translate(0, -radius);
+      g.fillText(ch, 0, 0);
+      g.restore();
+      angle += step;
+    }
+    g.restore();
   }
 
   function drawCoin(g, p, size, pal, opts) {
     var n = p.n, geo = coinGeometry(n, size, opts), R = geo.R, m = geo.m;
-    var dark = function (r, c) { return p.qr.isDark(r, c); };
+    var seed = seedOf(opts.seed || opts.label || "");
+    var lobes = 11 + (seed % 9);                       // 11 to 19, per provider
+    var phase = ((seed >>> 4) % 360) * Math.PI / 180;
 
-    // The ring: brand at full strength, with a sweep of light across it.
+    // The body: brand at full strength with a light sweeping across it.
     var lg = g.createLinearGradient(0, 0, size, size);
-    lg.addColorStop(0, pal.brand);
-    lg.addColorStop(0.5, rgb2hex(mix(hex2rgb(pal.brand), [255, 255, 255], 0.35)));
-    lg.addColorStop(1, pal.brand);
+    lg.addColorStop(0, pal.brandSink);
+    lg.addColorStop(0.42, pal.brandLift);
+    lg.addColorStop(0.62, pal.brand);
+    lg.addColorStop(1, pal.brandSink);
     g.fillStyle = opts.sheen ? lg : pal.brand;
-    g.beginPath();
-    g.arc(R, R, R, 0, Math.PI * 2);
+    if (opts.scallop > 0) scallopPath(g, R, R, geo.Rbase, R, lobes, phase);
+    else { g.beginPath(); g.arc(R, R, R, 0, Math.PI * 2); }
     g.fill();
 
-    // Coin milling: short ticks around the edge, entirely inside the ring band.
-    if (opts.milled) {
-      g.save();
-      g.strokeStyle = "rgba(0,0,0,0.22)";
-      g.lineWidth = Math.max(1, geo.ring * 0.16);
-      var ticks = 72;
-      for (var t = 0; t < ticks; t++) {
-        var a = (t / ticks) * Math.PI * 2;
-        g.beginPath();
-        g.moveTo(R + Math.cos(a) * (R - geo.ring * 0.12), R + Math.sin(a) * (R - geo.ring * 0.12));
-        g.lineTo(R + Math.cos(a) * (R - geo.ring * 0.62), R + Math.sin(a) * (R - geo.ring * 0.62));
-        g.stroke();
-      }
-      g.restore();
-    }
+    // The legend, struck into the middle of the ring band.
+    if (opts.legend) rimLegend(g, R, R, geo.Rd + geo.ring * 0.52, opts.label, pal, geo.ring * 0.46);
 
-    // The field. A radial wash, light everywhere: the darkest point still clears the
-    // contrast check because palette() measured the ink against the flat field colour and
-    // fieldEdge is only a shade off it.
-    var rg = g.createRadialGradient(R, R * 0.86, geo.Rd * 0.15, R, R, geo.Rd);
-    rg.addColorStop(0, "#ffffff");
-    rg.addColorStop(1, pal.fieldEdge);
-    g.fillStyle = rg;
+    // Two struck hairlines, the bezel, sitting either side of the legend.
+    g.strokeStyle = "rgba(0,0,0,0.20)";
+    g.lineWidth = Math.max(1, geo.ring * 0.055);
+    g.beginPath(); g.arc(R, R, geo.Rbase - geo.ring * 0.10, 0, Math.PI * 2); g.stroke();
+
+    /* The field is FLAT, and deliberately so on two counts.
+     *
+     * It is the largest single area of the coin, and a smooth gradient across it is the most
+     * expensive thing a PNG can be asked to store: every row differs slightly, so the format's
+     * filters find nothing to fold away. Measured, a washed field roughly doubled the size of
+     * the image saved to the gallery, for a wash nobody can see at arm's length.
+     *
+     * It is also the safer of the two for scanning. palette() measures the ink's contrast
+     * against one field colour; with a wash, part of the field is lighter than the number that
+     * was checked and part is darker. Flat, the measured contrast is the contrast everywhere. */
+    g.fillStyle = pal.field;
     g.beginPath();
     g.arc(R, R, geo.Rd, 0, Math.PI * 2);
     g.fill();
 
     // A hairline where field meets ring, so the two never bleed into one another.
-    g.strokeStyle = "rgba(0,0,0,0.10)";
+    g.strokeStyle = "rgba(0,0,0,0.12)";
     g.lineWidth = Math.max(1, m * 0.18);
     g.beginPath();
     g.arc(R, R, geo.Rd, 0, Math.PI * 2);
     g.stroke();
 
-    drawModules(g, p, geo, pal, opts);
+    /* The ink, as a gradient from the middle of the code outwards. Both stops were checked
+     * against the field in palette(), so every module is at or above the contrast floor
+     * wherever it happens to sit. */
+    var ig = g.createRadialGradient(R, R, geo.S * 0.06, R, R, geo.S * 0.78);
+    ig.addColorStop(0, pal.ink);
+    ig.addColorStop(1, pal.inkEdge);
+    drawModules(g, p, geo, pal, opts, opts.depth ? ig : pal.ink);
   }
 
-  function drawModules(g, p, geo, pal, opts) {
+  function drawModules(g, p, geo, pal, opts, inkStyle) {
     var n = p.n;
     var dark = function (r, c) { return p.qr.isDark(r, c); };
+    var ink = inkStyle || pal.ink;
 
-    g.fillStyle = pal.ink;
+    g.fillStyle = ink;
     for (var r = 0; r < n; r++) {
       for (var c = 0; c < n; c++) {
         if (!dark(r, c) || inFinder(n, r, c)) continue;
         blob(g, dark, n, r, c, geo, opts.dot);
       }
     }
-    eye(g, geo, 0, 0, pal);
-    eye(g, geo, 0, n - 7, pal);
-    eye(g, geo, n - 7, 0, pal);
+    eye(g, geo, 0, 0, pal, ink);
+    eye(g, geo, 0, n - 7, pal, ink);
+    eye(g, geo, n - 7, 0, pal, ink);
   }
 
   /* The escape hatch: an ordinary code, square modules, black on white, no frame. Every
@@ -421,9 +525,85 @@ self.QRArt = (function () {
     };
   }
 
+  /* ----------------------------------------------------------------- the card */
+
+  /* What gets saved to the gallery. The coin, large, on a dark brand-tinted ground with the
+   * provider underneath, so the picture is worth keeping and worth sending.
+   *
+   * It is drawn at a fixed 1400 pixels regardless of the screen, which matters more here than
+   * anywhere else in this file: a saved image is scanned from somebody else's photo library,
+   * often after their messaging app has recompressed it, and there is no second chance to
+   * pinch and zoom. 1400 is nearly four times the measured floor. The card carries the
+   * provider name only, the same as the page, and the test suite decodes it. */
+  function drawCard(canvas, payload, opts) {
+    opts = Object.assign({}, DEFAULTS, opts || {});
+    var W = Math.max(600, Math.round(opts.cardWidth || 1200));
+    var pad = Math.round(W * 0.085);
+    var coinSize = W - pad * 2;
+    var titleH = Math.round(W * 0.145);
+    var H = pad + coinSize + titleH;
+
+    canvas.width = W;
+    canvas.height = H;
+    var g = canvas.getContext("2d");
+    var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
+    var base = hex2rgb(pal.brand);
+
+    /* A FLAT ground, and that is a size decision rather than a taste one. PNG cannot compress
+     * a smooth gradient: every row differs slightly, so its filters find nothing to fold away.
+     * Measured on this very card, a full-bleed gradient background cost 1,244 KB against 45 KB
+     * for a flat fill of the same area, on an image whose whole point is to be saved and sent.
+     * The glow stays, because it is what stops the coin looking pasted on, but it is confined
+     * to a disc around the coin rather than washing the whole card. */
+    g.fillStyle = rgb2hex(mix([16, 15, 26], base, 0.11));
+    g.fillRect(0, 0, W, H);
+
+    var cxg = W / 2, cyg = pad + coinSize / 2, rg0 = coinSize * 0.52, rg1 = coinSize * 0.68;
+    var glow = g.createRadialGradient(cxg, cyg, rg0, cxg, cyg, rg1);
+    glow.addColorStop(0, "rgba(" + base.map(Math.round).join(",") + ",0.26)");
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = glow;
+    g.beginPath();
+    g.arc(cxg, cyg, rg1, 0, Math.PI * 2);
+    g.fill();
+
+    var coin = makeCanvas(canvas, 8, 8);
+    var meta = draw(coin, payload, Object.assign({}, opts, {
+      size: coinSize, pixelRatio: 1, minModulePx: Math.max(opts.minModulePx, 8),
+    }));
+    g.drawImage(coin, pad, pad, coinSize, coinSize);
+
+    var hsl = rgb2hsl(base), soft = null;
+    for (var l = Math.max(hsl[2], 0.62); l <= 0.94; l += 0.02) {
+      var cand = hsl2rgb([hsl[0], Math.min(hsl[1], 0.82), l]);
+      if (contrast(cand, [20, 18, 31]) >= 4.5) { soft = cand; break; }
+    }
+    g.fillStyle = rgb2hex(soft || [232, 236, 245]);
+    g.font = "700 " + Math.round(W * 0.062) + "px " + FONT;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(String(opts.label || ""), W / 2, pad + coinSize + titleH * 0.44);
+
+    return Object.assign({}, meta, { cardWidth: W, cardHeight: H });
+  }
+
+  /* A blank canvas of the same kind as the one handed in, so the card works in a browser and
+   * under the headless canvas the tests use without either being named here. */
+  function makeCanvas(like, w, h) {
+    if (typeof document !== "undefined" && document.createElement) {
+      var el = document.createElement("canvas");
+      el.width = w; el.height = h;
+      return el;
+    }
+    var ctor = like && like.constructor;
+    if (ctor) { try { return new ctor(w, h); } catch (e) { /* fall through */ } }
+    throw new Error("qr-art: cannot create a working canvas here.");
+  }
+
   return {
     DEFAULTS: DEFAULTS,
     draw: draw,
+    drawCard: drawCard,
     plan: plan,
     palette: palette,
     coinGeometry: coinGeometry,

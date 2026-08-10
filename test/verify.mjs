@@ -79,7 +79,7 @@ section("1. Every code decodes, from the renderer that ships");
 function decode(c, physical, extra) {
   const canvas = createCanvas(8, 8);
   const meta = QRArt.draw(canvas, c.payload,
-    Object.assign({ size: physical, pixelRatio: 1, brand: c.brand }, extra || {}));
+    Object.assign({ size: physical, pixelRatio: 1, brand: c.brand, label: c.name, seed: c.key }, extra || {}));
   const g = canvas.getContext("2d");
   const img = g.getImageData(0, 0, canvas.width, canvas.height);
   const got = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
@@ -152,10 +152,63 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 }
 
 {
+  /* The image saved to the gallery. This one matters more than the on-screen coin: it is
+   * scanned out of somebody else's photo library, often after a messaging app has recompressed
+   * it, and there is nobody there to pinch and zoom if it will not read. */
+  const bad = [];
+  let minCoin = Infinity;
+  for (const c of shipped) {
+    const canvas = createCanvas(8, 8);
+    const meta = QRArt.drawCard(canvas, c.payload, { brand: c.brand, label: c.name, seed: c.key });
+    const g = canvas.getContext("2d");
+    const img = g.getImageData(0, 0, canvas.width, canvas.height);
+    const got = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+    if (!got) bad.push(c.key + ": no read");
+    else if (got.data !== c.payload) bad.push(c.key + ": decoded to something else");
+    if (meta.plain) bad.push(c.key + ": the card fell back to a plain code");
+    minCoin = Math.min(minCoin, meta.cssSize);
+  }
+  ok("the image saved to the gallery decodes for every code", bad.length === 0, bad.join("; "));
+  ok("the saved coin is drawn far above the safe size (" + minCoin + "px against " + SAFE + ")",
+    minCoin >= SAFE * 1.6);
+}
+
+{
+  // Halving a saved card, as a messaging app would, must not make it unreadable.
+  const bad = [];
+  for (const c of shipped) {
+    const full = createCanvas(8, 8);
+    QRArt.drawCard(full, c.payload, { brand: c.brand, label: c.name, seed: c.key, cardWidth: 700 });
+    const g = full.getContext("2d");
+    const img = g.getImageData(0, 0, full.width, full.height);
+    const got = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+    if (!got || got.data !== c.payload) bad.push(c.key);
+  }
+  ok("a saved card halved to 700px still decodes", bad.length === 0, bad.join(", "));
+}
+
+{
+  // The coin's outline is derived from the provider key, so it is stable for ever and
+  // different between providers. Both halves of that are worth asserting.
+  const opts = Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode });
+  const shot = (c) => {
+    const cv = createCanvas(8, 8);
+    QRArt.draw(cv, c.payload, { size: 700, pixelRatio: 1, brand: c.brand, label: c.name, seed: c.key });
+    return crypto.createHash("sha256").update(Buffer.from(
+      cv.getContext("2d").getImageData(0, 0, 60, cv.height / 2).data)).digest("hex");
+  };
+  const first = shipped.map(shot);
+  const again = shipped.map(shot);
+  ok("the same account draws the same coin every time", first.join() === again.join());
+  ok("no two accounts share an outline and a colour", new Set(first).size === first.length);
+  void opts;
+}
+
+{
   // The decoded string must be the payload byte for byte, not a normalised version of it.
   const c = shipped[0];
   const canvas = createCanvas(8, 8);
-  QRArt.draw(canvas, c.payload, { size: 400, pixelRatio: 2, brand: c.brand });
+  QRArt.draw(canvas, c.payload, { size: 400, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
   const g = canvas.getContext("2d");
   const img = g.getImageData(0, 0, canvas.width, canvas.height);
   const got = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
@@ -225,7 +278,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   const bad = [];
   for (const c of shipped) {
     const canvas = createCanvas(8, 8);
-    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand });
+    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
     const geo = QRArt.coinGeometry(p.n, canvas.width, QRArt.DEFAULTS);
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
@@ -260,7 +313,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   const bad = [];
   for (const c of shipped) {
     const canvas = createCanvas(8, 8);
-    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand });
+    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
     const geo = QRArt.coinGeometry(p.n, canvas.width, QRArt.DEFAULTS);
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
@@ -295,7 +348,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   const bad = [];
   for (const c of shipped) {
     const canvas = createCanvas(8, 8);
-    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand });
+    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
     const geo = QRArt.coinGeometry(p.n, canvas.width, QRArt.DEFAULTS);
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
@@ -411,12 +464,59 @@ section("2. The bundle carries the codes and nothing else");
 }
 
 {
+  /* The three things the page must be able to do, asserted from the shipped source rather
+   * than from memory of having written them. */
+  const appJs = read(path.join(PUB, "app.js"));
+
+  ok("the grid picker exists, as a dialog with a tile per account",
+    /<dialog[^>]*id="sheet"/.test(indexHtml) && /id="grid"/.test(indexHtml) &&
+    /showModal/.test(appJs) && /className = "tile"/.test(appJs));
+  ok("the name opens the grid and says so to a screen reader",
+    /aria-haspopup="dialog"/.test(indexHtml) && /aria-expanded/.test(indexHtml));
+  ok("there is a dot per account rather than a scrolling rail",
+    /id="dots"/.test(indexHtml) && /className = "dot"/.test(appJs) && !/overflow-x:auto/.test(read(path.join(PUB, "app.css"))));
+
+  ok("tapping the code saves it, by share sheet where that exists and by download otherwise",
+    /navigator\.canShare\(\s*\{\s*files/.test(appJs) && /navigator\.share\(/.test(appJs) &&
+    /a\.download = card\.name/.test(appJs));
+  ok("a cancelled share sheet is not reported as a failure",
+    /AbortError/.test(appJs));
+
+  /* The saved image is built with toDataURL, not toBlob, and that is load-bearing rather than
+   * a style choice: iOS only allows navigator.share from inside the gesture that triggered it,
+   * and awaiting toBlob is enough to lose that permission. The failure mode is silent, the
+   * share sheet simply never appears, so assert the synchronous route stays. */
+  ok("the saved image is built synchronously, so the share gesture survives",
+    /toDataURL\(/.test(appJs) && !/toBlob\(/.test(appJs));
+
+  ok("a swipe cannot also register as a tap and save by accident",
+    /swiped/.test(appJs) && /stopImmediatePropagation/.test(appJs));
+}
+
+{
   ok("index.html has no inline script",
     !/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?\S[\s\S]*?<\/script>/i.test(indexHtml));
   ok("index.html has no inline style block or style attribute",
     !/<style[^>]*>[\s\S]*?\S[\s\S]*?<\/style>/i.test(indexHtml) && !/\sstyle\s*=\s*["']/i.test(indexHtml));
   ok("index.html carries no account data of its own",
     !/payload|QR_CODES\s*=/.test(indexHtml));
+}
+
+{
+  /* Every custom property the stylesheet reads must be defined somewhere, or the rule using it
+   * silently does nothing. An undefined var() is not a parse error and shows up only as a
+   * control that quietly lost its radius or its colour. */
+  const css = read(path.join(PUB, "app.css"));
+  const appJs = read(path.join(PUB, "app.js"));
+  const root = new Set();
+  const block = css.match(/:root\s*\{([\s\S]*?)\}/);
+  if (block) for (const m of block[1].matchAll(/(--[a-z0-9-]+)\s*:/gi)) root.add(m[1]);
+  // Some are set at runtime, per element or on the document, rather than in the sheet.
+  for (const m of appJs.matchAll(/setProperty\(\s*"(--[a-z0-9-]+)"/gi)) root.add(m[1]);
+  const used = new Set([...css.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((m) => m[1]));
+  const missing = [...used].filter((v) => !root.has(v));
+  ok("every CSS custom property the stylesheet uses is defined", missing.length === 0,
+    "undefined: " + missing.join(", "));
 }
 
 {

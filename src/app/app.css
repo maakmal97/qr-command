@@ -30,6 +30,7 @@
 
   /* geometry */
   --r:22px;
+  --r-sm:14px;
   --pill:999px;
   --sh:0 8px 40px rgba(0,0,0,0.35);
   --t:520ms cubic-bezier(.4,0,.2,1);
@@ -93,12 +94,31 @@ body{
   text-align:center;
 }
 
+/* The name is the way in to the grid, so it is a button and looks like one you can press. */
+.namewrap{margin:0;display:flex;justify-content:center;width:100%;}
+
+.namebtn{
+  appearance:none;-webkit-appearance:none;
+  font:inherit;cursor:pointer;
+  display:inline-flex;align-items:center;gap:10px;
+  max-width:100%;
+  padding:8px 16px 8px 18px;
+  min-height:var(--tap);
+  border:1px solid var(--brd);
+  border-radius:var(--pill);
+  background:rgba(255,255,255,0.05);
+  color:var(--brand-soft);
+  transition:background-color 200ms cubic-bezier(.4,0,.2,1),border-color 200ms,color var(--t);
+}
+.namebtn:hover{background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
+.namebtn:focus-visible{outline:2px solid var(--brand-soft);outline-offset:3px;}
+.namebtn .chev{width:14px;height:10px;flex:0 0 auto;opacity:.75;}
+
 .name{
-  margin:0;
-  font-size:clamp(26px,7.2vw,44px);
+  font-size:clamp(24px,6.6vw,40px);
   font-weight:700;
   letter-spacing:-0.8px;
-  line-height:1.1;
+  line-height:1.15;
   overflow-wrap:break-word;
   color:var(--brand-soft);
   background:linear-gradient(120deg,var(--brand-soft),#ffffff 130%);
@@ -156,6 +176,14 @@ body{
 }
 .coinbtn.plainmode .coin{border-radius:14px;}
 
+.tools{
+  flex:0 0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+
 .say{
   margin:0;
   min-height:1.2em;
@@ -166,57 +194,140 @@ body{
   color:var(--ink-3);
 }
 
-/* ------------------------------------------------------------------------- rail */
-
-.rail{
-  position:relative;
-  z-index:1;
-  flex:0 0 auto;
-  display:flex;
-  gap:8px;
-  overflow-x:auto;
-  overflow-y:hidden;
-  scroll-behavior:smooth;
-  scrollbar-width:none;
-  padding:10px 16px max(14px,env(safe-area-inset-bottom));
-  -webkit-overflow-scrolling:touch;
-}
-.rail::-webkit-scrollbar{display:none;}
-
-.chip{
-  flex:0 0 auto;
-  appearance:none;
-  -webkit-appearance:none;
-  font:inherit;
-  font-size:13.5px;
-  font-weight:600;
-  white-space:nowrap;
+.pill{
+  appearance:none;-webkit-appearance:none;
+  font:inherit;font-size:12.5px;font-weight:600;
+  cursor:pointer;
   color:var(--ink-2);
   background:rgba(255,255,255,0.05);
   border:1px solid var(--brd);
   border-radius:var(--pill);
-  padding:0 15px;
-  min-height:var(--tap);
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  transition:background-color 200ms cubic-bezier(.4,0,.2,1),
-             border-color 200ms cubic-bezier(.4,0,.2,1),color 200ms;
+  padding:0 14px;
+  min-height:36px;
+  transition:background-color 200ms cubic-bezier(.4,0,.2,1),border-color 200ms,color 200ms;
 }
-.chip::before{
-  content:"";
-  width:9px;height:9px;border-radius:50%;
-  background:var(--dot,#888);
+.pill:hover:not(:disabled){background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
+.pill:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
+.pill:disabled{opacity:.45;cursor:not-allowed;}
+.pill[aria-pressed="true"]{color:var(--ink);background-color:rgba(255,255,255,0.16);border-color:var(--brd-2);}
+.pill.wide{width:100%;min-height:var(--tap);font-size:14px;}
+
+/* ------------------------------------------------------------------------- dots */
+
+/* One dot per account, all visible at once, no scrolling. The old scrolling rail meant
+ * reaching the last account took a drag and a hunt; here every account is one tap away and
+ * the row doubles as the position indicator. */
+.dots{
+  position:relative;
+  z-index:1;
   flex:0 0 auto;
+  display:flex;
+  align-items:stretch;
+  gap:2px;
+  padding:4px 12px max(10px,env(safe-area-inset-bottom));
 }
-.chip:hover{background:rgba(255,255,255,0.10);border-color:var(--brd-2);}
-.chip:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
-.chip[aria-current="true"]{
+
+.dot{
+  appearance:none;-webkit-appearance:none;
+  flex:1 1 0;
+  min-width:0;
+  min-height:var(--tap);
+  border:0;
+  background:none;
+  cursor:pointer;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:12px;
+}
+.dot::before{
+  content:"";
+  width:10px;height:10px;border-radius:50%;
+  background:var(--dot,#888);
+  opacity:.42;
+  transition:opacity 200ms,transform 200ms,box-shadow 200ms;
+}
+.dot:hover::before{opacity:.8;}
+.dot:focus-visible{outline:2px solid var(--brand-soft);outline-offset:-2px;}
+.dot[aria-current="true"]::before{
+  opacity:1;
+  transform:scale(1.55);
+  box-shadow:0 0 0 3px rgba(255,255,255,0.14), 0 0 14px -2px var(--dot,#888);
+}
+
+/* ------------------------------------------------------------------------ sheet */
+
+.sheet{
+  border:0;padding:0;margin:auto;
+  width:min(560px,calc(100vw - 24px));
+  max-height:min(84vh,720px);
+  background:none;
   color:var(--ink);
-  background:rgba(255,255,255,0.16);
+  overflow:visible;
+}
+.sheet::backdrop{background:rgba(8,7,14,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+
+.sheetin{
+  background:var(--veil);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  backdrop-filter:blur(24px) saturate(160%);
+  border:1px solid var(--brd-2);
+  border-radius:var(--r);
+  box-shadow:var(--sh);
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  max-height:inherit;
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .sheetin{background:#1c1a2a;}
+}
+
+.sheettitle{
+  margin:0;
+  font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--ink-3);
+}
+
+/* 132px, not more. On a 375px phone the sheet leaves about 300px of content, and at 148px
+ * auto-fill dropped to a SINGLE column, which made the grid scroll and gave back the very
+ * problem it replaced. At 132 two columns fit the narrowest phone and all thirteen accounts
+ * are on screen at once, which is the whole point of the grid. */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+  gap:8px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+
+.tile{
+  appearance:none;-webkit-appearance:none;
+  font:inherit;cursor:pointer;text-align:left;
+  display:flex;align-items:center;gap:10px;
+  min-height:54px;
+  padding:10px 12px;
+  border:1px solid var(--brd);
+  border-radius:var(--r-sm);
+  background:rgba(255,255,255,0.05);
+  color:var(--ink-2);
+  transition:background-color 180ms,border-color 180ms,color 180ms;
+}
+.tile:hover{background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
+.tile:focus-visible{outline:2px solid var(--soft,#fff);outline-offset:2px;}
+.tile[aria-current="true"]{
+  color:var(--ink);
+  background-color:rgba(255,255,255,0.14);
   border-color:var(--brd-2);
 }
+.tiledot{
+  flex:0 0 auto;width:14px;height:14px;border-radius:50%;
+  background:var(--dot,#888);
+  box-shadow:0 0 12px -2px var(--dot,#888);
+}
+.tiletext{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word;min-width:0;}
 
 /* --------------------------------------------------------------------- fallbacks */
 
@@ -239,20 +350,23 @@ body{
 @media (forced-colors:active){
   .name{-webkit-text-fill-color:currentColor;color:CanvasText;}
   .orb{display:none;}
-  .chip{border-color:CanvasText;}
+  .tile,.pill,.namebtn{border-color:CanvasText;}
+  .dot::before{opacity:1;}
 }
 
-/* Landscape on a phone: the rail and the title would squeeze the coin to nothing, so the
- * coin keeps its height and the title shrinks out of the way. */
+/* Landscape on a phone: the dot row and the title would squeeze the coin to nothing, so the
+ * coin keeps its height and everything else moves beside it. */
 @media (orientation:landscape) and (max-height:520px){
-  .stage{flex-direction:row;gap:20px;padding:8px 16px 0;}
-  .name{font-size:clamp(20px,3.6vw,32px);max-width:34vw;}
-  .say{position:absolute;bottom:4px;left:0;right:0;}
+  .stage{flex-direction:row;gap:18px;padding:8px 14px 0;align-items:center;}
+  .namewrap{width:auto;}
+  .name{font-size:clamp(18px,3.4vw,28px);max-width:30vw;}
+  .tools{position:absolute;right:14px;bottom:8px;}
 }
 
 @media print{
-  .orb,.rail{display:none !important;}
+  .orb,.dots,.tools,.sheet{display:none !important;}
   body{background:#fff;color:#000;}
   .name{-webkit-text-fill-color:currentColor;color:#000;}
+  .namebtn{border-color:#ccc;}
   .coinbtn{box-shadow:none;}
 }

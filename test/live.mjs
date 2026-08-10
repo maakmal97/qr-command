@@ -21,10 +21,20 @@ const ok = (what, cond, detail) => {
   else { fail++; console.log("  FAIL  " + what + (detail ? "\n        " + detail : "")); }
 };
 
+/* Every fetch carries a cache-buster.
+ *
+ * Without one this suite is a coin toss for the first minute after a deploy: Cloudflare's edge
+ * answers from cache, the build id comes back as the previous release and seven assertions fail
+ * on a deploy that actually worked. That is worse than having no check at all, because a test
+ * that cries wolf gets ignored on the day it is right. The `sleep` below waits for the new
+ * build to appear rather than asserting on the first answer. */
+const bust = () => "cb=" + Math.random().toString(36).slice(2) + Date.now().toString(36);
 const get = async (p) => {
-  const r = await fetch(URL_BASE + p, { redirect: "follow" });
+  const url = URL_BASE + p + (p.includes("?") ? "&" : "?") + bust();
+  const r = await fetch(url, { redirect: "follow", cache: "no-store" });
   return { r, text: await r.text() };
 };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 console.log("\nchecking " + URL_BASE + "\n");
 
@@ -61,9 +71,17 @@ ok("the page is not cached at the edge", (root.r.headers.get("cache-control") ||
 
 /* -------------------------------------------------- the deployed build itself */
 
-const rev = JSON.parse((await get("/rev.json")).text);
 const local = JSON.parse(fs.readFileSync(path.join(REPO, "public", "rev.json"), "utf8"));
-ok("the deployed build id matches the one on disk (" + rev.id + ")", rev.id === local.id,
+let rev = null, waited = 0;
+for (;;) {
+  rev = JSON.parse((await get("/rev.json")).text);
+  if (rev.id === local.id || waited >= 90000) break;
+  if (!waited) console.log("  ...  waiting for " + local.id + " to reach the edge");
+  await sleep(5000);
+  waited += 5000;
+}
+ok("the deployed build id matches the one on disk (" + rev.id + ")" +
+   (waited ? ", after " + waited / 1000 + "s" : ""), rev.id === local.id,
   "live " + rev.id + " against local " + local.id + ". Run npm run deploy.");
 
 const files = ["app.js", "app.css", "qr-art.js", "qrcode.js", "data.js", "sw.js", "manifest.webmanifest"];
