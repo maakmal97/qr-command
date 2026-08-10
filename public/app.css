@@ -173,16 +173,14 @@ body.view-code .codeview{
 /* The miniature coin. It is the SAME coin the code view shows, drawn small, which is what
  * makes opening an account read as one object moving rather than a dot being replaced by a
  * coin. --thumb must match THUMB in app.js. */
+/* Same rule as the big coin: the shadow is cast from the alpha, so it follows the scallops
+ * instead of drawing a circle behind them. */
 .tiledot{
   flex:0 0 auto;
   width:var(--thumb);height:var(--thumb);
-  border-radius:50%;
   display:block;
-  box-shadow:0 1px 2px rgba(0,0,0,.5), 0 0 14px -3px var(--dot,#888);
-  transition:opacity 260ms var(--ease);
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));
 }
-/* Drawn lazily, one per idle callback, so each fades up as it lands rather than popping. */
-.tiledot:not(.lit){opacity:.55;}
 .tiletext{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word;min-width:0;}
 
 /* ==================================================================== the code */
@@ -278,27 +276,36 @@ body.view-code .codeview{
    * will-change puts the coin on its own layer so the transform never repaints anything. */
   transition:transform 150ms cubic-bezier(.4,0,.2,1);
   will-change:transform;
-  box-shadow:
-    inset 0 2px 0 rgba(255,255,255,0.30),
-    0 3px 6px -2px rgba(0,0,0,0.72),
-    0 20px 38px -14px rgba(0,0,0,0.88),
-    0 0 88px -22px var(--brand);
+  /* NO box-shadow here, and that is a fix rather than a simplification.
+   *
+   * The button is a circle. The coin drawn inside it is SCALLOPED, so between the valleys and
+   * the lobe tips the canvas is transparent: measured, more than a third of the samples around
+   * the rim. A circular box-shadow therefore showed straight through those gaps as a hard dark
+   * ring behind the coin, and it appeared at the end of the zoom because that is the moment the
+   * coin, and with it its shadow, was revealed. The shadow now lives on the canvas as a
+   * drop-shadow filter, which follows the alpha and so follows the scallops. */
 }
 .coinbtn:hover{transform:translateY(-2px);}
 .coinbtn:active{transform:translateY(3px) scale(.982);}
 .coinbtn:focus-visible{outline:3px solid var(--brand-soft);outline-offset:7px;}
 .coinbtn:focus:not(:focus-visible){outline:none;}
 .coinbtn.plainmode{border-radius:18px;}
+/* The plain code IS a white square, so it wants its corners rounded and no scalloped shadow. */
+.coinbtn.plainmode .coin{border-radius:14px;filter:drop-shadow(0 3px 10px rgba(0,0,0,.55));}
 
+/* drop-shadow, not box-shadow: it is cast from the alpha channel, so a scalloped coin gets a
+ * scalloped shadow. No border-radius either, because the canvas is already transparent outside
+ * the coin and a 50% radius clips the lobe tips off. */
+.coin,.flier{
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)) drop-shadow(0 0 18px var(--glow,rgba(0,0,0,.4)));
+}
 .coin{
   display:block;
-  border-radius:50%;
   width:100%;
   height:100%;
   pointer-events:none;
   image-rendering:auto;
 }
-.coinbtn.plainmode .coin{border-radius:14px;}
 
 /* Taken off the page and put away. */
 @keyframes tuck{
@@ -406,7 +413,6 @@ body.view-code .bar{animation:bar-in 300ms var(--ease) 40ms backwards;}
   position:fixed;
   z-index:6;
   pointer-events:none;
-  border-radius:50%;
   will-change:transform;
   transform-origin:center;
 }

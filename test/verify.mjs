@@ -531,8 +531,22 @@ section("2. The bundle carries the codes and nothing else");
     /pointerdown/.test(appJs) && /setTimeout\(function \(\) \{[\s\S]{0,200}?save\(\);/.test(appJs));
   ok("a hold does not then also fire the tap, so one press never saves twice",
     /if \(held\)/.test(appJs));
-  ok("the coin is drawn as a physical object: a contact shadow, a lit rim and a press state",
-    /inset 0 2px 0 rgba\(255,255,255/.test(appCss) && /\.coinbtn:active\{/.test(appCss));
+  /* The coin's shadow is cast from its ALPHA, not from a box around it.
+   *
+   * The button is a circle; the coin inside it is scalloped, so more than a third of the
+   * samples around its rim are transparent. A box-shadow therefore showed straight through
+   * those valleys as a hard dark ring behind the coin, and it appeared at the end of the zoom
+   * because that is when the coin, and with it its shadow, was revealed. drop-shadow follows
+   * the alpha and so follows the scallops. */
+  // A box-shadow with an actual value, not the `box-shadow:none` that the forced-colours block
+  // uses to take it away.
+  const paintsAShadow = (sel) =>
+    new RegExp(sel + "[^{]*\{[^}]*box-shadow\s*:\s*(?!none)").test(cssCode);
+  ok("the coin's shadow follows its scalloped edge rather than a circle around it",
+    /\.coin,\.flier\{[\s\S]*?filter:drop-shadow/.test(cssCode) && !paintsAShadow("\.coinbtn"));
+  ok("no element behind a scalloped coin paints a circle the valleys can expose",
+    !paintsAShadow("\.coinbtn") && !paintsAShadow("\.tiledot"));
+  ok("the coin still presses in under a finger", /\.coinbtn:active\{/.test(cssCode));
   ok("saving plays a motion, so the action explains itself the first time",
     /@keyframes tuck/.test(appCss) && /oneShot\(elBtn, "tuck"/.test(appJs));
   ok("the long press cannot raise the system copy menu over the top of it",
@@ -569,6 +583,16 @@ section("2. The bundle carries the codes and nothing else");
     /oneShot\(elBtn, "enter", 320\);/.test(appJs));
   ok("the list deals itself in once, not every time it comes back",
     /body\.view-list\.fresh \.tile\{/.test(cssCode) && /classList\.remove\("fresh"\)/.test(appJs));
+
+  /* All thirteen thumbnails are drawn together, before the list is shown. One per idle
+   * callback read as a download in progress, which is exactly what it is not. It is affordable
+   * because decorative mode draws each module as a plain rect rather than a rounded blob, which
+   * at a module of about one pixel is identical to look at and several times cheaper. */
+  ok("every thumbnail is drawn at once, not one at a time",
+    /for \(var i = 0; i < CODES\.length; i\+\+\) \{[\s\S]{0,400}?QRArt\.draw\(el/.test(appJs) &&
+    !/idle\(step\)/.test(appJs));
+  ok("a thumbnail's modules are plain rects, which is what makes drawing them all affordable",
+    /if \(opts\.decorative\) \{[\s\S]{0,400}?g\.fillRect\(bx, by/.test(read(path.join(PUB, "qr-art.js"))));
 
   ok("the decorative escape from the safe-size rule is used for thumbnails only",
     (appJs.match(/decorative: true/g) || []).length === 1);

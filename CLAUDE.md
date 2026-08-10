@@ -166,8 +166,12 @@ Four things make it work, and each is asserted:
    fallback that would otherwise put a tiny plain black square on every tile. The suite asserts
    the option appears exactly once, so it cannot spread to the code view.
 
-Thumbnails are drawn one per idle callback rather than in one lump, and each tile shows a plain
-brand disc until its own arrives, so the list is never a set of holes.
+All thirteen thumbnails are drawn TOGETHER, before the list is shown. One per idle callback
+looked like a download in progress, thirteen coins arriving one after another, which is exactly
+what it is not. Drawing them together costs the thirteen encodes once at startup and almost
+nothing thereafter, because the matrices are then cached; decorative mode also draws each module
+as a plain rect rather than a rounded blob, which at a module of about one pixel is identical to
+look at and cheaper to paint.
 
 ## What was measured, and what it cost
 
@@ -192,6 +196,22 @@ so one path spanning the whole 686px code makes the rasteriser walk every scanli
 and sort thousands of edges, where each small fill touches only its own nine pixels. It turned a
 6ms draw into 17ms. It was tried, measured and reverted; `test/verify.mjs` now asserts against
 it so it cannot come back on the same reasoning.
+
+**ENCODING IS THE EXPENSIVE HALF, AND IT IS CACHED.** Measured in Chrome: 4.8ms to encode a
+payload against about 2ms to draw it, so the Reed-Solomon pass was seventy per cent of a
+full-size render and effectively the entire cost of a thumbnail, and it was being paid again on
+every redraw, every step between accounts and every resize. The matrix is a pure function of
+the payload and the level and is only ever read, so `plan()` keeps one per account for the life
+of the page. A coin draw went from 6.8ms to 1.59ms and redrawing all thirteen thumbnails from
+69ms to 5.4ms. If a render ever feels slow again, measure `plan()` before touching the drawing.
+
+**The coin's shadow is cast from its ALPHA, never from a box.** The button is a circle and the
+coin inside it is scalloped, so more than a third of the samples around its rim are transparent.
+A `box-shadow` on the button showed straight through those valleys as a hard dark ring behind
+the coin, and it appeared at the END of the zoom because that is the moment the coin, and with
+it its shadow, was revealed. `filter: drop-shadow` follows the alpha and so follows the
+scallops. For the same reason the canvas carries no `border-radius`: a 50 per cent radius clips
+the lobe tips off.
 
 **A step pre-renders.** A draw is six to fourteen milliseconds, most of a frame, and doing it at
 the halfway point of a step dropped one right where the eye was following the coin. The incoming
@@ -219,7 +239,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 117 assertions, a couple of minutes, no network
+npm test          # 121 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.

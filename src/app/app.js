@@ -89,6 +89,9 @@
     var root = document.documentElement.style;
     root.setProperty("--brand", C.rgb2hex(base));
     root.setProperty("--brand-soft", brand ? softOf(brand) : "#c3cbdb");
+    // The coin's halo. A drop-shadow needs a colour with alpha rather than a spread, so it is
+    // built here where the brand is already in pieces.
+    root.setProperty("--glow", "rgba(" + base.map(Math.round).join(",") + ",0.42)");
 
     /* The aurora cross-fades rather than transitioning its colours. The incoming washes are
      * written to whichever layer is currently hidden, which paints it once, and then the two
@@ -488,33 +491,29 @@
     drawThumbs();
   }
 
-  /* The thumbnails, drawn once and lazily.
+  /* The thumbnails, drawn ALL AT ONCE, before the list is ever shown.
    *
-   * Six milliseconds each is nothing on its own and eighty in a row is a visible stall, so they
-   * go in one per idle callback. Each fades up as it lands rather than appearing between two
-   * frames, which is the difference between a list settling and a list flickering. They are
-   * DECORATIVE: at 36 pixels a code is a texture, not something anyone could point a camera at,
-   * so the renderer is told so and skips the safe-size fallback that would otherwise put a tiny
-   * plain black square on every tile. */
+   * They used to go in one per idle callback, and that was wrong: thirteen coins appearing one
+   * after another reads as a download in progress, which is exactly what it is not. Drawn
+   * together they are simply there when the app opens. It is affordable because DECORATIVE
+   * mode draws each module as a plain rect rather than a rounded blob, which at a module of
+   * about one pixel is visually identical and several times cheaper.
+   *
+   * Decorative is also what skips the safe-size fallback: at 36 pixels a code is a texture, not
+   * something anyone can point a camera at, and without it every tile would carry a tiny plain
+   * black square instead of a coin. */
   function drawThumbs() {
-    var i = 0;
-    var step = function () {
-      if (i >= CODES.length) return;
+    for (var i = 0; i < CODES.length; i++) {
       var a = CODES[i], el = thumbOf(i);
-      i++;
-      if (el && el.getContext) {
-        try {
-          self.QRArt.draw(el, a.payload, artFor(a, {
-            size: THUMB, pixelRatio: self.devicePixelRatio || 1,
-            plain: false, decorative: true
-          }));
-          el.style.background = "none";
-          el.classList.add("lit");
-        } catch (e) { /* the brand disc stays; nothing is lost */ }
-      }
-      idle(step);
-    };
-    idle(step);
+      if (!el || !el.getContext) continue;
+      try {
+        self.QRArt.draw(el, a.payload, artFor(a, {
+          size: THUMB, pixelRatio: self.devicePixelRatio || 1,
+          plain: false, decorative: true
+        }));
+        el.style.background = "none";
+      } catch (e) { /* the brand disc stays; nothing is lost */ }
+    }
   }
 
   /* ------------------------------------------------------------------- controls */
