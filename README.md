@@ -25,6 +25,7 @@ back, and so does your phone's own back gesture.
 |---|---|
 | **Save the code to your photos** | **Press and hold it**, the same way you would keep any picture on a phone. A plain tap does it too. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
 | Next or previous | Swipe left and right across the code. A swipe never counts as a tap, so changing code cannot save one by accident. |
+| **The account number** | Press **DuitNow number** and the coin turns over. Its back is struck metal with the number embossed into it. **Tap it to copy**, digits only, ready to paste into a banking app. Changing account always turns it back to the code. |
 | Plain code | The small pill under the code, for a scanner that is struggling. |
 | Keyboard | Left and right arrows step through, `Enter` or `S` saves, `P` toggles plain, `Esc` goes back. |
 | One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
@@ -48,7 +49,7 @@ still works, instantly.
 Not here. **Adding, editing and removing codes is a laptop job**, in the master project:
 
 ```
-C:\Users\maakm\Claude\Projects\Personal\Cow-Fin06_QR Consolidator\pay-afif-site
+C:\Users\maakm\Claude\Code\pay-afif-site
 ```
 
 Run `serve.py` there, use `edit.html`, save. Then come back here and ship it:
@@ -69,10 +70,13 @@ your codes. That is a considered decision, not an oversight: a DuitNow code can 
 
 Two things follow, and the second is the one worth knowing:
 
-- The page prints **only the provider name and the code**. Your legal name, your account
-  numbers, your groups and the DuitNow member numbers are dropped at build time and never leave
-  the laptop. The build checks this by reading the bundle back and searching it, and the test
-  suite checks it again.
+- The page prints the provider name, the code, and **your account number on the back of the
+  coin**, which you asked for so a number can be copied and sent to somebody. That last one is a
+  real widening: before it, an account number could only be got at by decoding a code, and only
+  for six of the thirteen. Now all thirteen are readable as text by anyone who opens the site.
+- Your legal name, your groups and the DuitNow member numbers are still dropped at build time
+  and never leave the laptop. The build checks that by reading the bundle back and searching it,
+  and the suite checks it again, in both directions.
 - **The codes themselves still carry your name.** A DuitNow payload is an EMVCo string with the
   account-holder name as a mandatory field, and for six of your thirteen the account number is
   in there in the clear too. Anyone who scans a code sees those in their banking app before they

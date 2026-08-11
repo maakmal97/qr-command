@@ -44,13 +44,19 @@
 
     <div class="coinwrap">
       <button type="button" id="coinbtn" class="coinbtn">
-        <canvas id="coin" class="coin" role="img" aria-label="Payment code"></canvas>
+        <span class="faces" id="faces">
+          <canvas id="coin" class="coin face" role="img" aria-label="Payment code"></canvas>
+          <canvas id="coinback" class="coin face back" role="img" aria-label="Account number"></canvas>
+        </span>
       </button>
     </div>
 
     <div class="tools">
       <p id="say" class="say" role="status" aria-live="polite"></p>
-      <button type="button" id="plainbtn" class="pill" aria-pressed="false">Plain code</button>
+      <div class="pills">
+        <button type="button" id="flipbtn" class="pill" aria-pressed="false">DuitNow number</button>
+        <button type="button" id="plainbtn" class="pill" aria-pressed="false">Plain code</button>
+      </div>
     </div>
   </main>
 </section>

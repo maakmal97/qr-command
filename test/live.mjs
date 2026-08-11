@@ -13,7 +13,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
 const URL_BASE = (process.argv[2] || "https://qr-command.maakmal97.workers.dev").replace(/\/+$/, "");
 const MASTER = process.env.QR_MASTER ||
-  "C:/Users/maakm/Claude/Projects/Personal/Cow-Fin06_QR Consolidator/pay-afif-site";
+  "C:/Users/maakm/Claude/Code/pay-afif-site";
 
 let pass = 0, fail = 0;
 const ok = (what, cond, detail) => {
@@ -119,9 +119,13 @@ ok("index.html served byte for byte as built",
     const sq = t.replace(/[\s-]/g, "");
     if (sq.length >= 6) secret.add(sq);
   };
+  /* `sub` is deliberately NOT on this list. The account numbers ship, as `acct`, for the back
+   * of the coin; see the note on SHIP in tools/build.mjs. Everything else the master holds must
+   * still stay behind, and the assertion after this one checks the other direction so the
+   * feature cannot silently disappear either. */
   add(master.payee);
   (master.owners || []).forEach((o) => { add(o && o.name); add(o && o.legal); });
-  master.accounts.forEach((a) => { add(a.sub); add(a.mid); });
+  master.accounts.forEach((a) => { add(a.mid); });
 
   const payloads = master.accounts.map((a) => a.payload).sort((a, b) => b.length - a.length);
   const hits = [];
@@ -133,6 +137,15 @@ ok("index.html served byte for byte as built",
   }
   ok("no dropped value is served anywhere, outside the payloads themselves",
     hits.length === 0, [...new Set(hits)].join(", "));
+
+  // And the other way: every account number is actually being served, matching the master.
+  const served = JSON.parse(fetched["data.js"].match(/self\.QR_CODES = ([\s\S]*?);\nself\.QR_BUILD/)[1]);
+  const wrong = master.accounts.filter((a) => {
+    const c = served.find((x) => x.key === a.key);
+    return !c || c.acct !== String(a.sub || "").trim();
+  });
+  ok("every account number is served, matching the master exactly", wrong.length === 0,
+    wrong.map((a) => a.key).join(", "));
 }
 
 /* ------------------------------------------------ the served codes still scan */

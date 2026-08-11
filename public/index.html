@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=08728f6ea9a1">
+<link rel="stylesheet" href="./app.css?v=75074976db9d">
 </head>
 <body class="view-list">
 
@@ -44,13 +44,19 @@
 
     <div class="coinwrap">
       <button type="button" id="coinbtn" class="coinbtn">
-        <canvas id="coin" class="coin" role="img" aria-label="Payment code"></canvas>
+        <span class="faces" id="faces">
+          <canvas id="coin" class="coin face" role="img" aria-label="Payment code"></canvas>
+          <canvas id="coinback" class="coin face back" role="img" aria-label="Account number"></canvas>
+        </span>
       </button>
     </div>
 
     <div class="tools">
       <p id="say" class="say" role="status" aria-live="polite"></p>
-      <button type="button" id="plainbtn" class="pill" aria-pressed="false">Plain code</button>
+      <div class="pills">
+        <button type="button" id="flipbtn" class="pill" aria-pressed="false">DuitNow number</button>
+        <button type="button" id="plainbtn" class="pill" aria-pressed="false">Plain code</button>
+      </div>
     </div>
   </main>
 </section>
@@ -59,9 +65,9 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=08728f6ea9a1"></script>
-<script src="./qr-art.js?v=08728f6ea9a1"></script>
-<script src="./data.js?v=08728f6ea9a1"></script>
-<script src="./app.js?v=08728f6ea9a1"></script>
+<script src="./qrcode.js?v=75074976db9d"></script>
+<script src="./qr-art.js?v=75074976db9d"></script>
+<script src="./data.js?v=75074976db9d"></script>
+<script src="./app.js?v=75074976db9d"></script>
 </body>
 </html>

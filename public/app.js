@@ -33,6 +33,8 @@
   var elPlain = document.getElementById("plainbtn");
   var elGrid = document.getElementById("grid");
   var elBack = document.getElementById("back");
+  var elBackFace = document.getElementById("coinback");
+  var elFlip = document.getElementById("flipbtn");
   var elList = document.getElementById("accounts");
   var skies = [document.getElementById("sky1"), document.getElementById("sky2")];
   var skyOn = 0;
@@ -40,7 +42,7 @@
   // The miniature on a tile, in CSS pixels. Must match --thumb in app.css.
   var THUMB = 36;
   // One duration for the whole transition, so the coin, the fade and the chrome agree.
-  var ZOOM = 420;
+  var ZOOM = 460;
 
   var idx = -1;
   var plain = false;
@@ -49,6 +51,7 @@
   var sayTimer = null;
   var depth = 0;         // how many entries WE pushed, so back is never a guess
   var flier = null;      // the coin in transit, if any
+  var flipped = false;   // showing the reverse, with the account number
 
   /* ------------------------------------------------------------------- storage */
 
@@ -146,6 +149,23 @@
     return { canvas: off, meta: meta };
   }
 
+  /* The reverse is drawn only when it is first needed and then kept, because most openings
+   * never turn the coin over. */
+  var backs = {};
+  function paintBack() {
+    var a = CODES[idx];
+    if (!a || !elBackFace) return;
+    var size = fit();
+    var dpr = self.devicePixelRatio || 1;
+    var key = a.key + "|" + size + "|" + dpr;
+    if (backs.key === key) return;
+    self.QRArt.drawBack(elBackFace, {
+      size: size, pixelRatio: dpr, brand: a.brand, label: a.name, seed: a.key, acct: a.acct
+    });
+    elBackFace.setAttribute("aria-label", a.name + " account number " + a.acct);
+    backs.key = key;
+  }
+
   function paint(pre) {
     var a = CODES[idx];
     if (!a) return null;
@@ -168,7 +188,51 @@
     elPlain.setAttribute("aria-pressed", meta.plain ? "true" : "false");
     elPlain.disabled = meta.fellBack;
     elPlain.textContent = meta.fellBack ? "Plain code (screen too small)" : "Plain code";
+    if (flipped) paintBack();
     return meta;
+  }
+
+  /* Turning the coin over. The number is real text on the button, not only pixels on a canvas,
+   * so a screen reader can read it and the copy never depends on the drawing. */
+  function setFlipped(on) {
+    flipped = !!on;
+    if (flipped) paintBack();
+    elBtn.classList.toggle("flipped", flipped);
+    elFlip.setAttribute("aria-pressed", flipped ? "true" : "false");
+    elFlip.textContent = flipped ? "Show the code" : "DuitNow number";
+    var a = CODES[idx];
+    if (a) {
+      elBtn.setAttribute("aria-label", flipped
+        ? a.name + " account number " + a.acct + ". Tap to copy."
+        : a.name + " payment code. Press and hold to save it to your photos.");
+    }
+    say(flipped ? "Tap to copy" : "");
+  }
+
+  /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
+   * banking app is the number itself. */
+  function copyAcct() {
+    var a = CODES[idx];
+    if (!a || !a.acct) return;
+    var digits = a.acct.replace(/\s+/g, "");
+    var done = function () { say("Copied " + a.acct); tuck(); };
+    var fallback = function () {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = digits;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        document.body.appendChild(ta);
+        ta.select();
+        var okd = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (okd) done(); else say("Could not copy");
+      } catch (e) { say("Could not copy"); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(digits).then(done, fallback);
+    } else fallback();
   }
 
   /* -------------------------------------------------------------------- motion */
@@ -244,6 +308,16 @@
     var from = shrinking ? atBig : atSmall;
     var to = shrinking ? atSmall : atBig;
 
+    /* Commit the starting transform BEFORE the element is painted for the first time.
+     *
+     * Without this the flier is inserted at its full size and the browser can paint one frame
+     * of it that way before the animation's first frame lands, which is a full-size coin
+     * flashing for 16ms and then snapping small to grow. That is the "skipped a beat". Setting
+     * the transform inline and reading a layout property forces the from-state to be the first
+     * thing ever painted. */
+    c.style.transform = from;
+    void c.offsetWidth;
+
     var ms = opts.duration || ZOOM;
     var done = false;
     var finish = function () {
@@ -264,6 +338,9 @@
       var a = c.animate([{ transform: from }, { transform: to }],
         { duration: ms, easing: "cubic-bezier(.32,.72,0,1)", fill: "both" });
       if (a.finished && a.finished.then) a.finished.then(finish, finish);
+    } else {
+      c.style.transition = "transform " + ms + "ms cubic-bezier(.32,.72,0,1)";
+      requestAnimationFrame(function () { c.style.transform = to; });
     }
     setTimeout(finish, ms + 60);   // whatever the animation does or fails to do, this cleans up
     return true;
@@ -321,6 +398,8 @@
       tiles[k].setAttribute("aria-current", k === idx ? "true" : "false");
     }
     say("");
+    // A different account always arrives face up. Its number is not the one just on screen.
+    if (flipped) setFlipped(false);
     paint(pre);
     oneShot(elName, "enter", 360);
     remember("last", a.key);
@@ -546,7 +625,7 @@
       holdTimer = setTimeout(function () {
         if (moved) return;
         held = true;
-        save();
+        if (flipped) copyAcct(); else save();
       }, 420);
     }
     function endHold() { clearTimeout(holdTimer); }
@@ -560,9 +639,14 @@
     elBtn.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
     elBtn.addEventListener("click", function (e) {
-      if (held) { held = false; e.preventDefault(); return; }   // the hold already saved
+      if (held) { held = false; e.preventDefault(); return; }   // the hold already acted
       if (swiped) { swiped = false; return; }                   // a swipe is not a tap
-      save();
+      if (flipped) copyAcct(); else save();
+    });
+
+    elFlip.addEventListener("click", function (e) {
+      e.stopPropagation();
+      setFlipped(!flipped);
     });
 
     document.addEventListener("keydown", function (e) {
@@ -572,8 +656,9 @@
       if (!onCode) return;
       if (e.key === "ArrowRight") { step(idx + 1, 1); e.preventDefault(); }
       else if (e.key === "ArrowLeft") { step(idx - 1, -1); e.preventDefault(); }
-      else if (e.key === "s" || e.key === "Enter") { save(); e.preventDefault(); }
+      else if (e.key === "s" || e.key === "Enter") { if (flipped) copyAcct(); else save(); e.preventDefault(); }
       else if (e.key === "p") { elPlain.click(); e.preventDefault(); }
+      else if (e.key === "d" || e.key === "c") { setFlipped(!flipped); e.preventDefault(); }
     });
 
     /* Swipe across the code to step. A swipe must never also register as a tap, or every swipe

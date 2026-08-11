@@ -176,6 +176,27 @@ self.QRArt = (function () {
     var onBrandWhite = contrast([255, 255, 255], base);
     var onBrandDark = contrast([26, 22, 18], base);
 
+    /* The reverse face is metal rather than paper, so its lettering is measured against the
+     * metal. Embossing supplies the edges; the fill still has to carry the reading, so it is
+     * pushed away from the face until it clears 3.5:1, in whichever direction has room. */
+    /* 4.5:1, the same bar as body text, because this is a number somebody has to read off a
+     * phone and then type into a banking app. The embossing supplies edges, not legibility.
+     * Whichever direction has room wins: a deep navy brand cannot go darker usefully, so its
+     * lettering goes light instead. */
+    var faceMid = mix(base, [0, 0, 0], 0.10);
+    var faceInk = null;
+    for (var t = 0.35; t <= 0.95; t += 0.02) {
+      var darker = mix(base, [0, 0, 0], t);
+      if (contrast(darker, faceMid) >= 4.5) { faceInk = darker; break; }
+    }
+    if (!faceInk) {
+      for (var u = 0.35; u <= 0.97; u += 0.02) {
+        var lighter = mix(base, [255, 255, 255], u);
+        if (contrast(lighter, faceMid) >= 4.5) { faceInk = lighter; break; }
+      }
+    }
+    if (!faceInk) faceInk = [12, 12, 14];
+
     return {
       brand: rgb2hex(base),
       brandLift: rgb2hex(mix(base, [255, 255, 255], 0.34)),
@@ -186,6 +207,9 @@ self.QRArt = (function () {
       inkEdge: rgb2hex(inkEdge),
       inkSoft: rgb2hex(mix(ink, base, 0.22)),
       rimInk: onBrandWhite >= onBrandDark ? "rgba(255,255,255,0.92)" : "rgba(24,20,16,0.78)",
+      faceInk: rgb2hex(faceInk),
+      faceDim: rgb2hex(mix(faceInk, base, 0.42)),
+      faceContrast: contrast(faceInk, faceMid),
       contrast: Math.min(contrast(ink, field), contrast(inkEdge, field))
     };
   }
@@ -252,11 +276,20 @@ self.QRArt = (function () {
    * shrinking steadily with it, which is the signature of aliasing. Snapped, the boundaries
    * are exact at every size and the decode is stable. A module may vary by one pixel against
    * its neighbour, which is a smaller variation than any printed code carries. */
-  function coinGeometry(n, size, opts) {
+  /* The parts of the coin that do not depend on how many modules the code has: the silhouette,
+   * the lettered band and the face inside it. Both faces are struck from this same frame, which
+   * is what makes the flip read as one object turning over rather than two pictures. */
+  function coinFrame(size, opts) {
     var R = size / 2;                                    // the furthest a scallop tip reaches
     var Rbase = R * (1 - opts.scallop);                  // the circle the scallops sit on
     var ring = Math.max(4, R * opts.ringWidth);          // the lettered band
-    var Rd = Rbase - ring;                               // radius of the light field
+    return { R: R, Rbase: Rbase, ring: ring, Rd: Rbase - ring };
+  }
+
+  function coinGeometry(n, size, opts) {
+    var f = coinFrame(size, opts);
+    var R = f.R, Rbase = f.Rbase, ring = f.ring;
+    var Rd = f.Rd;                                       // radius of the light field
     var unitsAcross = (n + 2 * opts.quiet) * Math.SQRT2; // module units spanning the diameter
     var m = (2 * Rd) / unitsAcross;                      // one module, in pixels
     var S = m * n;
@@ -576,6 +609,131 @@ self.QRArt = (function () {
     };
   }
 
+  /* ------------------------------------------------------------- the reverse */
+
+  /* The other face of the coin: solid struck metal, with the DuitNow name and the account
+   * number embossed into it.
+   *
+   * There is no QR here, so nothing needs a light field or a quiet zone, and the face can be
+   * the brand metal itself rather than paper. That is what makes it read as the back of the
+   * same object: identical silhouette, identical rim, and a surface you could only get by
+   * turning it over.
+   *
+   * "DuitNow" is set as a WORDMARK, not as the official logo. The master carries no DuitNow
+   * artwork, and drawing a trademark from memory would get it subtly wrong; a clean wordmark
+   * says the same thing honestly. Drop the official asset into the master and this is the one
+   * function that needs to change. */
+  function emboss(g, text, cx, cy, px, weight, ink, depth) {
+    g.font = weight + " " + px.toFixed(1) + "px " + FONT;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    var d = Math.max(1, px * (depth || 0.055));
+    // The struck look is three passes: the shadow the light does not reach, the highlight on
+    // the raised edge, then the face of the letter itself.
+    g.fillStyle = "rgba(0,0,0,0.42)";
+    g.fillText(text, cx + d, cy + d);
+    g.fillStyle = "rgba(255,255,255,0.42)";
+    g.fillText(text, cx - d * 0.85, cy - d * 0.85);
+    g.fillStyle = ink;
+    g.fillText(text, cx, cy);
+  }
+
+  function drawBack(canvas, opts) {
+    opts = Object.assign({}, DEFAULTS, opts || {});
+    var cssSize = Math.max(64, Math.round(opts.size || 512));
+    var dpr = opts.pixelRatio || 1;
+    var size = Math.max(opts.minDevice || 0, Math.round(cssSize * dpr));
+
+    canvas.width = size;
+    canvas.height = size;
+    var g = canvas.getContext("2d");
+    g.clearRect(0, 0, size, size);
+
+    var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
+    var f = coinFrame(size, opts);
+    var R = f.R;
+    var seed = seedOf(opts.seed || opts.label || "");
+    var lobes = 11 + (seed % 9);
+    var phase = ((seed >>> 4) % 360) * Math.PI / 180;
+
+    // The body, struck from the same die as the front.
+    var lg = g.createLinearGradient(0, 0, size, size);
+    lg.addColorStop(0, pal.brandSink);
+    lg.addColorStop(0.42, pal.brandLift);
+    lg.addColorStop(0.62, pal.brand);
+    lg.addColorStop(1, pal.brandSink);
+    g.fillStyle = opts.sheen ? lg : pal.brand;
+    if (opts.scallop > 0) scallopPath(g, R, R, f.Rbase, R, lobes, phase);
+    else { g.beginPath(); g.arc(R, R, R, 0, Math.PI * 2); }
+    g.fill();
+
+    if (opts.legend) rimLegend(g, R, R, f.Rd + f.ring * 0.52, opts.label, pal, f.ring * 0.46);
+
+    g.strokeStyle = "rgba(0,0,0,0.20)";
+    g.lineWidth = Math.max(1, f.ring * 0.055);
+    g.beginPath(); g.arc(R, R, f.Rbase - f.ring * 0.10, 0, Math.PI * 2); g.stroke();
+
+    // The inner face: the same metal, dished, so the embossing has something to sit in.
+    var rg = g.createRadialGradient(R, R * 0.82, f.Rd * 0.1, R, R, f.Rd);
+    rg.addColorStop(0, pal.brandLift);
+    rg.addColorStop(1, pal.brandSink);
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(R, R, f.Rd, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "rgba(0,0,0,0.16)";
+    g.lineWidth = Math.max(1, f.Rd * 0.008);
+    g.beginPath(); g.arc(R, R, f.Rd, 0, Math.PI * 2); g.stroke();
+
+    var acct = String(opts.acct || "").trim();
+    var D = f.Rd * 2;
+
+    emboss(g, "DuitNow", R, R - D * 0.20, D * 0.15, "700", pal.faceInk, 0.05);
+
+    /* The number, laid out to be read.
+     *
+     * One line if it nearly fits, because a number in one piece is easier to check against a
+     * banking app than one in two. If it must break, it breaks at the MOST BALANCED point
+     * rather than in the middle of the group list: splitting by group count left a single
+     * orphan digit on the second line for five of the thirteen, which looks like a mistake.
+     * Balance is measured in rendered width, not in characters, and a tie keeps more on the
+     * first line. */
+    var groups = acct.split(/\s+/).filter(Boolean);
+    var base = D * 0.17;
+    g.font = "700 " + base + "px " + FONT;
+    var room = D * 0.78;
+    var oneLine = g.measureText(acct).width;
+
+    var lines, px;
+    if (groups.length < 2 || oneLine <= room / 0.78 * 0.62) {
+      lines = [acct];
+      px = base * Math.min(1, room / oneLine);
+    } else {
+      var bestK = 1, bestGap = Infinity, bestWide = Infinity;
+      for (var k = 1; k < groups.length; k++) {
+        var w1 = g.measureText(groups.slice(0, k).join(" ")).width;
+        var w2 = g.measureText(groups.slice(k).join(" ")).width;
+        var gap = Math.abs(w1 - w2), wide = Math.max(w1, w2);
+        if (gap < bestGap - 0.5 || (Math.abs(gap - bestGap) <= 0.5 && w1 > w2)) {
+          bestGap = gap; bestK = k; bestWide = wide;
+        }
+      }
+      lines = [groups.slice(0, bestK).join(" "), groups.slice(bestK).join(" ")];
+      px = base * Math.min(1, room / bestWide);
+    }
+    var widest = 0;
+    g.font = "700 " + px + "px " + FONT;
+    for (var i = 0; i < lines.length; i++) widest = Math.max(widest, g.measureText(lines[i]).width);
+    if (widest > room) px *= room / widest;
+
+    var y0 = R + D * 0.06 - (lines.length - 1) * px * 0.62;
+    for (var k = 0; k < lines.length; k++) {
+      emboss(g, lines[k], R, y0 + k * px * 1.24, px, "700", pal.faceInk, 0.05);
+    }
+
+    emboss(g, "ACCOUNT NUMBER", R, R + D * 0.34, D * 0.062, "700", pal.faceDim, 0.045);
+
+    return { size: cssSize, deviceSize: size, palette: pal, acct: acct };
+  }
+
   /* ----------------------------------------------------------------- the card */
 
   /* What gets saved to the gallery. The coin, large, on a dark brand-tinted ground with the
@@ -654,8 +812,10 @@ self.QRArt = (function () {
   return {
     DEFAULTS: DEFAULTS,
     draw: draw,
+    drawBack: drawBack,
     drawCard: drawCard,
     plan: plan,
+    coinFrame: coinFrame,
     palette: palette,
     coinGeometry: coinGeometry,
     minDeviceFor: minDeviceFor,

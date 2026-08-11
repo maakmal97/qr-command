@@ -27,7 +27,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
 const PUB = path.join(REPO, "public");
 const MASTER = process.env.QR_MASTER ||
-  "C:/Users/maakm/Claude/Projects/Personal/Cow-Fin06_QR Consolidator/pay-afif-site";
+  "C:/Users/maakm/Claude/Code/pay-afif-site";
 
 const read = (p) => fs.readFileSync(p, "utf8");
 
@@ -400,9 +400,9 @@ section("2. The bundle carries the codes and nothing else");
 }
 
 {
-  const SHIP = ["brand", "key", "name", "payload"];
+  const SHIP = ["acct", "brand", "key", "name", "payload"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
-  ok("every shipped record has exactly key, name, brand, payload", wrong.length === 0,
+  ok("every shipped record has exactly key, name, brand, payload, acct", wrong.length === 0,
     wrong.map((w) => w.key + ": " + Object.keys(w).join(",")).join("; "));
 }
 
@@ -417,9 +417,13 @@ section("2. The bundle carries the codes and nothing else");
     const sq = t.replace(/[\s-]/g, "");
     if (sq.length >= 6) secret.add(sq);
   };
+  /* `sub` is NOT on this list any more. The account numbers ship deliberately, as `acct`, for
+   * the back of the coin: see the note on SHIP in tools/build.mjs. Everything else the master
+   * holds still has to stay behind, and the assertion after this one checks the other
+   * direction, so the feature cannot quietly disappear either. */
   add(master.payee);
   (master.owners || []).forEach((o) => { add(o && o.name); add(o && o.legal); });
-  master.accounts.forEach((a) => { add(a.sub); add(a.mid); });
+  master.accounts.forEach((a) => { add(a.mid); });
 
   const payloads = shipped.map((c) => c.payload).sort((a, b) => b.length - a.length);
   const hits = [];
@@ -431,6 +435,15 @@ section("2. The bundle carries the codes and nothing else");
     for (const s of secret) if (hay.includes(s.toLowerCase())) hits.push(rel(f) + " <- " + s.length + " chars");
   }
   ok("no dropped value appears anywhere in public/ outside a payload", hits.length === 0, [...new Set(hits)].join("\n        "));
+
+  // And the other direction: every account number IS in the bundle, exactly as the master
+  // has it, because that is now a feature and a silent loss of it would be a regression.
+  const missingAcct = master.accounts.filter((a) => {
+    const c = shipped.find((x) => x.key === a.key);
+    return !c || c.acct !== String(a.sub || "").trim();
+  });
+  ok("every account number ships, matching the master exactly", missingAcct.length === 0,
+    missingAcct.map((a) => a.key).join(", "));
 }
 
 {
@@ -542,11 +555,48 @@ section("2. The bundle carries the codes and nothing else");
   // uses to take it away.
   const paintsAShadow = (sel) =>
     new RegExp(sel + "[^{]*\{[^}]*box-shadow\s*:\s*(?!none)").test(cssCode);
+  /* The drop-shadow sits on the BUTTON, not on either face. A filter forces transform-style
+   * back to flat on the element carrying it, so a filter on a face would collapse the 3D flip
+   * and show both sides of the coin at once. On the button it still follows the alpha of
+   * whichever face is in front, which is the whole point of using drop-shadow. */
   ok("the coin's shadow follows its scalloped edge rather than a circle around it",
-    /\.coin,\.flier\{[\s\S]*?filter:drop-shadow/.test(cssCode) && !paintsAShadow("\.coinbtn"));
+    /\.coinbtn\{\s*filter:drop-shadow/.test(cssCode) && !paintsAShadow("\.coinbtn"));
+  ok("no filter sits on a rotating face, which would flatten the flip",
+    !/\.face\{[^}]*filter:/.test(cssCode) && !/\.faces\{[^}]*filter:/.test(cssCode));
   ok("no element behind a scalloped coin paints a circle the valleys can expose",
     !paintsAShadow("\.coinbtn") && !paintsAShadow("\.tiledot"));
   ok("the coin still presses in under a finger", /\.coinbtn:active\{/.test(cssCode));
+
+  /* THE REVERSE. A coin has two faces, so it turns over rather than cross-fading, and the
+   * account number is embossed into struck metal rather than printed on paper. */
+  ok("the coin has two faces and turns over",
+    /id="coin"[^>]*class="coin face"/.test(indexHtml) &&
+    /id="coinback"[^>]*class="coin face back"/.test(indexHtml) &&
+    /transform-style:preserve-3d/.test(cssCode) &&
+    /\.coinbtn\.flipped \.faces\{transform:rotateY\(180deg\)\}/.test(cssCode.replace(/;\}/g, "}")));
+  ok("the reverse is drawn by the same renderer, from the same frame as the front",
+    /function drawBack\(canvas, opts\)/.test(read(path.join(PUB, "qr-art.js"))) &&
+    /function coinFrame\(size, opts\)/.test(read(path.join(PUB, "qr-art.js"))));
+  ok("the number is embossed rather than printed: a shadow, a highlight and a face",
+    /function emboss\(/.test(read(path.join(PUB, "qr-art.js"))) &&
+    /rgba\(255,255,255,0\.42\)/.test(read(path.join(PUB, "qr-art.js"))));
+  ok("tapping the reverse copies the number, and the front still saves",
+    /if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
+  ok("the digits are copied without the spacing that is only there to be read",
+    /a\.acct\.replace\(\/\\s\+\/g, ""\)/.test(appJs));
+  ok("copying falls back to execCommand where the clipboard API is refused",
+    /navigator\.clipboard\.writeText/.test(appJs) && /execCommand\("copy"\)/.test(appJs));
+  ok("the number is real text for a screen reader, not only pixels on a canvas",
+    /aria-label", a\.name \+ " account number " \+ a\.acct/.test(appJs));
+  ok("changing account always returns the coin to its front",
+    /if \(flipped\) setFlipped\(false\);/.test(appJs));
+
+  /* The zoom sets its own first frame before the browser can paint the element. Without it the
+   * flier is painted once at full size and then snaps small to grow, which is the skipped beat
+   * this was reported as. */
+  ok("the flier commits its starting transform before it is ever painted",
+    /c\.style\.transform = from;\s*\n\s*void c\.offsetWidth;/.test(appJs));
+
   ok("saving plays a motion, so the action explains itself the first time",
     /@keyframes tuck/.test(appCss) && /oneShot\(elBtn, "tuck"/.test(appJs));
   ok("the long press cannot raise the system copy menu over the top of it",

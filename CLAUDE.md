@@ -1,14 +1,15 @@
 # QR Command
 
 The payment-QR consolidator, read-only, on the phone. A Cloudflare Worker serving a static
-bundle built from the Cow-Fin06 master. Two screens: the accounts, which is where it opens, and
-one code drawn on the device as a struck coin. Nothing else is shown and nothing else is
-shipped.
+bundle built from the master at `Code\pay-afif-site`. Two screens: the accounts, which is where
+it opens, and one code drawn on the device as a struck coin. The coin turns over: its reverse is
+struck metal carrying the DuitNow name and the account number, embossed, and tapping it copies
+the number. Nothing else is shown and nothing else is shipped.
 
 ## Hard rules
 
 1. **This repository is a DEPLOY SURFACE, not a source.** The master is
-   `C:\Users\maakm\Claude\Projects\Personal\Cow-Fin06_QR Consolidator\pay-afif-site`, and it is
+   `C:\Users\maakm\Claude\Code\pay-afif-site`, and it is
    the only place an account is added, edited or removed. `public/` here is a build output of
    it. A hand-edit inside `public/` is overwritten by the next `npm run build` and lost, and
    the suite fails in the meantime because the build id no longer hashes the files on disk.
@@ -24,11 +25,17 @@ shipped.
    drifted. A third copy here would be the same mistake again, and a first attempt at one
    rejected all thirteen live payloads over a prefix it had guessed wrong. If the master moves,
    the build fails loudly rather than falling back to a guess.
-4. **The bundle carries four fields per account and no more:** `key`, `name`, `brand`,
-   `payload`. The account number, the owner, the group, the DuitNow member number and the
-   payee's legal name stay on the laptop. The build reads `public/` back and searches it for
-   every dropped value; the suite repeats the search. Adding a field to the page means adding it
-   to `SHIP` in `tools/build.mjs` deliberately, in one place, where it is visible.
+4. **The bundle carries five fields per account and no more:** `key`, `name`, `brand`,
+   `payload`, `acct`. The owner, the group, the DuitNow member number and the payee's legal name
+   stay on the laptop. The build reads `public/` back and searches it for every dropped value;
+   the suite repeats the search, and also asserts the other way, that every account number IS
+   there, so a feature cannot vanish silently either. Adding a field means adding it to `SHIP`
+   in `tools/build.mjs` deliberately, in one place, where it is visible.
+
+   `acct` was added on 11 Aug 2026 at the owner's request, for the back of the coin. **It is a
+   real widening of what a stranger with the address can read** and it was made deliberately:
+   before it, an account number was recoverable only by decoding a code, and only for six of the
+   thirteen; now all thirteen are in the page as text. The build prints that on every run.
 5. **The name IS inside the codes, and that is not this repo's to fix.** A DuitNow payload is an
    EMVCo TLV string with the account-holder name as a mandatory field (tag 59), and for six of
    the thirteen the account identifier sits in tag 26 in the clear as well. Anyone who scans a
@@ -239,7 +246,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 121 assertions, a couple of minutes, no network
+npm test          # 132 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.

@@ -2,7 +2,7 @@
   "name": "qr-command",
   "version": "1.0.0",
   "private": true,
-  "description": "The payment-QR consolidator, read-only, on the phone. Built from the Cow-Fin06 master and deployed as a Cloudflare Worker with static assets. Ships provider names and payloads only: no legal name, no account numbers, no edit path.",
+  "description": "The payment-QR consolidator, read-only, on the phone. Built from the Cow-Fin06 master and deployed as a Cloudflare Worker with static assets. Ships five fields per account (key, name, brand, payload, account number) and no edit path: the legal name, owner, group and DuitNow member number stay on the laptop.",
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
