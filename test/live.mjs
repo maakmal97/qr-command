@@ -96,7 +96,15 @@ ok("the deployed build id matches the one on disk (" + rev.id + ")" +
   ", page current: " + rootText.includes("?v=" + local.id) + ". Run npm run deploy.");
 root.text = rootText;
 
-const files = ["app.js", "app.css", "qr-art.js", "qrcode.js", "data.js", "sw.js", "manifest.webmanifest"];
+/* EVERY text asset in public/, read off the directory rather than listed again here. A typed
+ * list goes stale the moment a file joins the bundle, and it goes stale silently: the new file
+ * is simply never compared, so the one check that says the deployed bytes are the reviewed bytes
+ * quietly stops covering it. That happened once already, when duitnow-mark.js was added.
+ * index.html is compared separately below, out of the root response. */
+const files = fs.readdirSync(path.join(REPO, "public"))
+  .filter((f) => /\.(js|css|json|webmanifest)$/i.test(f) && f !== "index.html")
+  .sort();
+ok("the wire check covers every text asset in public/", files.length >= 8, files.join(", "));
 const fetched = {};
 for (const f of files) {
   const { text } = await get("/" + f);

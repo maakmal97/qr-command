@@ -244,7 +244,7 @@ self.QRArt = (function () {
   function plan(payload, opts) {
     opts = Object.assign({}, DEFAULTS, opts || {});
     var levels = [].concat(opts.ecl);
-    var key = levels.join(",") + " " + payload;
+    var key = levels.join(",") + " " + payload;
     if (PLANS[key]) return PLANS[key];
 
     var qrcode = encoder(opts);
@@ -623,6 +623,36 @@ self.QRArt = (function () {
    * artwork, and drawing a trademark from memory would get it subtly wrong; a clean wordmark
    * says the same thing honestly. Drop the official asset into the master and this is the one
    * function that needs to change. */
+  /* The official mark, filled from its own path data at its own aspect ratio. No outline, no
+   * shadow, no rotation, no stretch: the scale is uniform and the colour is one of the two the
+   * pack ships. Everything here is deliberately dull, because the guidelines leave no room for
+   * anything else. */
+  function mark_clearRatio(mark) {
+    // 1.5X, where X is the height of the letter D in the logotype. Measured from the official
+    // artwork when the mark was vendored, not estimated here.
+    return (mark && mark.clearRatio) || 0.249;
+  }
+
+  function drawMark(g, mark, x, y, w, h) {
+    var P = (typeof Path2D !== "undefined") ? Path2D
+          : (typeof self !== "undefined" && self.Path2D) ? self.Path2D : null;
+    if (!P) return false;
+    var sx = w / (mark.viewBox[2] - mark.viewBox[0]);
+    var sy = h / (mark.viewBox[3] - mark.viewBox[1]);
+    g.save();
+    g.translate(x, y);
+    g.scale(sx, sy);
+    g.translate(-mark.viewBox[0], -mark.viewBox[1]);
+    // Each path in the colour the official file gives it, in the order it gives them: white
+    // container first, then the ruby logomark, then the black logotype over the top.
+    for (var i = 0; i < mark.paths.length; i++) {
+      g.fillStyle = mark.paths[i].fill;
+      g.fill(new P(mark.paths[i].d));
+    }
+    g.restore();
+    return true;
+  }
+
   function emboss(g, text, cx, cy, px, weight, ink, depth) {
     g.font = weight + " " + px.toFixed(1) + "px " + FONT;
     g.textAlign = "center";
@@ -686,7 +716,32 @@ self.QRArt = (function () {
     var acct = String(opts.acct || "").trim();
     var D = f.Rd * 2;
 
-    emboss(g, "DuitNow", R, R - D * 0.20, D * 0.15, "700", pal.faceInk, 0.05);
+    /* THE OFFICIAL MARK, and everything about how it is drawn is a rule rather than a choice.
+     *
+     * It is filled flat, in one of its own two monochrome colours, at its own aspect ratio,
+     * with 1.5X of clear space kept empty beneath it. It is NOT embossed and carries no shadow,
+     * outline or holding shape, all of which the brand guidelines forbid in as many words. The
+     * account number below IS embossed, because that is our own typography and ours to treat.
+     *
+     * Black or white is chosen by measuring against the face, which is what "use for high
+     * contrast application" asks for: the face is a different brand colour for every account,
+     * gold for one and navy for the next, and a fixed choice would be illegible on half of them.
+     * Choosing between two official variants is not "changing the colour of the logo".
+     *
+     * Below the minimum size the mark is omitted rather than shrunk, because 40 pixels is a
+     * floor in the guidelines and a mark too small to read is worse than none. */
+    /* There is no colour decision to make here, and that is exactly why the container is the
+     * right asset. Inside it the logo sits on its own white, which is a sanctioned combination
+     * whatever the coin's metal happens to be, and the only thing touching the account's colour
+     * is PayNet's own shape. Below the minimum width the graphic is omitted rather than shrunk,
+     * because the minimum is a rule and a mark too small to read is worse than none. */
+    var mark = (typeof self !== "undefined" && self.DuitNowMark) || null;
+    var markH = 0, markW = 0;
+    if (mark) {
+      markH = D * 0.25;
+      markW = markH * mark.aspect;
+      if (markW * (cssSize / size) < mark.minWidthPx) { markH = 0; markW = 0; }
+    }
 
     /* The number, laid out to be read.
      *
@@ -703,7 +758,7 @@ self.QRArt = (function () {
     var oneLine = g.measureText(acct).width;
 
     var lines, px;
-    if (groups.length < 2 || oneLine <= room / 0.78 * 0.62) {
+    if (groups.length < 2 || oneLine <= room) {
       lines = [acct];
       px = base * Math.min(1, room / oneLine);
     } else {
@@ -724,12 +779,27 @@ self.QRArt = (function () {
     for (var i = 0; i < lines.length; i++) widest = Math.max(widest, g.measureText(lines[i]).width);
     if (widest > room) px *= room / widest;
 
-    var y0 = R + D * 0.06 - (lines.length - 1) * px * 0.62;
-    for (var k = 0; k < lines.length; k++) {
-      emboss(g, lines[k], R, y0 + k * px * 1.24, px, "700", pal.faceInk, 0.05);
-    }
+    /* THE WHOLE STACK IS LAID OUT AT ONCE and centred in the face, rather than each piece being
+     * placed from the middle and hoping. Positioned piecemeal, the caption drifted down into
+     * the rim legend on every account whose number ran to two lines. Measure the block, centre
+     * it, then draw: the only way the pieces cannot collide is if their heights are added up
+     * before anything is committed. */
+    var clear = markH * mark_clearRatio(mark);        // 1.5X, and nothing may enter it
+    var capPx = D * 0.055;
+    var linesH = px + (lines.length - 1) * px * 1.22;
+    var gap = px * 0.62;
+    var blockH = (markH ? markH + clear : 0) + linesH + gap + capPx;
 
-    emboss(g, "ACCOUNT NUMBER", R, R + D * 0.34, D * 0.062, "700", pal.faceDim, 0.045);
+    var top = R - blockH / 2;
+    if (markH) {
+      drawMark(g, mark, R - markW / 2, top, markW, markH);
+      top += markH + clear;
+    }
+    for (var k = 0; k < lines.length; k++) {
+      emboss(g, lines[k], R, top + px * 0.5 + k * px * 1.22, px, "700", pal.faceInk, 0.05);
+    }
+    top += linesH + gap;
+    emboss(g, "ACCOUNT NUMBER", R, top + capPx * 0.5, capPx, "700", pal.faceDim, 0.045);
 
     return { size: cssSize, deviceSize: size, palette: pal, acct: acct };
   }

@@ -3,8 +3,8 @@
 The payment-QR consolidator, read-only, on the phone. A Cloudflare Worker serving a static
 bundle built from the master at `Code\pay-afif-site`. Two screens: the accounts, which is where
 it opens, and one code drawn on the device as a struck coin. The coin turns over: its reverse is
-struck metal carrying the DuitNow name and the account number, embossed, and tapping it copies
-the number. Nothing else is shown and nothing else is shipped.
+struck metal carrying PayNet's own DuitNow QR brand graphic and the account number, embossed, and
+tapping it copies the number. Nothing else is shown and nothing else is shipped.
 
 ## Hard rules
 
@@ -109,6 +109,42 @@ centre imposes: reach the corner module centres at 1.414 modules, and stay three
 through the middle so the ratio still measures 3. 1.5 satisfied both by a twentieth of a module,
 which is under a pixel once snapped, and flipped those corners on ten of the thirteen codes;
 1.68 fixed the corners and stretched the middle run to 3.8.
+
+## The reverse, and PayNet's rules
+
+The back of the coin carries the account number, embossed, under the DuitNow QR mark, and a tap
+copies the number. It copies the DIGITS, `1571 5788 9482` going to the clipboard as
+`157157889482`, because that is what a banking app wants pasted into it; the status line echoes
+the grouped form so the eye can check it.
+
+**The mark is PayNet's artwork, never ours.** `tools/mark.mjs` reads the official SVG out of the
+logo pack in the Vault and writes `src/vendor/duitnow-mark.js`: path data byte for byte, each
+path keeping the fill the official file gives it. Nothing is traced, redrawn or approximated,
+which is the only way to satisfy "use only official logo files provided by PayNet" and still draw
+to a canvas. Rerun it when PayNet issues a new pack; it refuses rather than guessing if the
+artwork has gained a gradient, a mask or a clip path it cannot reproduce faithfully.
+
+**It is the brand graphic, the container, not the bare logo, and that is a rule not a taste.**
+The coin's face is a different brand colour for every account, so dropping a bare mark onto it
+breaks two stated rules at once. "DO NOT create unbranded holding shapes for the logo": a plain
+coloured disc with a logo centred on it is exactly that. And the palette page allows only three
+combinations, "White on ruby", "White or/and ruby on black", "Black or/and ruby on white", none
+of which is a white mark on Maybank gold. Section 1.4.2 (a) answers it directly: use the brand
+graphic "as a container for the DuitNow/sub-brand logos". Inside the container the logo sits on
+white, which is sanctioned, and the only thing touching the account's own colour is PayNet's own
+container. This was got wrong first, with the bare 01 logo recoloured to whatever contrasted, so
+the assertions now name the three fills and check nothing else can reach the metal.
+
+**The 40px floor is on the LOGO, so the container's floor is larger.** The logo occupies 164.65
+of the graphic's 256.63 units, so the container must be at least 62.3px for the logo inside it to
+clear the minimum; `minWidthPx` is 64. Below that the mark is omitted rather than shrunk. At a
+343px coin the container lands at 74 CSS px and the logo inside it at 47.5, both clear. The 1.5X
+clear space is already built into the file and must never be re-inset; what is ours to keep is
+the band of undisturbed metal outside it.
+
+The mark is drawn flat. The account number beneath it is embossed, because that is our own
+typography and ours to treat; the mark is not, and "DO NOT use shadows or other effects" is
+explicit.
 
 ## Motion
 
@@ -236,7 +272,9 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 | `src/app/qr-art.js` | The coin, and `drawCard` for the gallery. Read the note at the top before touching it. |
 | `src/app/sw.js` | Service worker template. `__BUILD__` and `__SHELL__` are stamped by the build. |
 | `src/vendor/qrcode.js` | The encoder, copied from the master unchanged. |
+| `src/vendor/duitnow-mark.js` | **Generated. Do not edit.** PayNet's brand graphic as path data. |
 | `tools/build.mjs` | Master store in, `public/` out, with the leak check and the disclosure. |
+| `tools/mark.mjs` | Official logo pack in, `duitnow-mark.js` out. Rerun only when PayNet reissues. |
 | `test/verify.mjs` | The whole suite. No network, no browser. |
 | `test/vendor/jsqr.js` | The decoder. **Test only, never shipped.** |
 | `public/` | Build output, committed so the deployed bytes are the reviewed bytes. |
@@ -246,7 +284,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 132 assertions, a couple of minutes, no network
+npm test          # 147 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
@@ -254,10 +292,17 @@ npm run deploy    # build, test, then wrangler deploy. The test is not optional 
 
 `QR_MASTER` overrides the master path for both the build and the suite.
 
-Four things that will bite:
+Six things that will bite:
 
 - **`compatibility_date` must not exceed what the installed runtime supports.** wrangler 4.120.0
   tops out at 2026-08-08 and refuses to start on anything later, locally and on deploy.
+- **DO NOT EDIT THESE FILES THROUGH A SHELL HEREDOC.** The Bash tool on this machine collapses
+  one level of backslash on the way in, so a script that says `"\x00"` reaches the interpreter as
+  a literal NUL and writes one into the file. It has happened twice, into a string in
+  `build.mjs` and into the cache-key separator in `qr-art.js`, and it raises nothing: a NUL is a
+  legal character in a JS string, so the file parses, the build runs and the only symptom is a
+  comparison that quietly stops matching. The suite now sweeps every source and shipped file for
+  control bytes, which is the assertion that would have caught both. Use the editing tools.
 - **The suite is slow because it decodes.** Roughly a thousand renders go through jsQR on every
   run. That is the point of it; do not trim the size sweep to make it quick.
 - **The saved image is built with `toDataURL`, not `toBlob`, and that is load-bearing.** iOS

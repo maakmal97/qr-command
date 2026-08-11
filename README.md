@@ -107,6 +107,14 @@ has already taught you for keeping any picture. Press and hold. The coin dips as
 is the only explanation the action ever needs, and a tap does the same for anyone whose instinct
 runs that way.
 
+**The back is the same coin, turned over.** It carries the DuitNow QR mark and your account
+number struck into the metal, and a tap copies the number. The mark is PayNet's own artwork,
+taken path for path out of the official logo pack rather than traced, and it is the version of
+it PayNet supplies as a container, on white, because the coin behind it is a different colour
+for every provider and their guidelines allow the logo on only three backgrounds. Nothing but
+their own white touches the provider's colour. The number underneath it is embossed; the mark
+is left flat, which is what they ask for.
+
 It is decoration over an exact code, never a redrawing of one. Every module sits at its precise
 grid position; only the shape, the colour and the frame change, and a decoder samples none of
 those. The four-module quiet zone is why the code fills about 58 per cent of the coin's width
