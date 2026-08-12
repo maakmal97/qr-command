@@ -146,6 +146,23 @@ ok("index.html served byte for byte as built",
   ok("no dropped value is served anywhere, outside the payloads themselves",
     hits.length === 0, [...new Set(hits)].join(", "));
 
+  /* And the slugged form, which exact matching above cannot see. A key derived from the payee
+   * would be served as text AND become the public URL of the page, and one very nearly was.
+   * This is the copy that matters most, because it reads what is actually on the wire rather
+   * than what the build believed it wrote. */
+  const squash = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const stems = [master.payee, ...(master.owners || []).flatMap((o) => [o && o.name, o && o.legal])]
+    .map((v) => squash(v).slice(0, 12)).filter((s) => s.length === 12);
+  const slugHits = [];
+  for (const [name, body] of Object.entries({ "index.html": root.text, ...fetched })) {
+    let t = body;
+    for (const p of payloads) t = t.split(p).join(" PAYLOAD ");
+    const flat = squash(t);
+    for (const s of stems) if (flat.includes(s)) slugHits.push(name + " <- " + JSON.stringify(s));
+  }
+  ok("no slugged form of a person's name is served outside the payloads",
+    stems.length > 0 && slugHits.length === 0, [...new Set(slugHits)].join(", "));
+
   // And the other way: every account number is actually being served, matching the master.
   const served = JSON.parse(fetched["data.js"].match(/self\.QR_CODES = ([\s\S]*?);\nself\.QR_BUILD/)[1]);
   const wrong = master.accounts.filter((a) => {

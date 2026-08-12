@@ -3,15 +3,15 @@
  * activate. There is no version constant to remember to bump, because a constant someone has
  * to remember is a constant that eventually goes stale.
  */
-const CACHE = "pay-dac7a2e1ebde";
+const CACHE = "pay-459750323d5a";
 const SHELL = [
   "./",
-  "./app.css?v=dac7a2e1ebde",
-  "./app.js?v=dac7a2e1ebde",
-  "./qr-art.js?v=dac7a2e1ebde",
-  "./qrcode.js?v=dac7a2e1ebde",
-  "./duitnow-mark.js?v=dac7a2e1ebde",
-  "./data.js?v=dac7a2e1ebde"
+  "./app.css?v=459750323d5a",
+  "./app.js?v=459750323d5a",
+  "./qr-art.js?v=459750323d5a",
+  "./qrcode.js?v=459750323d5a",
+  "./duitnow-mark.js?v=459750323d5a",
+  "./data.js?v=459750323d5a"
 ];
 
 self.addEventListener("install", (e) => {

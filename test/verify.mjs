@@ -452,6 +452,38 @@ section("2. The bundle carries the codes and nothing else");
   });
   ok("every account number ships, matching the master exactly", missingAcct.length === 0,
     missingAcct.map((a) => a.key).join(", "));
+
+  /* A NAME ALSO TRAVELS AS A SLUG, and the exact-match sweep above cannot see that. The master
+   * once keyed an account `muhammad-afif-akmal-bin`, a truncated lowercase slug of the payee,
+   * and it passed every check here and in the build because it matched no forbidden string byte
+   * for byte. It would have become the public URL of the page. Compare stems instead: strip
+   * everything that is not a letter or a digit from both sides, and look for the first twelve
+   * characters of the name. */
+  const stem = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
+  const stems = [master.payee, ...(master.owners || []).flatMap((o) => [o && o.name, o && o.legal])]
+    .map(stem).filter((s) => s.length === 12);
+  const squash = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const slugHits = [];
+  for (const f of files) {
+    if (!/\.(html|js|mjs|css|json|webmanifest|txt|svg|map)$/i.test(f)) continue;
+    let body = read(f);
+    for (const p of payloads) body = body.split(p).join(" PAYLOAD ");
+    const flat = squash(body);
+    for (const s of stems) if (flat.includes(s)) slugHits.push(rel(f) + " <- " + JSON.stringify(s));
+  }
+  ok("no slugged form of a person's name appears in public/ outside a payload",
+    slugHits.length === 0, [...new Set(slugHits)].join("\n        "));
+
+  // The stem sweep is only worth anything if it would actually catch one. Feed it the slug the
+  // master really produced, and it must be found.
+  ok("the stem sweep catches the slug that got through once",
+    stems.length > 0 && stems.some((s) => squash("key: muhammad-afif-akmal-bin,").includes(s)));
+
+  // And the build refuses it rather than merely reporting it, so a bad key cannot reach public/.
+  const buildTxt = read(path.join(REPO, "tools", "build.mjs"));
+  ok("tools/build.mjs runs the same stem check and dies on a hit",
+    /function nameStems\(doc\)/.test(buildTxt) && /const STEM = 12;/.test(buildTxt) &&
+    /for \(const stem of stems\) \{[\s\S]{0,120}?squashed\.includes\(stem\)[\s\S]{0,80}?die\(/.test(buildTxt));
 }
 
 {

@@ -35,10 +35,18 @@ tapping it copies the number. Nothing else is shown and nothing else is shipped.
    `acct` was added on 11 Aug 2026 at the owner's request, for the back of the coin. **It is a
    real widening of what a stranger with the address can read** and it was made deliberately:
    before it, an account number was recoverable only by decoding a code, and only for six of the
-   thirteen; now all thirteen are in the page as text. The build prints that on every run.
+   fourteen; now all fourteen are in the page as text. The build prints that on every run.
+
+   **A name also travels as a SLUG, and exact matching cannot see one.** On 13 Aug 2026 the
+   master keyed a new account `muhammad-afif-akmal-bin`, a truncated lowercase slug of the
+   payee. It matched no forbidden string byte for byte, so it passed the leak check in both the
+   build and the suite, and it would have become the public URL of the page. Both now also
+   compare STEMS: strip everything that is not a letter or a digit from each side and look for
+   the first twelve characters of the name. Keys are provider-named, never person-named, and the
+   build dies rather than shipping one that is not.
 5. **The name IS inside the codes, and that is not this repo's to fix.** A DuitNow payload is an
    EMVCo TLV string with the account-holder name as a mandatory field (tag 59), and for six of
-   the thirteen the account identifier sits in tag 26 in the clear as well. Anyone who scans a
+   the fourteen the account identifier sits in tag 26 in the clear as well. Anyone who scans a
    code sees those in their banking app, which is what that field is for. The leak check
    therefore strips payloads out before searching, and the build prints the disclosure on every
    run. Do not "fix" this by hiding it; the page not printing the name is the only part that is
@@ -209,9 +217,9 @@ Four things make it work, and each is asserted:
    fallback that would otherwise put a tiny plain black square on every tile. The suite asserts
    the option appears exactly once, so it cannot spread to the code view.
 
-All thirteen thumbnails are drawn TOGETHER, before the list is shown. One per idle callback
-looked like a download in progress, thirteen coins arriving one after another, which is exactly
-what it is not. Drawing them together costs the thirteen encodes once at startup and almost
+All fourteen thumbnails are drawn TOGETHER, before the list is shown. One per idle callback
+looked like a download in progress, fourteen coins arriving one after another, which is exactly
+what it is not. Drawing them together costs the fourteen encodes once at startup and almost
 nothing thereafter, because the matrices are then cached; decorative mode also draws each module
 as a plain rect rather than a rounded blob, which at a module of about one pixel is identical to
 look at and cheaper to paint.
@@ -284,7 +292,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 147 assertions, a couple of minutes, no network
+npm test          # 150 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
@@ -312,16 +320,17 @@ Six things that will bite:
   `toBlob` does not come back.
 - **The grid's `minmax` is 132px and must not grow.** At 148px, `auto-fill` dropped to a single
   column on a 375px phone, which made the list scroll. Two columns must fit the narrowest phone
-  so all thirteen accounts are on screen at once with nothing to hunt for.
+  so all fourteen accounts are on screen at once with nothing to hunt for.
 - **There is no Save button, and that is a decision to defend rather than an omission.** The
   affordance carries it: the coin is drawn as a physical token, with a contact shadow, a lit rim
   and a press state, and the action is press-and-hold, which is the gesture a phone has already
   taught for keeping a picture. A tap does the same for the other instinct, and `.tuck` plays on
   save so the motion explains itself the first time. Three attempts got here: a rail nobody could
   reach the end of, then a grid hidden behind the title with a row of colour dots, which was
-  worse because five of the thirteen brands are near-identical reds and two are exactly the same
-  colour, so the dots could never say which was which. Colour was the only signal, and it was not
-  enough to be one.
+  worse because five of the fourteen brands are near-identical reds and two PAIRS share a colour
+  exactly, so the dots could never say which was which. Colour was the only signal, and it was
+  not enough to be one. The fourteenth account made the point again: Maybank QRPayBiz is the same
+  gold as Maybank, and only the name and the rim legend tell them apart.
 
 ## Deploying
 

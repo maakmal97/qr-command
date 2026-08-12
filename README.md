@@ -17,7 +17,7 @@ fetched when you open it.
 
 ## Using it
 
-**The app opens on your accounts.** All thirteen, named, on one screen, nothing hidden and
+**The app opens on your accounts.** All fourteen, named, on one screen, nothing hidden and
 nothing to scroll. Tap one and its code fills the screen. **Accounts** at the top left goes
 back, and so does your phone's own back gesture.
 
@@ -73,12 +73,12 @@ Two things follow, and the second is the one worth knowing:
 - The page prints the provider name, the code, and **your account number on the back of the
   coin**, which you asked for so a number can be copied and sent to somebody. That last one is a
   real widening: before it, an account number could only be got at by decoding a code, and only
-  for six of the thirteen. Now all thirteen are readable as text by anyone who opens the site.
+  for six of the fourteen. Now all fourteen are readable as text by anyone who opens the site.
 - Your legal name, your groups and the DuitNow member numbers are still dropped at build time
   and never leave the laptop. The build checks that by reading the bundle back and searching it,
   and the suite checks it again, in both directions.
 - **The codes themselves still carry your name.** A DuitNow payload is an EMVCo string with the
-  account-holder name as a mandatory field, and for six of your thirteen the account number is
+  account-holder name as a mandatory field, and for six of your fourteen the account number is
   in there in the clear too. Anyone who scans a code sees those in their banking app before they
   pay, which is exactly what that field is for. No page design can change it, and this one does
   not pretend to. If that matters more than convenience, the answer is a private address rather

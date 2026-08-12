@@ -126,6 +126,31 @@ function secrets(doc) {
   return [...s];
 }
 
+/* A NAME DOES NOT ONLY TRAVEL AS ITSELF. The check above compares exact strings, and a person's
+ * name reaches a page far more often as a slug: lowercased, spaces turned to hyphens, and cut to
+ * some length. That is not hypothetical. The master keyed a new account
+ * `muhammad-afif-akmal-bin`, a truncated slug of the payee, and because it matched no forbidden
+ * string byte for byte it went into the bundle and would have become the public URL of the page.
+ * The squashed form the set already carries does not help: the slug is a PREFIX of it, not equal.
+ *
+ * So for person names, and only for those, compare stems. Strip everything that is not a letter
+ * or a digit from both sides and ask whether the output contains the first twelve characters of
+ * the name. Twelve is long enough that no real word or hash trips it and short enough to survive
+ * any truncation a slug is likely to apply. */
+const STEM = 12;
+
+function nameStems(doc) {
+  const out = new Set();
+  const add = (v) => {
+    if (typeof v !== "string") return;
+    const n = v.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (n.length >= STEM) out.add(n.slice(0, STEM));
+  };
+  add(doc.payee);
+  (doc.owners || []).forEach((o) => { add(o && o.name); add(o && o.legal); });
+  return [...out];
+}
+
 function walk(dir) {
   const out = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -161,6 +186,7 @@ function auditPublic(doc, codes, V) {
    * provider and the code, and nothing else. So the check below strips the payloads out and
    * asserts that not one of those values appears anywhere else. */
   const forbidden = secrets(doc);
+  const stems = nameStems(doc);
   const payloads = codes.map((c) => c.payload).sort((a, b) => b.length - a.length);
   for (const f of files) {
     if (!TEXT.test(f)) continue;
@@ -172,6 +198,15 @@ function auditPublic(doc, codes, V) {
         die("public/" + rel(f) + " contains, OUTSIDE any payload, a value the bundle is not " +
             "allowed to carry (" + s.length + " characters, beginning " +
             JSON.stringify(s.slice(0, 3)) + "). Check the field list in tools/build.mjs.");
+      }
+    }
+    const squashed = hay.replace(/[^a-z0-9]/g, "");
+    for (const stem of stems) {
+      if (squashed.includes(stem)) {
+        die("public/" + rel(f) + " carries a person's name OUTSIDE any payload, in a form that " +
+            "survives slugging (stem " + JSON.stringify(stem) + "). A key, a filename or a label " +
+            "has been derived from the payee or an owner. Rename it in the master; the page is " +
+            "not allowed to print the name.");
       }
     }
   }
