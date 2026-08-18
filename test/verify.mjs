@@ -84,12 +84,26 @@ section("1. Every code decodes, from the renderer that ships");
 
 /* Decode a code at a given PHYSICAL size, which is the size it occupies on the glass and so
  * the only size a camera cares about. A large backing store shown small proves nothing. */
+/* THE DOWNSCALE IS THE MEASUREMENT, and leaving it out quietly disabled this whole section.
+ *
+ * The backing store is never allowed below minDeviceFor(), which is around 530 pixels for a
+ * typical code, so a canvas rendered for a 200px display is still a 530px buffer. Decoding that
+ * buffer proves the buffer is big and nothing else: it succeeds at every requested size, so the
+ * floor sweep below simply reported whichever size its loop started at, and the assertion that
+ * safePhysicalPx still clears the floor was passing on a number it had not measured.
+ *
+ * Draw as the app draws, then scale to the size the glass would actually show, which is what a
+ * camera sees. The dark ground behind it is the page's, so the surround is the real one too. */
 function decode(c, physical, extra) {
   const canvas = createCanvas(8, 8);
   const meta = QRArt.draw(canvas, c.payload,
     Object.assign({ size: physical, pixelRatio: 1, brand: c.brand, label: c.name, seed: c.key }, extra || {}));
-  const g = canvas.getContext("2d");
-  const img = g.getImageData(0, 0, canvas.width, canvas.height);
+  const shown = createCanvas(physical, physical);
+  const sg = shown.getContext("2d");
+  sg.fillStyle = "#0a0d18";
+  sg.fillRect(0, 0, physical, physical);
+  sg.drawImage(canvas, 0, 0, physical, physical);
+  const img = sg.getImageData(0, 0, physical, physical);
   const got = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
   return { ok: !!got && got.data === c.payload, meta, got };
 }
@@ -130,7 +144,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   let worst = 0, who = "";
   for (const c of shipped) {
     let floor = null, streak = 0;
-    for (let px = 200; px <= 1000; px += 20) {
+    for (let px = 120; px <= 1000; px += 20) {
       if (decode(c, px, { safePhysicalPx: 0 }).ok) { if (!streak) floor = px; streak++; if (streak >= 6) break; }
       else { streak = 0; floor = null; }
     }
@@ -138,7 +152,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     if (floor > worst) { worst = floor; who = c.key; }
   }
   ok("the safe size sits above the measured floor of the worst code (" + who + " reads from " +
-     worst + "px, threshold " + SAFE + "px)", worst * 1.2 <= SAFE);
+     worst + "px, threshold " + SAFE + "px)", worst * 1.5 <= SAFE);
 }
 
 {
@@ -297,9 +311,11 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   const bad = [];
   for (const c of shipped) {
     const canvas = createCanvas(8, 8);
-    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
+    const meta = QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
-    const geo = QRArt.coinGeometry(p.n, canvas.width, QRArt.DEFAULTS);
+    // Where the renderer says it drew, not where the canvas width implies. The lens holds
+    // the disc back from the edge, and re-deriving this was what broke when it landed.
+    const geo = meta.grid;
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
 
     for (const [r0, c0, where] of [[0, 0, "top-left"], [0, p.n - 7, "top-right"], [p.n - 7, 0, "bottom-left"]]) {
@@ -332,9 +348,11 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   const bad = [];
   for (const c of shipped) {
     const canvas = createCanvas(8, 8);
-    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
+    const meta = QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
-    const geo = QRArt.coinGeometry(p.n, canvas.width, QRArt.DEFAULTS);
+    // Where the renderer says it drew, not where the canvas width implies. The lens holds
+    // the disc back from the edge, and re-deriving this was what broke when it landed.
+    const geo = meta.grid;
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
     const n = p.n;
     const lum = (x, y) => { const i = (Math.round(y) * canvas.width + Math.round(x)) * 4;
@@ -367,9 +385,11 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   const bad = [];
   for (const c of shipped) {
     const canvas = createCanvas(8, 8);
-    QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
+    const meta = QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
-    const geo = QRArt.coinGeometry(p.n, canvas.width, QRArt.DEFAULTS);
+    // Where the renderer says it drew, not where the canvas width implies. The lens holds
+    // the disc back from the edge, and re-deriving this was what broke when it landed.
+    const geo = meta.grid;
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
     const lum = (x, y) => { const i = (Math.round(y) * canvas.width + Math.round(x)) * 4;
       return 0.2126 * img[i] + 0.7152 * img[i + 1] + 0.0722 * img[i + 2]; };
@@ -397,6 +417,95 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 }
 
 /* ================================================== 2. nothing private shipped */
+
+{
+  /* THE LENS. Its whole claim is that it is free: the light bent around the disc lives outside
+   * the code, so it cannot cost a scan. That claim is only worth having if it is checked. */
+  const art = read(path.join(REPO, "src", "app", "qr-art.js"));
+
+  ok("the lens is on by default and its scale is a stated number",
+    QRArt.DEFAULTS.lens === true && QRArt.DEFAULTS.lensScale > 0.6 && QRArt.DEFAULTS.lensScale < 1);
+
+  /* NOTHING IS PAINTED OVER THE FIELD. The rim glow is the one piece drawn after the coin, and
+   * it must be clipped out of the light disc: an unclipped glow washes the outer modules and
+   * the contrast palette() measured stops being the contrast that is there. */
+  ok("the rim glow is clipped clear of the light field",
+    /function lensRim\(/.test(art) &&
+    /g\.arc\(R, R, geo\.Rd, 0, Math\.PI \* 2\);\s*\n\s*g\.clip\("evenodd"\);/.test(art));
+  ok("the arcs and the Einstein ring are drawn behind the coin, never over it",
+    art.indexOf("function lensBehind(") > 0 &&
+    /lensBehind\(g, device, coinPx, pal, opts\);[\s\S]{0,200}?drawCoin\(g, p, coinPx, pal, lopts\);/.test(art));
+
+  /* THE CANVAS STAYS TRANSPARENT. The coin's shadow is cast from its alpha by drop-shadow, so
+   * an opaque backdrop here would put a hard square shadow behind a round object. The dark of
+   * space is the page's job. Measured at the corners, which must be untouched. */
+  {
+    const c = createCanvas(8, 8);
+    QRArt.draw(c, shipped[0].payload, { size: 700, pixelRatio: 1, brand: shipped[0].brand,
+      label: shipped[0].name, seed: shipped[0].key });
+    const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    const alphaAt = (x, y) => d[(y * c.width + x) * 4 + 3];
+    ok("the canvas is transparent at its corners, so the shadow follows the coin and not a box",
+      alphaAt(1, 1) === 0 && alphaAt(c.width - 2, 1) === 0 && alphaAt(1, c.height - 2) === 0);
+  }
+
+  /* THE SKY IS THE PROVIDER'S SIGNATURE, and it has to be the same sky every time or the
+   * thumbnail and the full-size render would disagree and the zoom would stop being one object
+   * moving. No Math.random anywhere in the renderer; the arcs come from the key. */
+  ok("nothing in the renderer is random, so an account draws the same every time",
+    // A CALL, not the words: the comment above randOf() names Math.random to say it is not
+    // used, and matching that would make this assertion pass by accident either way.
+    !new RegExp('Math' + String.fromCharCode(92) + '.random\\s*\\(').test(art) &&
+    /function randOf\(seed\)/.test(art));
+  {
+    const c1 = createCanvas(8, 8), c2 = createCanvas(8, 8), c3 = createCanvas(8, 8);
+    const o = (a) => ({ size: 700, pixelRatio: 1, brand: a.brand, label: a.name, seed: a.key });
+    QRArt.draw(c1, shipped[0].payload, o(shipped[0]));
+    QRArt.draw(c2, shipped[0].payload, o(shipped[0]));
+    QRArt.draw(c3, shipped[1].payload, o(shipped[1]));
+    const px = (c) => Buffer.from(c.getContext("2d").getImageData(0, 0, c.width, c.height).data);
+    ok("the same account draws pixel for pixel the same coin twice", px(c1).equals(px(c2)));
+    ok("two accounts get different skies", !px(c1).equals(px(c3)) || shipped[0].brand !== shipped[1].brand);
+  }
+
+  /* BOTH FACES ARE ONE OBJECT. If the reverse were left full-bleed it would grow as the coin
+   * turned over, which reads as two pictures swapped rather than one thing rotating. */
+  {
+    const f = createCanvas(8, 8), b = createCanvas(8, 8);
+    const a = shipped[0];
+    const mf = QRArt.draw(f, a.payload, { size: 343, pixelRatio: 3, brand: a.brand, label: a.name, seed: a.key });
+    const mb = QRArt.drawBack(b, { size: 343, pixelRatio: 3, brand: a.brand, label: a.name, seed: a.key, acct: a.acct });
+    ok("the two faces are drawn at the same diameter, so the flip is one object turning",
+      Math.abs(mf.grid.size - mb.coinPx) <= 1, mf.grid.size + " against " + mb.coinPx);
+  }
+
+  /* PayNet's mark has a stated minimum and no permission to go under it. The lens shrank the
+   * coin and took the container below that floor, which silently removed it from every reverse;
+   * the fix raised the mark, which then pushed the caption onto the rim legend. Both directions
+   * are checked here, because each was a real bug. */
+  {
+    const bad = [];
+    for (const a of shipped) {
+      const b = createCanvas(8, 8);
+      QRArt.drawBack(b, { size: 343, pixelRatio: 3, brand: a.brand, label: a.name, seed: a.key, acct: a.acct });
+      const d = b.getContext("2d").getImageData(0, 0, b.width, b.height).data;
+      // PayNet's white container is the only pure white on the reverse. Find it, and check its
+      // width in CSS pixels against the floor the guidelines set for the logo inside it.
+      let minX = b.width, maxX = -1, seen = 0;
+      for (let y = 0; y < b.height; y += 2) for (let x = 0; x < b.width; x += 2) {
+        const i = (y * b.width + x) * 4;
+        if (d[i] > 246 && d[i + 1] > 246 && d[i + 2] > 246 && d[i + 3] > 250) {
+          seen++; if (x < minX) minX = x; if (x > maxX) maxX = x;
+        }
+      }
+      const cssW = (maxX - minX) / 3;
+      if (!seen) bad.push(a.key + ": the mark is missing from the reverse");
+      else if (cssW < markScope.DuitNowMark.minWidthPx) bad.push(a.key + ": container only " + cssW.toFixed(0) + " CSS px");
+    }
+    ok("PayNet's container is on every reverse and clears its minimum width at phone size",
+      bad.length === 0, bad.slice(0, 4).join("; "));
+  }
+}
 
 section("2. The bundle carries the codes and nothing else");
 

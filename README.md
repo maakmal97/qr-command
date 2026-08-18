@@ -91,14 +91,17 @@ archives permanently.
 
 ## The coin, and why there is no Save button
 
-The code is drawn as a struck coin in the provider's own colour: a scalloped edge, the
-provider's name around the rim, a tinted paper field and rounded eyes, and the whole page
-shifts colour to match. The modules are liquid: a lone one is a circle, a run of them is a
-capsule, a block is a rounded slab.
+The code is drawn as a struck coin in the provider's own colour, held in a gravitational lens:
+the disc bends the light behind it into arcs that sweep around the rim and close, at one radius,
+into a single complete ring. The provider's name runs around the rim, the field is tinted paper,
+the eyes are rounded, and the whole page shifts colour to match. The modules are liquid: a lone
+one is a circle, a run of them is a capsule, a block is a rounded slab.
 
-**Every provider's coin has its own outline.** The number of scallops and where they fall come
-from a hash of the provider's key, so Maybank is always the same shape and never ShopeePay's,
-on every device, for ever, with nothing stored anywhere to remember it.
+**Every provider gets its own sky.** How many arcs, where they fall and how far they sweep all
+come from a hash of the provider's key, so Maybank is always the same and never ShopeePay's, on
+every device, for ever, with nothing stored anywhere to remember it. It matters more than it
+sounds: Boost Bank and Boost are the same red to the byte, so colour alone could never tell you
+which one you were looking at.
 
 **The shape is the instruction.** The coin sits on the page as a physical thing: a contact
 shadow beneath it, a lit rim along the top, and it presses in under a finger. There is no
@@ -128,8 +131,10 @@ against the matrix.
 
 Two measured numbers govern it:
 
-- **360 pixels** is the smallest the worst code will still read at.
-- **560 pixels** is the size below which the app stops drawing coins and shows the plain code
+- **380 pixels** is the smallest the worst code will still read at, measured at the size the
+  screen actually shows rather than the size it is drawn into, which is not the same thing and
+  was quietly flattering the old number.
+- **580 pixels** is the size below which the app stops drawing coins and shows the plain code
   instead, which reads down to 230. On a phone the coin is two to three times that, so you will
   not meet the threshold in normal use.
 

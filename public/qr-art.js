@@ -54,16 +54,32 @@ self.QRArt = (function () {
     legend: true,        // strike the provider's name around the rim
     depth: true,         // run the ink as a gradient from the middle outwards
     sheen: true,         // a light sweep across the body
+    /* THE LENS. Light from behind the disc, bent around it. See the block above lensBehind()
+     * for what is and is not allowed to touch the code.
+     *
+     * lensScale is the disc as a fraction of the canvas, and it is the ONLY part of this frame
+     * that costs anything: the arcs, the ring and the glow were each ablated and none of them
+     * moved the decode floor, while shrinking the disc moved it a great deal, because a
+     * smaller disc is a smaller code. 0.78 is where the measured floor still sits under the
+     * safe size with the same half-again margin the safe size was chosen for. */
+    lens: true,
+    lensScale: 0.78,
+    lensArcs: 26,        // smeared arcs. Their count, place and sweep come from the key.
     label: "",           // what the legend reads
     seed: "",            // decides the lobe count and phase. The provider key.
     minContrast: 8,      // ink against field. WCAG's ceiling is 21; 8 is comfortably safe.
     minModulePx: 6,      // floor on a module, in device pixels, in the backing store
     /* The smallest the coin may be PHYSICALLY DRAWN and still be trusted to scan. Measured,
-     * not chosen: decoding every payload at descending sizes, the worst code in the book
-     * stopped reading below 370 physical pixels, so this is that with half again on top.
-     * Below it the app draws the plain code instead, which reads down to 230. The two numbers
-     * are re-measured by test/verify.mjs on every run, so this one cannot quietly go stale. */
-    safePhysicalPx: 560,
+     * not chosen: every payload is rendered as the app renders it, DOWNSCALED to the size the
+     * glass would show, and decoded. The worst code in the book stops reading below 380
+     * physical pixels with the lens on, and 440 without it, so this is 380 with half again on
+     * top. Below it the app draws the plain code instead, which reads down to 230.
+     *
+     * The downscale is the whole of the measurement. The backing store never drops below
+     * minDeviceFor(), so decoding the buffer proves only that the buffer is big, and it passes
+     * at every size. The suite measured the buffer for a while and so reported whatever size
+     * its sweep happened to start at; it now downscales, and these numbers are that. */
+    safePhysicalPx: 580,
     plain: false,        // true draws an ordinary square code on a white square
     /* DECORATIVE: draw the coin at any size, as an icon, and do not fall back to the plain
      * code when it is too small to scan.
@@ -221,6 +237,20 @@ self.QRArt = (function () {
     s = String(s || "");
     for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
     return h >>> 0;
+  }
+
+  /* A stream of numbers from that hash, for the lens sky. Math.random is deliberately not used
+   * anywhere in this file: an account's coin must be the same picture on every device and on
+   * every redraw, or the thumbnail and the full-size render would disagree and the zoom would
+   * stop being one object moving. Xorshift, seeded by the provider key, nothing stored. */
+  function randOf(seed) {
+    var x = (seed >>> 0) || 1;
+    return function () {
+      x ^= x << 13; x >>>= 0;
+      x ^= x >> 17;
+      x ^= x << 5; x >>>= 0;
+      return x / 4294967296;
+    };
   }
 
   /* -------------------------------------------------------------------- encode */
@@ -563,6 +593,83 @@ self.QRArt = (function () {
           g.fillRect(gx(c), gx(r), gx(c + 1) - gx(c), gx(r + 1) - gx(r));
   }
 
+  /* ---------------------------------------------------------------------- lens */
+
+  /* THE LENS. The disc is a mass and the light behind it is bent around it: arcs smeared into
+   * rings, and at the radius where the smearing closes, the one complete Einstein ring.
+   *
+   * Three rules hold it up, and each is asserted.
+   *
+   * 1. NOTHING IS PAINTED OVER THE FIELD. Every arc, the ring and the rim glow live outside
+   *    the light disc the code sits on. Measured by ablation, the whole frame costs the decode
+   *    exactly nothing: stars, arcs, ring and glow were switched off one at a time and the
+   *    floor did not move. What DID move it was shrinking the disc to make room, which is why
+   *    lensScale is a measured number and not a taste.
+   *
+   * 2. THE CANVAS STAYS TRANSPARENT OUTSIDE THE ARTWORK. No opaque backdrop is painted here.
+   *    The coin's shadow is cast from its alpha by `filter: drop-shadow`, so an opaque fill
+   *    would put a hard square shadow behind a round object. The dark of space belongs to the
+   *    page, in app.css, where it also covers the whole screen rather than one box.
+   *
+   * 3. THE ARCS ARE THE PROVIDER'S SIGNATURE. The scalloped outline is gone, because a lens
+   *    has a smooth horizon, so the identity that outline carried moves here: how many arcs,
+   *    where they fall and how far they sweep all come from a hash of the provider key. Two
+   *    accounts sharing a brand colour exactly, as Boost Bank and Boost do, still get their
+   *    own sky, and nothing is stored to remember it. */
+  function lensBehind(g, size, coinPx, pal, opts) {
+    var R = size / 2, Rc = coinPx / 2;
+    var seed = seedOf(opts.seed || opts.label || "");
+    var rand = randOf(seed ^ 0x2bd1);
+    var lift = hex2rgb(pal.brandLift);
+    var n = opts.lensArcs;
+
+    g.save();
+    g.translate(R, R);
+    for (var i = 0; i < n; i++) {
+      var r = Rc * (1.05 + rand() * 0.48);
+      var a0 = rand() * Math.PI * 2;
+      var span = 0.12 + rand() * 0.55;
+      g.strokeStyle = "rgba(" + mix(lift, [255, 255, 255], rand() * 0.7).map(Math.round).join(",") +
+                      "," + (0.16 + rand() * 0.5).toFixed(3) + ")";
+      g.lineWidth = Math.max(1, Rc * (0.006 + rand() * 0.022));
+      g.lineCap = "round";
+      g.beginPath();
+      g.arc(0, 0, r, a0, a0 + span);
+      g.stroke();
+    }
+    // The Einstein ring: the one closed circle, where the smearing completes.
+    g.strokeStyle = "rgba(" + mix(lift, [255, 255, 255], 0.6).map(Math.round).join(",") + ",0.55)";
+    g.lineWidth = Math.max(1, Rc * 0.012);
+    g.beginPath();
+    g.arc(0, 0, Rc * 1.035, 0, Math.PI * 2);
+    g.stroke();
+    g.restore();
+  }
+
+  /* The lit horizon, laid over the coin's own ring band and stopping short of the field. It is
+   * a `screen` blend so it brightens the band without touching what is under the code. */
+  function lensRim(g, size, coinPx, geo, pal) {
+    var R = size / 2, Rc = coinPx / 2;
+    var lift = hex2rgb(pal.brandLift);
+    g.save();
+    g.globalCompositeOperation = "screen";
+    var rim = g.createRadialGradient(R, R, Rc * 0.90, R, R, Rc);
+    rim.addColorStop(0, "rgba(" + lift.map(Math.round).join(",") + ",0)");
+    rim.addColorStop(1, "rgba(" + lift.map(Math.round).join(",") + ",0.75)");
+    g.fillStyle = rim;
+    /* Clipped clear of the field, so the measured contrast under the code is the contrast that
+     * was measured. Without this the glow washes the outer modules and the palette's number
+     * stops being true where it matters most. */
+    g.beginPath();
+    g.rect(0, 0, size, size);
+    g.arc(R, R, geo.Rd, 0, Math.PI * 2);
+    g.clip("evenodd");
+    g.beginPath();
+    g.arc(R, R, Rc, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  }
+
   /* ---------------------------------------------------------------------- draw */
 
   /* canvas may be a browser HTMLCanvasElement or any object with width, height and
@@ -590,18 +697,57 @@ self.QRArt = (function () {
     var plainNow = opts.plain || fellBack;
     if (opts.decorative) opts = Object.assign({}, opts, { legend: false });
 
-    var device = opts.decorative ? physical : Math.max(minDeviceFor(p.n, opts), physical);
+    /* The lens holds the disc back from the edge of the canvas to make room for the light it
+     * bends. The backing store has to grow to match, or the module floor would be met against
+     * the canvas while the code itself came out smaller than the floor was meant to protect.
+     * A thumbnail is exempt: at 36 pixels the sky is noise, and the tile is a picture rather
+     * than something anyone points a camera at. */
+    var lensOn = opts.lens && !plainNow && !opts.decorative;
+    var scale = lensOn ? opts.lensScale : 1;
+    var device = opts.decorative ? physical
+               : Math.max(Math.ceil(minDeviceFor(p.n, opts) / scale), physical);
+    var coinPx = lensOn ? Math.round(device * scale) : device;
+    var off = Math.round((device - coinPx) / 2);
+
     canvas.width = device;
     canvas.height = device;
     var g = canvas.getContext("2d");
     g.clearRect(0, 0, device, device);
-    if (plainNow) drawPlain(g, p, device, opts);
-    else drawCoin(g, p, device, pal, opts);
 
-    var geo = coinGeometry(p.n, device, opts);
+    /* A lens has a smooth horizon, so the scalloped edge goes and the arcs carry the provider's
+     * signature instead. The geometry MUST be computed from the same options the drawing uses:
+     * coinFrame takes the scallop depth off the radius, so deriving the grid from the unmodified
+     * options put every reported module position out by that depth. The suite reads this grid to
+     * find the painted pixels, so the symptom was finder ratios of 0.33:1.44:1.33 and a quiet
+     * zone that measured dark, which reads like a broken renderer rather than a bad measurement. */
+    var lopts = lensOn ? Object.assign({}, opts, { scallop: 0 }) : opts;
+    var geo = coinGeometry(p.n, coinPx, lopts);
+
+    if (plainNow) {
+      drawPlain(g, p, device, opts);
+    } else if (lensOn) {
+      lensBehind(g, device, coinPx, pal, opts);
+      g.save();
+      g.translate(off, off);
+      drawCoin(g, p, coinPx, pal, lopts);
+      g.restore();
+      lensRim(g, device, coinPx, geo, pal);
+    } else {
+      drawCoin(g, p, device, pal, opts);
+    }
     return {
       ecl: p.ecl, version: p.version, modules: p.n,
       plain: plainNow, fellBack: fellBack,
+      /* WHERE THE CODE ACTUALLY LANDED, in canvas pixels. The lens holds the disc back from
+       * the edge, so a caller can no longer assume the coin fills the canvas and re-derive the
+       * grid from its width. Anything that inspects the painted pixels, which is most of the
+       * geometry half of the suite, asks here instead of working it out a second time. Null
+       * for the plain code, which has a layout of its own. */
+      grid: plainNow ? null : {
+        m: geo.m, size: coinPx, offset: off,
+        gx: function (c) { return off + geo.gx(c); },
+        gy: function (r) { return off + geo.gy(r); }
+      },
       modulePxDevice: plainNow ? device / (p.n + 2 * opts.quiet) : geo.m,
       modulePxPhysical: (plainNow ? device / (p.n + 2 * opts.quiet) : geo.m) * (physical / device),
       contrast: pal.contrast, palette: pal,
@@ -680,20 +826,35 @@ self.QRArt = (function () {
     g.clearRect(0, 0, size, size);
 
     var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
-    var f = coinFrame(size, opts);
+
+    /* BOTH FACES ARE THE SAME OBJECT, so the reverse is held back from the edge by exactly the
+     * amount the front is. Left full-bleed while the front wore the lens, the coin would grow
+     * as it turned over and shrink as it turned back, which reads as two pictures being swapped
+     * rather than one thing rotating. The lens sky is drawn behind this face too, for the same
+     * reason: it is the same object, seen from the other side. */
+    var lensOn = opts.lens && !opts.decorative;
+    var lopts = lensOn ? Object.assign({}, opts, { scallop: 0 }) : opts;
+    var coinPx = lensOn ? Math.round(size * opts.lensScale) : size;
+    var off = Math.round((size - coinPx) / 2);
+
+    var f = coinFrame(coinPx, lopts);
     var R = f.R;
     var seed = seedOf(opts.seed || opts.label || "");
     var lobes = 11 + (seed % 9);
     var phase = ((seed >>> 4) % 360) * Math.PI / 180;
 
+    if (lensOn) lensBehind(g, size, coinPx, pal, opts);
+    g.save();
+    g.translate(off, off);
+
     // The body, struck from the same die as the front.
-    var lg = g.createLinearGradient(0, 0, size, size);
+    var lg = g.createLinearGradient(0, 0, coinPx, coinPx);
     lg.addColorStop(0, pal.brandSink);
     lg.addColorStop(0.42, pal.brandLift);
     lg.addColorStop(0.62, pal.brand);
     lg.addColorStop(1, pal.brandSink);
     g.fillStyle = opts.sheen ? lg : pal.brand;
-    if (opts.scallop > 0) scallopPath(g, R, R, f.Rbase, R, lobes, phase);
+    if (lopts.scallop > 0) scallopPath(g, R, R, f.Rbase, R, lobes, phase);
     else { g.beginPath(); g.arc(R, R, R, 0, Math.PI * 2); }
     g.fill();
 
@@ -738,8 +899,15 @@ self.QRArt = (function () {
     var mark = (typeof self !== "undefined" && self.DuitNowMark) || null;
     var markH = 0, markW = 0;
     if (mark) {
-      markH = D * 0.25;
+      /* 0.32 of the face, not 0.25, and the number comes from the floor rather than the eye.
+       * The lens holds the coin to 0.78 of the canvas, which shrank the container to 58 CSS px
+       * at phone size and tripped the 64px minimum, so the mark vanished from every reverse.
+       * At 0.32 it lands back at the 74 CSS px that was measured and checked before the lens,
+       * with the logo inside it clear of its own 40px floor. */
+      markH = D * 0.32;
       markW = markH * mark.aspect;
+      // The floor is on the mark as the EYE sees it, so the ratio is device to CSS across the
+      // whole canvas, which already carries the lens scale through coinPx.
       if (markW * (cssSize / size) < mark.minWidthPx) { markH = 0; markW = 0; }
     }
 
@@ -790,6 +958,33 @@ self.QRArt = (function () {
     var gap = px * 0.62;
     var blockH = (markH ? markH + clear : 0) + linesH + gap + capPx;
 
+    /* MEASURING THE BLOCK IS NOT ENOUGH; IT HAS TO BE CHECKED AGAINST THE ROOM.
+     *
+     * Centring a block taller than the face pushes half the overflow out of each end, and what
+     * it runs into at the bottom is the rim legend. That is exactly what happened when the mark
+     * grew to clear its minimum under the lens: the caption landed on the lettering on half the
+     * accounts. Adding the heights up stops the pieces colliding with EACH OTHER; only this
+     * stops them colliding with the coin.
+     *
+     * What shrinks is OUR typography, never PayNet's mark. The mark has a stated minimum size
+     * and no permission to go under it, so if the block still will not fit once the number is
+     * as small as it should ever be, the mark is dropped rather than squeezed. */
+    var room = D * 0.84;
+    if (blockH > room) {
+      var slack = blockH - (markH ? markH + clear : 0);
+      var want = room - (markH ? markH + clear : 0);
+      var k = want / slack;
+      if (k < 0.72) {
+        markH = 0; markW = 0; clear = 0;                 // no room for both: the mark goes
+        k = room / (linesH + gap + capPx);
+      }
+      k = Math.min(1, k);
+      px *= k; capPx *= k; gap *= k;
+      linesH = px + (lines.length - 1) * px * 1.22;
+      g.font = "700 " + px + "px " + FONT;
+      blockH = (markH ? markH + clear : 0) + linesH + gap + capPx;
+    }
+
     var top = R - blockH / 2;
     if (markH) {
       drawMark(g, mark, R - markW / 2, top, markW, markH);
@@ -801,7 +996,10 @@ self.QRArt = (function () {
     top += linesH + gap;
     emboss(g, "ACCOUNT NUMBER", R, top + capPx * 0.5, capPx, "700", pal.faceDim, 0.045);
 
-    return { size: cssSize, deviceSize: size, palette: pal, acct: acct };
+    g.restore();
+    if (lensOn) lensRim(g, size, coinPx, f, pal);
+
+    return { size: cssSize, deviceSize: size, coinPx: coinPx, palette: pal, acct: acct };
   }
 
   /* ----------------------------------------------------------------- the card */

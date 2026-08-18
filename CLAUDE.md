@@ -2,7 +2,8 @@
 
 The payment-QR consolidator, read-only, on the phone. A Cloudflare Worker serving a static
 bundle built from the master at `Code\pay-afif-site`. Two screens: the accounts, which is where
-it opens, and one code drawn on the device as a struck coin. The coin turns over: its reverse is
+it opens, and one code drawn on the device as a struck coin held in a gravitational lens: light
+from behind it smeared into arcs, and the one closed Einstein ring. The coin turns over: its reverse is
 struck metal carrying PayNet's own DuitNow QR brand graphic and the account number, embossed, and
 tapping it copies the number. Nothing else is shown and nothing else is shipped.
 
@@ -75,11 +76,18 @@ had pushed it to 61 modules. The stylisation costs no error correction anyway, b
 faithful at every module centre outside the eyes. M is also what the master page and the printed
 card use, so all three now agree.
 
-**Below 560 physical pixels the coin is not drawn at all.** The worst measured floor is 370, so
-`safePhysicalPx` is that with half again on top. Under it the renderer draws the plain code
-instead and says so. What matters is the PHYSICAL size on the glass, not the backing store: a
-large buffer shown small proves nothing, and an early version of the test measured the buffer
-and so passed while the displayed code would not have read.
+**Below 580 physical pixels the coin is not drawn at all.** The worst measured floor is 380 with
+the lens and 440 without it, so `safePhysicalPx` is 380 with half again on top. Under it the
+renderer draws the plain code instead and says so.
+
+**THE DOWNSCALE IS THE MEASUREMENT, and leaving it out disabled the guard for a while.** What
+matters is the PHYSICAL size on the glass, not the backing store. The backing store is never
+allowed below `minDeviceFor()`, about 530 pixels for a typical code, so a canvas rendered for a
+200px display is still a 530px buffer: decode that and it succeeds at every size. `decode()` in
+the suite did exactly that, so the floor sweep reported whichever size its loop started at, and
+the assertion that `safePhysicalPx` still clears the floor was passing on a number it had never
+measured. It now draws as the app draws, scales to the size the glass would show, and decodes
+that. The numbers above are from the corrected measurement; the old 370 was not comparable.
 
 **Module edges are snapped to whole device pixels.** Left fractional, boundaries drift in and
 out of phase with the pixel lattice and paint half-lit rows a binariser reads as neither dark
@@ -91,6 +99,56 @@ diagonal corners of each, which is what a rounded eye is. The suite names those 
 on any other. It also measures the 1:1:3:1:1 run ratio through each eye out of the painted
 pixels, because a finder carries no error correction: a decoder that cannot see one does not
 recover from it, it never finds the code at all.
+
+## The lens
+
+The coin sits in a gravitational lens: the disc is a mass, and the light behind it is bent into
+arcs that sweep around the rim, closing at one radius into the Einstein ring. How many arcs,
+where they fall and how far they sweep all come from a hash of the provider key, so this is
+where the per-provider identity now lives. It has to live somewhere: a lens has a smooth
+horizon, so the scalloped outline is gone, and Boost Bank and Boost are the same `#ED1C24` to
+the byte, so colour cannot tell them apart. They get different skies, and nothing is stored to
+remember which.
+
+**The frame is free; the ROOM it needs is not.** Ablated one at a time, the stars, the arcs, the
+ring and the rim glow each cost the decode exactly nothing, because none of them touches the
+light field. What does cost is `lensScale`, which holds the disc to 0.78 of the canvas to make
+room: a smaller disc is a smaller code. Measured properly, at 0.78 the worst code reads from 380
+physical pixels against 440 for the full-bleed coin, so the lens is slightly BETTER, because the
+backing store grows with it and the downscale has more to work from.
+
+**Three rules, all asserted.**
+
+1. **Nothing is painted over the field.** The rim glow is the only piece drawn after the coin
+   and it is clipped out of the light disc. Unclipped it washes the outer modules, and the
+   contrast `palette()` measured stops being the contrast that is actually there.
+2. **The canvas stays transparent outside the artwork.** No opaque backdrop is painted on it.
+   The coin's shadow is cast from its alpha by `filter: drop-shadow`, so an opaque fill would
+   put a hard square shadow behind a round object. The dark of space belongs to the page, in
+   `app.css`, where it also covers the whole screen rather than one box. The suite reads the
+   corner pixels and fails if any of them is opaque.
+3. **Nothing is random.** `Math.random` appears nowhere in the renderer; the sky comes from
+   `randOf(seedOf(key))`. An account must draw the same picture every time, or the thumbnail and
+   the full-size render would disagree and the zoom would stop being one object moving.
+
+**Both faces are drawn at the same diameter.** The reverse wears the lens too. Left full-bleed
+while the front wore it, the coin grew as it turned over and shrank as it turned back, which
+reads as two pictures being swapped rather than one thing rotating.
+
+**Two things bit while fitting PayNet's mark into it.** The 0.78 scale took the container to 58
+CSS px at phone size, under its 64px floor, so the rule correctly removed the mark from every
+reverse; raising it to 0.32 of the face put it back at 79 CSS px, and that taller block then
+pushed the caption onto the rim legend. The stack measured its own height but never checked it
+against the room, so it now does, and what shrinks is our typography rather than PayNet's mark,
+which has a stated minimum and no permission to go under it.
+
+**`draw()` reports where it drew.** `meta.grid` gives the module grid in canvas pixels. The coin
+no longer fills the canvas, so anything inspecting the painted pixels has to ask rather than
+re-derive it from the canvas width. It must also be computed from the options the drawing
+actually used: deriving it with the scallop still set, while the lens draws with `scallop: 0`,
+put every reported position out by the scallop depth, and the symptom was finder ratios of
+0.33:1.44:1.33 and a quiet zone measuring dark, which reads like a broken renderer rather than
+a bad measurement.
 
 **The decoration is free, and that is measured too.** Colour, the scalloped edge, the rim
 legend, the ring sheen and the ink gradient all sit outside the quiet zone or affect only
@@ -292,7 +350,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 150 assertions, a couple of minutes, no network
+npm test          # 159 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
