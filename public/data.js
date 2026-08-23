@@ -61,6 +61,13 @@ self.QR_CODES = [
     "acct": "1205 6116 5020"
   },
   {
+    "key": "tngbiz",
+    "name": "Touch 'n Go Business",
+    "brand": "#1A2B6B",
+    "payload": "00020201021126520014A000000615000101068900530220MDN177104459556739375204739953034585802MY5925MUHAMMADAFIFAKMALBINAFFIA6011KUALALUMPUR6304FF56",
+    "acct": "9988 00112763 9"
+  },
+  {
     "key": "spay",
     "name": "ShopeePay",
     "brand": "#EE4D2D",
@@ -89,4 +96,4 @@ self.QR_CODES = [
     "acct": "2236 9026 4534"
   }
 ];
-self.QR_BUILD = "1acb67ddfc45";
+self.QR_BUILD = "820fbc6a3c32";

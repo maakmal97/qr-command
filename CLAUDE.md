@@ -36,7 +36,7 @@ tapping it copies the number. Nothing else is shown and nothing else is shipped.
    `acct` was added on 11 Aug 2026 at the owner's request, for the back of the coin. **It is a
    real widening of what a stranger with the address can read** and it was made deliberately:
    before it, an account number was recoverable only by decoding a code, and only for six of the
-   twelve; now all twelve are in the page as text. The build prints that on every run.
+   thirteen; now all thirteen are in the page as text. The build prints that on every run.
 
    **A name also travels as a SLUG, and exact matching cannot see one.** On 13 Aug 2026 the
    master keyed a new account `muhammad-afif-akmal-bin`, a truncated lowercase slug of the
@@ -47,7 +47,7 @@ tapping it copies the number. Nothing else is shown and nothing else is shipped.
    build dies rather than shipping one that is not.
 5. **The name IS inside the codes, and that is not this repo's to fix.** A DuitNow payload is an
    EMVCo TLV string with the account-holder name as a mandatory field (tag 59), and for six of
-   the twelve the account identifier sits in tag 26 in the clear as well. Anyone who scans a
+   the thirteen the account identifier sits in tag 26 in the clear as well. Anyone who scans a
    code sees those in their banking app, which is what that field is for. The leak check
    therefore strips payloads out before searching, and the build prints the disclosure on every
    run. Do not "fix" this by hiding it; the page not printing the name is the only part that is
@@ -275,9 +275,9 @@ Four things make it work, and each is asserted:
    fallback that would otherwise put a tiny plain black square on every tile. The suite asserts
    the option appears exactly once, so it cannot spread to the code view.
 
-All twelve thumbnails are drawn TOGETHER, before the list is shown. One per idle callback
-looked like a download in progress, twelve coins arriving one after another, which is exactly
-what it is not. Drawing them together costs the twelve encodes once at startup and almost
+Every thumbnail is drawn TOGETHER with the rest, before the list is shown. One per idle callback
+looked like a download in progress, coins arriving one after another, which is exactly
+what it is not. Drawing them together costs one encode per account at startup and almost
 nothing thereafter, because the matrices are then cached; decorative mode also draws each module
 as a plain rect rather than a rounded blob, which at a module of about one pixel is identical to
 look at and cheaper to paint.
@@ -378,14 +378,14 @@ Six things that will bite:
   `toBlob` does not come back.
 - **The grid's `minmax` is 132px and must not grow.** At 148px, `auto-fill` dropped to a single
   column on a 375px phone, which made the list scroll. Two columns must fit the narrowest phone
-  so all twelve accounts are on screen at once with nothing to hunt for.
+  so every account is on screen at once with nothing to hunt for.
 - **There is no Save button, and that is a decision to defend rather than an omission.** The
   affordance carries it: the coin is drawn as a physical token, with a contact shadow, a lit rim
   and a press state, and the action is press-and-hold, which is the gesture a phone has already
   taught for keeping a picture. A tap does the same for the other instinct, and `.tuck` plays on
   save so the motion explains itself the first time. Three attempts got here: a rail nobody could
   reach the end of, then a grid hidden behind the title with a row of colour dots, which was
-  worse because six of the twelve brands sit within twenty degrees of red, and Boost Bank and
+  worse because six of the brands sit within twenty degrees of red, and Boost Bank and
   Boost are the same #ED1C24 exactly, to the byte. Colour was the only signal, and it was not
   enough to be one. Only the name and the rim legend separate that pair, which is why the
   legend is not decoration and must survive any restyling of the coin.
