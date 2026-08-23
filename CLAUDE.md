@@ -422,7 +422,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 177 assertions, a couple of minutes, no network
+npm test          # 177 assertions, about ten seconds, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
@@ -441,8 +441,10 @@ Six things that will bite:
   legal character in a JS string, so the file parses, the build runs and the only symptom is a
   comparison that quietly stops matching. The suite now sweeps every source and shipped file for
   control bytes, which is the assertion that would have caught both. Use the editing tools.
-- **The suite is slow because it decodes.** Roughly a thousand renders go through jsQR on every
-  run. That is the point of it; do not trim the size sweep to make it quick.
+- **The suite decodes about a thousand renders on every run,** which is the point of it: do
+  not trim the size sweep to make it quick. It is not slow, though. Caching the encode in
+  `plan()` took it to roughly ten seconds, and the docs claimed "a couple of minutes" long
+  after that stopped being true.
 - **The saved image is built with `toDataURL`, not `toBlob`, and that is load-bearing.** iOS
   only allows `navigator.share` from inside the gesture that triggered it, and awaiting
   `toBlob` is enough to lose that permission. The failure is silent: the share sheet simply
