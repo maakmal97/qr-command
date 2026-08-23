@@ -64,6 +64,43 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    /* /state.json - the one thing the bundle cannot carry, because it changes without a deploy.
+     *
+     * READ ONLY, like everything else here. The Worker calls QR_STATE.get and nothing more;
+     * there is no route that writes it, no secret and nothing to authenticate. The value is
+     * put there from the laptop by wrangler, under the owner's own Cloudflare login, so the
+     * public surface gained a JSON file and not a write path.
+     *
+     * It carries account keys and booleans. The keys are already public in data.js, so this
+     * discloses nothing new: it says which of the codes already on the page is currently being
+     * changed and should not be shown.
+     *
+     * NEVER CACHED, anywhere. A suspended code that is still being served from a cache is the
+     * one failure this whole mechanism exists to prevent, so it is no-store at the edge and the
+     * service worker is forbidden from precaching it.
+     *
+     * A miss, an empty namespace or a KV outage all answer {} rather than an error. The phone
+     * then falls back to the flag baked into the bundle, which is the durable truth; this is
+     * the fast path, never the only one. */
+    if (url.pathname === "/state.json") {
+      let body = "{}";
+      try {
+        if (env.QR_STATE) {
+          const raw = await env.QR_STATE.get("state");
+          if (raw) { JSON.parse(raw); body = raw; }   // parse to refuse malformed JSON, then pass through
+        }
+      } catch (e) { body = "{}"; }
+      return new Response(body, {
+        status: 200,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "no-store, must-revalidate",
+          ...SECURITY,
+        },
+      });
+    }
+
     const upstream = await env.ASSETS.fetch(request);
 
     // Response headers are immutable as returned, so rebuild rather than mutate.

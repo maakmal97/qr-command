@@ -26,7 +26,7 @@ back, and so does your phone's own back gesture.
 | **Save the code to your photos** | **Press and hold it**, the same way you would keep any picture on a phone. A plain tap does it too. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
 | Next or previous | Swipe left and right across the code. A swipe never counts as a tap, so changing code cannot save one by accident. |
 | **The account number** | Press **DuitNow number** and the coin turns over. Its back is struck metal with the number embossed into it. **Tap it to copy**, digits only, ready to paste into a banking app. Changing account always turns it back to the code. |
-| Plain code | The small pill under the code, for a scanner that is struggling. |
+| Under maintenance | An account being changed on the laptop shows **Under maintenance** and no code at all. Flip it from the local page; the phone follows within seconds. |
 | Keyboard | Left and right arrows step through, `Enter` or `S` saves, `P` toggles plain, `Esc` goes back. |
 | One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
 

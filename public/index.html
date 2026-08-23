@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=8956438c5c4d">
+<link rel="stylesheet" href="./app.css?v=a2320e6017af">
 </head>
 <body class="view-list">
 
@@ -40,8 +40,9 @@
   </div>
 
   <main class="stage">
-    <h2 id="name" class="name">&nbsp;</h2>
-
+    <!-- No title. The provider's name is struck around the coin's rim, where it belongs on a
+         coin, and repeating it in 28px above was saying the same thing twice. The coin's own
+         aria-label still carries it, so nothing is lost to a screen reader. -->
     <div class="coinwrap">
       <button type="button" id="coinbtn" class="coinbtn">
         <span class="faces" id="faces">
@@ -54,8 +55,6 @@
            which cancels the animation silently. -->
       <div class="maint" id="maint" aria-hidden="true">
         <p class="maint-h">Under maintenance</p>
-        <p class="maint-b" id="maint-b">This code is being changed on the laptop. It is not shown
-          here until that is finished, so nobody can pay into it meanwhile.</p>
       </div>
     </div>
 
@@ -63,7 +62,6 @@
       <p id="say" class="say" role="status" aria-live="polite"></p>
       <div class="pills">
         <button type="button" id="flipbtn" class="pill" aria-pressed="false">DuitNow number</button>
-        <button type="button" id="plainbtn" class="pill" aria-pressed="false">Plain code</button>
       </div>
     </div>
   </main>
@@ -73,10 +71,10 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=8956438c5c4d"></script>
-<script src="./duitnow-mark.js?v=8956438c5c4d"></script>
-<script src="./qr-art.js?v=8956438c5c4d"></script>
-<script src="./data.js?v=8956438c5c4d"></script>
-<script src="./app.js?v=8956438c5c4d"></script>
+<script src="./qrcode.js?v=a2320e6017af"></script>
+<script src="./duitnow-mark.js?v=a2320e6017af"></script>
+<script src="./qr-art.js?v=a2320e6017af"></script>
+<script src="./data.js?v=a2320e6017af"></script>
+<script src="./app.js?v=a2320e6017af"></script>
 </body>
 </html>

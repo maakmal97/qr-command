@@ -110,4 +110,4 @@ self.QR_CODES = [
     "maintenance": false
   }
 ];
-self.QR_BUILD = "8956438c5c4d";
+self.QR_BUILD = "a2320e6017af";

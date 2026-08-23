@@ -23,9 +23,29 @@
 		"run_worker_first": true
 	},
 
-	// No KV, no secrets, no vars. The site is read-only: the account list is baked into the
-	// bundle at build time and changed by deploying. There is nothing here to write to and
-	// nothing to steal a key for.
+	// ONE KV NAMESPACE, AND THE WORKER ONLY EVER READS IT.
+	//
+	// The account list is still baked into the bundle at build time. This holds one thing the
+	// bundle cannot: whether an account has been suspended since the last deploy, so a code
+	// being changed on the laptop stops being shown on the phone within seconds instead of
+	// within a deploy.
+	//
+	// IT DOES NOT REOPEN THE WRITE PATH. src/worker.js calls QR_STATE.get and nothing else;
+	// there is no route that writes, no secret, no EDIT_KEY and nothing to authenticate,
+	// which is the property the site was built around. The value is written from the laptop
+	// through the Cloudflare API by wrangler, under the owner's own login. A stranger with
+	// the address gains a JSON file listing account keys and booleans, and the keys are
+	// already public in data.js.
+	//
+	// The baked flag remains the fail-safe. A phone with no signal cannot read this, so the
+	// bundle still has to carry the truth, and the local toggle deploys as well as writing
+	// here. KV is the fast path, never the only one.
+	"kv_namespaces": [
+		{
+			"binding": "QR_STATE",
+			"id": "5b09e99f07e147f09a88fc1325203ead"
+		}
+	],
 
 	"observability": {
 		"enabled": true

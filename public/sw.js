@@ -3,15 +3,15 @@
  * activate. There is no version constant to remember to bump, because a constant someone has
  * to remember is a constant that eventually goes stale.
  */
-const CACHE = "pay-8956438c5c4d";
+const CACHE = "pay-a2320e6017af";
 const SHELL = [
   "./",
-  "./app.css?v=8956438c5c4d",
-  "./app.js?v=8956438c5c4d",
-  "./qr-art.js?v=8956438c5c4d",
-  "./qrcode.js?v=8956438c5c4d",
-  "./duitnow-mark.js?v=8956438c5c4d",
-  "./data.js?v=8956438c5c4d"
+  "./app.css?v=a2320e6017af",
+  "./app.js?v=a2320e6017af",
+  "./qr-art.js?v=a2320e6017af",
+  "./qrcode.js?v=a2320e6017af",
+  "./duitnow-mark.js?v=a2320e6017af",
+  "./data.js?v=a2320e6017af"
 ];
 
 self.addEventListener("install", (e) => {
@@ -40,6 +40,18 @@ self.addEventListener("fetch", (e) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  /* /state.json IS NEVER TOUCHED BY THIS WORKER, in either direction.
+   *
+   * It says which codes are suspended, and it changes without a deploy, which is the whole
+   * reason it exists. A cached copy is a suspended code still being shown, which is the single
+   * failure the flag is there to prevent. Returning without calling respondWith lets the
+   * request go straight to the network, so nothing here can hold a stale copy of it, and it
+   * never enters the cache because it is never put there.
+   *
+   * Offline, the fetch simply fails and the app keeps the flag baked into the bundle. That is
+   * the fail-safe, and it is why this file may ignore this URL rather than fall back for it. */
+  if (url.pathname === "/state.json") return;
 
   // Navigations go to the network first so a deploy lands on the next open. Everything else
   // is stamped with the build id in its query string, so a cache hit is by definition the

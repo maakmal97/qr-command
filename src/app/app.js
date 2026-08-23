@@ -26,11 +26,9 @@
   var BUILD = self.QR_BUILD || "dev";
   var C = self.QRArt.colour;
 
-  var elName = document.getElementById("name");
   var elCoin = document.getElementById("coin");
   var elBtn = document.getElementById("coinbtn");
   var elSay = document.getElementById("say");
-  var elPlain = document.getElementById("plainbtn");
   var elGrid = document.getElementById("grid");
   var elBack = document.getElementById("back");
   var elBackFace = document.getElementById("coinback");
@@ -76,7 +74,13 @@
   var HOLD_MS = 420;
 
   var idx = -1;
-  var plain = false;
+  /* THE PLAIN CODE IS NO LONGER AN OPTION, ONLY A FALLBACK.
+   *
+   * The pill that let you ask for it is gone. What stays is the renderer deciding for itself:
+   * below safePhysicalPx it draws the plain code instead of a coin, because a coin too small to
+   * scan is a broken page rather than a design choice. That is a safety net, not a preference,
+   * and removing the button does not remove it. `meta.plain` is still read and still styles the
+   * frame; nothing here ever asks for it. */
   var tiles = [];
   var cards = {};        // one saveable image per account, built once and kept
   var sayTimer = null;
@@ -162,7 +166,7 @@
 
   function artFor(a, extra) {
     return Object.assign({
-      brand: a.brand, label: a.name, seed: a.key, plain: plain
+      brand: a.brand, label: a.name, seed: a.key
     }, extra || {});
   }
 
@@ -204,7 +208,68 @@
    * The rule is not cosmetic. An account is marked while it is being changed on the laptop, so
    * the code on the phone may already be the wrong one, and a wrong DuitNow code still scans and
    * still pays, just to somebody else. So this does not dim a code, it refuses to draw one. */
-  function down(a) { return !!(a && a.maintenance === true); }
+  /* THE OVERRIDE, and the precedence rule is the whole of it.
+   *
+   * `override` holds whatever /state.json last said, which the laptop can change without a
+   * deploy. It is consulted FIRST, so suspending an account reaches the phone in seconds; if it
+   * says nothing about an account, the flag baked into the bundle stands.
+   *
+   * The bake is the fail-safe and the override is the fast path, never the only one. A phone
+   * with no signal cannot fetch this at all, so the durable truth has to live in the bundle,
+   * which is why the local toggle deploys as well as writing to KV.
+   *
+   * An unreadable, malformed or missing response leaves `override` exactly as it was rather
+   * than clearing it. Treating a failed fetch as "nothing is suspended" would turn a dropped
+   * connection into a suspended code coming back on screen. */
+  var override = null;
+
+  function down(a) {
+    if (!a) return false;
+    if (override && Object.prototype.hasOwnProperty.call(override, a.key)) {
+      return override[a.key] === true;
+    }
+    return a.maintenance === true;
+  }
+
+  function readState() {
+    if (!self.fetch) return Promise.resolve(false);
+    return fetch("state.json", { cache: "no-store", credentials: "omit" })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || typeof j !== "object") return false;
+        var m = j.maintenance;
+        if (!m || typeof m !== "object") return false;
+        // Only real booleans against known keys. Anything else in the file is ignored rather
+        // than trusted, because this decides whether a payment code is shown.
+        var next = {}, changed = false;
+        for (var i = 0; i < CODES.length; i++) {
+          var k = CODES[i].key;
+          if (Object.prototype.hasOwnProperty.call(m, k) && typeof m[k] === "boolean") next[k] = m[k];
+        }
+        var before = JSON.stringify(override);
+        override = next;
+        changed = before !== JSON.stringify(override);
+        return changed;
+      })
+      .catch(function () { return false; });   // offline: the baked flag stands
+  }
+
+  /* Re-read on open and whenever the app comes back to the front, which is the moment somebody
+   * is about to show a code to somebody else. Nothing polls: a timer would spend battery to
+   * answer a question that only matters when the screen is being looked at. */
+  function watchState() {
+    var apply = function (changed) {
+      if (!changed) return;
+      for (var i = 0; i < tiles.length; i++) {
+        tiles[i].className = down(CODES[i]) ? "tile down" : "tile";
+      }
+      if (idx >= 0) paint();
+    };
+    readState().then(apply);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) readState().then(apply);
+    });
+  }
 
   function paint(pre) {
     var a = CODES[idx];
@@ -224,9 +289,7 @@
       elCoin.setAttribute("aria-label", a.name + " is under maintenance and its code is not shown");
       elBtn.setAttribute("aria-label", a.name + " is under maintenance");
       elFlip.disabled = true;
-      elPlain.disabled = true;
       elFlip.textContent = "Unavailable";
-      elPlain.textContent = "Unavailable";
       say("");
       return { plain: false, fellBack: false, maintenance: true };
     }
@@ -248,9 +311,6 @@
     elCoin.setAttribute("aria-label", a.name + " payment code");
     elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");
     elBtn.classList.toggle("plainmode", meta.plain);
-    elPlain.setAttribute("aria-pressed", meta.plain ? "true" : "false");
-    elPlain.disabled = meta.fellBack;
-    elPlain.textContent = meta.fellBack ? "Plain code (screen too small)" : "Plain code";
     if (flipped) paintBack();
     return meta;
   }
@@ -456,7 +516,6 @@
     var a = CODES[idx];
     var arriving = document.body.className.indexOf("view-code") < 0;
     document.body.className = "view-code";
-    elName.textContent = a.name;
     document.title = a.name;
     tune(a.brand);
     for (var k = 0; k < tiles.length; k++) {
@@ -466,7 +525,6 @@
     // A different account always arrives face up. Its number is not the one just on screen.
     if (flipped) setFlipped(false);
     paint(pre);
-    oneShot(elName, "enter", MS.enter);
     remember("last", a.key);
     idle(function () { cardOf(a); });
     return arriving;
@@ -676,14 +734,6 @@
       route();
     });
 
-    elPlain.addEventListener("click", function (e) {
-      e.stopPropagation();
-      plain = !plain;
-      remember("plain", plain ? "1" : "0");
-      paint();
-      say(plain ? "Plain code" : "");
-    });
-
     /* Press and hold, or tap. Both save. Hold is the gesture a phone has already taught for
      * keeping a picture; the tap is there for the other instinct. The hold fires on its own
      * timer and then swallows the click that follows, so one press never saves twice. */
@@ -727,7 +777,6 @@
       if (e.key === "ArrowRight") { step(idx + 1, 1); e.preventDefault(); }
       else if (e.key === "ArrowLeft") { step(idx - 1, -1); e.preventDefault(); }
       else if (e.key === "s" || e.key === "Enter") { if (flipped) copyAcct(); else save(); e.preventDefault(); }
-      else if (e.key === "p") { elPlain.click(); e.preventDefault(); }
       else if (e.key === "d" || e.key === "c") { setFlipped(!flipped); e.preventDefault(); }
     });
 
@@ -769,9 +818,12 @@
       document.querySelector(".atitle").textContent = "No codes in this build";
       return;
     }
-    plain = recall("plain") === "1";
     buildGrid();
     wire();
+    // Asked for after the list is built, never waited on. The baked flags are already correct
+    // on screen; this only narrows the window between suspending a code on the laptop and the
+    // phone agreeing, and a network round trip must never hold up the first frame.
+    watchState();
 
     // The first frame is the list, dealt in. Anything else would flash the wrong screen.
     document.body.className = "view-list fresh";

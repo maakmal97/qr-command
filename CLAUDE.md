@@ -212,6 +212,48 @@ The mark is drawn flat. The account number beneath it is embossed, because that 
 typography and ours to treat; the mark is not, and "DO NOT use shadows or other effects" is
 explicit.
 
+## Under maintenance
+
+An account can be suspended, and the phone then **draws no code for it at all**. That is the
+whole rule and it is not cosmetic: an account is marked while it is being changed on the laptop,
+so the payload on the phone may already be the wrong one, and a wrong DuitNow code still scans
+and still pays, just to somebody else. Both canvases are cleared to 8x8, `prerender()` returns
+null, and no 36px miniature is drawn on the tile either. A coin drawn and then covered by a
+panel is a screenshot away from being scanned, and the panel is a stylesheet away from not being
+there. Saving and copying are refused too, because the number may be the one being changed.
+
+**Two sources, and the precedence is the point.**
+
+| Where | Reaches the phone | What it is |
+|---|---|---|
+| `/state.json`, from KV | seconds, no deploy | the fast path. Consulted FIRST |
+| `maintenance` in the bundle | next deploy | the durable truth, and what an offline phone reads |
+
+`down()` asks the override first; where the override says nothing about an account, the baked
+flag stands. A failed, malformed or missing fetch leaves the previous override **untouched**
+rather than clearing it, because treating a dropped connection as "nothing is suspended" would
+put a suspended code back on screen. Only real booleans against known account keys are trusted
+off the wire.
+
+**KV did not reopen the write path, and that was the condition for adding it.** `src/worker.js`
+calls `QR_STATE.get` and nothing else. There is no route that writes, no secret and nothing to
+authenticate, which is the property the site was built around. The value is written from the
+laptop by wrangler under the owner's own Cloudflare login. A stranger with the address gains a
+JSON file of account keys and booleans, and the keys are already public in `data.js`.
+
+**`/state.json` is never cached, anywhere.** `no-store` at the edge, and the service worker
+returns early for that path so it can neither serve nor store a copy. A suspended code still
+being served from a cache is the one failure the whole mechanism exists to prevent.
+
+**KV is eventually consistent.** A write is usually visible within seconds but the edge can
+serve the previous value briefly; observed here at about twenty seconds. That is why the local
+switch writes the durable flag first and KV second: if the order were reversed, a crash between
+the two would leave the fast path saying one thing and the bundle another.
+
+The switch is on the local page, and it is the only place either value can be changed:
+`maintenance.py` writes `accounts.json`, then pushes the whole suspended set to KV, and reports
+which of the two landed.
+
 ## Motion
 
 **MOTION IS TIERED, and one curve for everything was the bug rather than the discipline.**
@@ -374,13 +416,13 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 | `test/verify.mjs` | The whole suite. No network, no browser. |
 | `test/vendor/jsqr.js` | The decoder. **Test only, never shipped.** |
 | `public/` | Build output, committed so the deployed bytes are the reviewed bytes. |
-| `wrangler.jsonc` | Worker plus assets. No KV, no secrets, no vars: there is nothing to write. |
+| `wrangler.jsonc` | Worker, assets, and one READ-ONLY KV namespace. No secrets, no vars. |
 
 ## Working on it
 
 ```
 npm run build     # master -> public/
-npm test          # 164 assertions, a couple of minutes, no network
+npm test          # 177 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
@@ -409,7 +451,14 @@ Six things that will bite:
 - **The grid's `minmax` is 132px and must not grow.** At 148px, `auto-fill` dropped to a single
   column on a 375px phone, which made the list scroll. Two columns must fit the narrowest phone
   so every account is on screen at once with nothing to hunt for.
-- **There is no Save button, and that is a decision to defend rather than an omission.** The
+- **There is no plain-code pill and no title above the coin.** The pill went on the owner's
+instruction; what remains is the renderer dropping to the plain code BY ITSELF below
+`safePhysicalPx`, which is a safety net rather than a preference and is still asserted. The
+title went for the same reason it should never have been there: the provider's name is struck
+around the coin's rim, and repeating it in 28px above was saying the same thing twice. The
+coin's `aria-label` still carries it, so a screen reader loses nothing.
+
+**There is no Save button, and that is a decision to defend rather than an omission.** The
   affordance carries it: the coin is drawn as a physical token, with a contact shadow, a lit rim
   and a press state, and the action is press-and-hold, which is the gesture a phone has already
   taught for keeping a picture. A tap does the same for the other instinct, and `.tuck` plays on
@@ -437,7 +486,7 @@ it is asserted offline by the suite and by that curl afterwards.
 
 ## What is deliberately not here
 
-- **No edit path.** No `edit.html`, no `POST`, no KV, no `EDIT_KEY`. Editing is a laptop job,
+- **No edit path.** No `edit.html`, no `POST`, no `EDIT_KEY`. Editing is a laptop job,
   against the master, through `serve.py`. That decision is what removes the entire write-guard
   surface: there is no key to leak, no revision race and nothing to authenticate.
 - **No Cloudflare Access.** The site is public by decision, because a DuitNow code can only

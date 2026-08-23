@@ -239,23 +239,7 @@ body.view-code .codeview{
   text-align:center;
 }
 
-.name{
-  margin:0;
-  flex:0 0 auto;
-  font-size:clamp(24px,6.8vw,40px);
-  font-weight:700;
-  letter-spacing:-0.8px;
-  line-height:1.15;
-  overflow-wrap:break-word;
-  color:var(--brand-soft);
-  background:linear-gradient(120deg,var(--brand-soft),#ffffff 130%);
-  -webkit-background-clip:text;
-  background-clip:text;
-  -webkit-text-fill-color:transparent;
-  transition:color var(--t);
-}
 @supports not ((-webkit-background-clip:text) or (background-clip:text)){
-  .name{-webkit-text-fill-color:currentColor;}
 }
 
 /* UNDER MAINTENANCE.
@@ -288,7 +272,6 @@ body.maintenance .maint{opacity:1;visibility:visible;transition:opacity var(--t)
 /* The coin is drawn blank for a code under maintenance, so this only hides an empty canvas. */
 body.maintenance .coinbtn{opacity:0;pointer-events:none;}
 .maint-h{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
-.maint-b{margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:30ch;}
 
 /* On the list, the account is still there and still named. Hiding it would be worse: you would
    wonder where it went. It is dimmed, and the miniature is not drawn. */
@@ -451,7 +434,6 @@ body.maintenance .coinbtn{opacity:0;pointer-events:none;}
  * to zero rather than waiting on animationend, or a reduced-motion phone would sit for ever
  * waiting for an event that is never coming. */
 :root{
-  --in:260ms var(--ease);
   --out:150ms cubic-bezier(.4,0,1,1);
 }
 
@@ -465,12 +447,6 @@ body.view-list.fresh .tile{
   animation:tile-in 260ms var(--ease) backwards;
   animation-delay:calc(min(var(--i,0),12) * 22ms);
 }
-
-@keyframes name-in{
-  from{opacity:0;transform:translateY(10px);}
-  to{opacity:1;transform:none;}
-}
-.name.enter{animation:name-in var(--in) backwards;}
 
 @keyframes bar-in{
   from{opacity:0;transform:translateX(-10px);}
@@ -539,7 +515,6 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
   .flier,.flash{display:none !important;}
 }
 @media (forced-colors:active){
-  .name{-webkit-text-fill-color:currentColor;color:CanvasText;}
   .sky{display:none;}
   .tile,.pill,.back{border-color:CanvasText;}
   .coinbtn{box-shadow:none;border:1px solid CanvasText;}
@@ -549,7 +524,6 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
  * beside it and the coin keeps its height. */
 @media (orientation:landscape) and (max-height:520px){
   .stage{flex-direction:row;gap:18px;padding:0 14px 8px;align-items:center;}
-  .name{font-size:clamp(18px,3.4vw,28px);max-width:30vw;}
   .tools{position:absolute;right:14px;bottom:10px;}
   .bar{position:absolute;top:4px;left:4px;padding:0;}
 }
@@ -557,6 +531,5 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 @media print{
   .sky,.tools,.bar,.accounts{display:none !important;}
   body{background:#fff;color:#000;}
-  .name{-webkit-text-fill-color:currentColor;color:#000;}
   .coinbtn{box-shadow:none;}
 }

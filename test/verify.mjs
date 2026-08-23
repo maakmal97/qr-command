@@ -516,8 +516,27 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
    * drawn and then covered by a panel is a screenshot away from being scanned, and the panel is
    * a stylesheet away from not being there. */
   const appJsSrc = read(path.join(REPO, "src", "app", "app.js"));
+  /* ONE READING, AND THE PRECEDENCE IS THE POINT. The KV override is consulted first so a
+   * suspension reaches the phone without a deploy; where it says nothing, the flag baked
+   * into the bundle stands. The bake is the fail-safe, the override the fast path. */
   ok("the flag is read in one place, and only a real boolean counts",
-    /function down\(a\) \{ return !!\(a && a\.maintenance === true\); \}/.test(appJsSrc));
+    /function down\(a\)/.test(appJsSrc) &&
+    /return a\.maintenance === true;/.test(appJsSrc) &&
+    /override\[a\.key\] === true/.test(appJsSrc));
+  ok("a failed or malformed state read leaves the previous state alone",
+    /\.catch\(function \(\) { return false; \}\);/.test(appJsSrc) &&
+    /if \(!j \|\| typeof j !== "object"\) return false;/.test(appJsSrc));
+  ok("only booleans against known account keys are trusted from the wire",
+    /typeof m\[k\] === "boolean"/.test(appJsSrc));
+  ok("the state file is fetched no-store and never precached",
+    /fetch\("state\.json", { cache: "no-store"/.test(appJsSrc) &&
+    /if \(url\.pathname === "\/state\.json"\) return;/.test(read(path.join(REPO, "src", "app", "sw.js"))));
+  ok("the Worker only ever reads the namespace, and answers {} when it cannot",
+    (function () {
+      const w = read(path.join(REPO, "src", "worker.js"));
+      return /env\.QR_STATE\.get\("state"\)/.test(w) &&
+             !/QR_STATE\.(?:put|delete)/.test(w) && /body = "{}";/.test(w);
+    })());
   ok("the build normalises the flag rather than shipping whatever the master had",
     /rec\.maintenance = a\.maintenance === true;/.test(read(path.join(REPO, "tools", "build.mjs"))));
   ok("a suspended account is cleared off the canvas, not merely covered",
@@ -1071,8 +1090,22 @@ if (wrangler) {
   const unused = [...declared].filter((d) => !reads.includes(d));
   ok("the config declares nothing the Worker never reads", unused.length === 0, "unused: " + unused.join(", "));
 
-  ok("no KV, secret or variable is configured, because the site is read-only",
-    !wrangler.kv_namespaces && !wrangler.vars && !wrangler.d1_databases && !wrangler.r2_buckets);
+  /* ONE NAMESPACE, READ ONLY, AND NOTHING ELSE.
+   *
+   * The site was built with no storage at all, and the reason was never storage itself:
+   * it was that there must be no route that writes, no secret and nothing to
+   * authenticate. QR_STATE keeps that property. The Worker calls .get and never .put,
+   * and the value is written from the laptop through the Cloudflare API under the
+   * owner's own login, so the public surface gained a JSON file and not a write path.
+   * Anything beyond this one binding is still refused. */
+  ok("exactly one KV namespace, bound QR_STATE, and no other storage or secret",
+    Array.isArray(wrangler.kv_namespaces) && wrangler.kv_namespaces.length === 1 &&
+    wrangler.kv_namespaces[0].binding === "QR_STATE" &&
+    !wrangler.vars && !wrangler.d1_databases && !wrangler.r2_buckets &&
+    !wrangler.durable_objects && !wrangler.queues);
+  ok("the Worker never writes to it, so there is still nothing to authenticate",
+    !/QR_STATE\.(?:put|delete|list)/.test(workerSrc) &&
+    /This site is read only\./.test(workerSrc));
 }
 
 /* ==================================================== 4. the Worker's behaviour */
@@ -1188,12 +1221,18 @@ section("6. One build id, everywhere");
   const names = [...decl.matchAll(/\["([^"]+)",/g)].map((m) => m[1]);
   ok("the hashed bundle is the one build.mjs declares", names.length >= 6 && names.includes("duitnow-mark.js"),
     names.join(", "));
-  const parts = names.map((f) =>
+  /* LF, exactly as the build hashes it. write() normalises CRLF on the way into public/, so
+   * hashing a source file raw keys the build id to the line endings of the working tree
+   * rather than to the bytes that reach the phone. sw.js is the one part read from source
+   * here, and an editor that saved it CRLF broke this assertion on a build that was
+   * perfectly correct. */
+  const lfNorm = (t) => t.split("\r\n").join("\n");
+  const parts = names.map((f) => lfNorm(
     // sw.js is the one file public/ holds in stamped form, so the hash takes its source.
     f === "sw.js"
       ? read(path.join(REPO, "src", "app", "sw.js"))
-      : read(path.join(PUB, f)).replace(new RegExp("\\?v=" + rev.id, "g"), "?v=__BUILD__"));
-  const dataBody = dataSrc.replace(/self\.QR_BUILD = "[^"]*";\n$/, "");
+      : read(path.join(PUB, f)).replace(new RegExp("\\?v=" + rev.id, "g"), "?v=__BUILD__")));
+  const dataBody = lfNorm(dataSrc.replace(/self\.QR_BUILD = "[^"]*";\n$/, ""));
   const h = crypto.createHash("sha256");
   for (const p of parts) h.update(p);
   h.update(dataBody);
