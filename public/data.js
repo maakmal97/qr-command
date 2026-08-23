@@ -96,4 +96,4 @@ self.QR_CODES = [
     "acct": "2236 9026 4534"
   }
 ];
-self.QR_BUILD = "820fbc6a3c32";
+self.QR_BUILD = "9bc5a30ae69b";

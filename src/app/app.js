@@ -41,8 +41,39 @@
 
   // The miniature on a tile, in CSS pixels. Must match --thumb in app.css.
   var THUMB = 36;
-  // One duration for the whole transition, so the coin, the fade and the chrome agree.
-  var ZOOM = 460;
+
+  /* THE DURATIONS COME FROM THE STYLESHEET, not from numbers typed here as well.
+   *
+   * Every one of these has a partner in app.css: the class the script adds plays a keyframe the
+   * sheet defines, and the script has to know when to take the class off again. Two copies of
+   * the same number in two files is a drift waiting to happen, and the failure is silent, since
+   * a mismatch shows up only as a class removed halfway through its own animation or left on
+   * long enough to out-rank the next one.
+   *
+   * So the sheet is the source. --dur and --dur-fast are read once at startup and everything
+   * else is derived from them, which also means retuning the motion is a change to one file. */
+  function cssMs(name, fallback) {
+    try {
+      var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      var n = parseFloat(v);
+      if (!isFinite(n)) return fallback;
+      return /ms$/.test(v) ? n : n * 1000;      // CSS time is ms or s
+    } catch (e) { return fallback; }
+  }
+  var DUR = cssMs("--dur", 300);
+  var FAST = cssMs("--dur-fast", 140);
+  var MS = {
+    zoom: DUR,             // tile to coin and back: the whole transition agrees on one number
+    enter: DUR,            // a coin or a name arriving
+    stepOut: Math.round(DUR * 0.56),
+    stepIn: Math.round(DUR * 0.73),
+    tuck: Math.round(DUR * 1.27),   // the save and copy dip, which outlasts the transition
+    fast: FAST
+  };
+  var ZOOM = MS.zoom;
+  // The press-and-hold threshold. A GESTURE timing, not a motion one, so it does not follow
+  // the stylesheet: shortening the animations must not make the app easier to save by accident.
+  var HOLD_MS = 420;
 
   var idx = -1;
   var plain = false;
@@ -255,7 +286,7 @@
     for (var i = 0; i < ONESHOT.length; i++) el.classList.remove(ONESHOT[i]);
     void el.offsetWidth;
     el.classList.add(cls);
-    setTimeout(function () { el.classList.remove(cls); }, ms || 420);
+    setTimeout(function () { el.classList.remove(cls); }, ms || MS.enter);
   }
 
   function rectOf(el) {
@@ -363,7 +394,7 @@
     f.style.width = r.width + "px";
     f.style.height = r.height + "px";
     document.body.appendChild(f);
-    setTimeout(function () { if (f.parentNode) f.parentNode.removeChild(f); }, 620);
+    setTimeout(function () { if (f.parentNode) f.parentNode.removeChild(f); }, MS.tuck + 120);
   }
 
   /* -------------------------------------------------------------------- routing */
@@ -401,7 +432,7 @@
     // A different account always arrives face up. Its number is not the one just on screen.
     if (flipped) setFlipped(false);
     paint(pre);
-    oneShot(elName, "enter", 360);
+    oneShot(elName, "enter", MS.enter);
     remember("last", a.key);
     idle(function () { cardOf(a); });
     return arriving;
@@ -421,7 +452,7 @@
       onArrive: function () { elBtn.style.opacity = ""; }
     })) {
       elBtn.style.opacity = "";
-      oneShot(elBtn, "enter", 320);
+      oneShot(elBtn, "enter", MS.enter);
       return;
     }
     elBtn.style.opacity = "0";
@@ -461,11 +492,11 @@
     var out = dir < 0 ? "out-left" : "out-right";
     var into = dir < 0 ? "in-right" : "in-left";
     var pre = still() ? null : prerender(i);
-    if (dir) oneShot(elBtn, out, 170);
+    if (dir) oneShot(elBtn, out, MS.stepOut);
     after(dir && !still() ? 150 : 0, function () {
       history.replaceState(history.state, "", "#" + CODES[i].key);
       showCode(i, pre);
-      if (dir) oneShot(elBtn, into, 280);
+      if (dir) oneShot(elBtn, into, MS.stepIn);
     });
   }
 
@@ -508,7 +539,7 @@
   }
 
   function tuck() {
-    oneShot(elBtn, "tuck", 540);
+    oneShot(elBtn, "tuck", MS.tuck);
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
   }
 
@@ -626,7 +657,7 @@
         if (moved) return;
         held = true;
         if (flipped) copyAcct(); else save();
-      }, 420);
+      }, HOLD_MS);
     }
     function endHold() { clearTimeout(holdTimer); }
 

@@ -848,7 +848,39 @@ section("2. The bundle carries the codes and nothing else");
   ok("a zero-size rect can never start a zoom",
     /function rectOf\(el\)/.test(appJs) && /\(r\.width && r\.height\) \? r : null/.test(appJs));
   ok("if the zoom cannot play, the coin still gets an entrance",
-    /oneShot\(elBtn, "enter", 320\);/.test(appJs));
+    /oneShot\(elBtn, "enter", MS\.enter\);/.test(appJs));
+
+  /* THE DURATIONS HAVE ONE SOURCE, and it is the stylesheet. Every class the script adds
+   * plays a keyframe app.css defines, and the script has to know when to take it off
+   * again; two copies of that number in two files drift, and the failure is silent, since
+   * a mismatch shows only as a class stripped mid-animation or left on long enough to
+   * out-rank the next one. This assertion existed pinning the literal 320, which was that
+   * duplication written down a third time. */
+  ok("the script reads its timings from the stylesheet rather than restating them",
+    /function cssMs\(name, fallback\)/.test(appJs) &&
+    /cssMs\("--dur"/.test(appJs) && /cssMs\("--dur-fast"/.test(appJs));
+  ok("no motion duration is left hard-coded in the script",
+    !/oneShot\([^)]*, \d{3}\)/.test(appJs));
+
+  /* MOTION IS TIERED. One duration for everything was the bug: measured on the real zoom,
+   * the old 420ms curve reached 95 per cent of the distance in 203ms and spent the other
+   * 217ms creeping through the last five per cent, which reads as a snap and then a
+   * pause. Feedback has to answer a finger quickly; a transition may take longer. */
+  {
+    const dur = (cssCode.match(/--dur:\s*(\d+)ms/) || [])[1];
+    const fast = (cssCode.match(/--dur-fast:\s*(\d+)ms/) || [])[1];
+    ok("the feedback tier answers a finger inside 160ms, and is faster than a transition",
+      fast && dur && Number(fast) <= 160 && Number(fast) < Number(dur),
+      "fast " + fast + ", transition " + dur);
+    ok("a screen transition stays under 340ms, so it cannot read as lag",
+      dur && Number(dur) <= 340, dur + "ms");
+  }
+
+  /* The press-and-hold threshold is a GESTURE timing, not a motion one. Shortening the
+   * animations must not make the app easier to save by accident, so it does not follow
+   * the stylesheet and is named to say so. */
+  ok("the hold threshold is independent of the motion tokens",
+    /var HOLD_MS = \d+;/.test(appJs) && /}, HOLD_MS\);/.test(appJs));
   ok("the list deals itself in once, not every time it comes back",
     /body\.view-list\.fresh \.tile\{/.test(cssCode) && /classList\.remove\("fresh"\)/.test(appJs));
 

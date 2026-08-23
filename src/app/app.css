@@ -34,12 +34,28 @@
   --pill:999px;
   --thumb:36px;
   --sh:0 8px 40px rgba(0,0,0,0.35);
-  --t:420ms cubic-bezier(.32,.72,0,1);
-  /* One curve for the whole app. It is the shape iOS uses to present things: quick off the
-   * mark, a long tail, no bounce. One duration too, so the coin, the fade and the chrome all
-   * finish together instead of three things ending at three times. */
-  --ease:cubic-bezier(.32,.72,0,1);
-  --dur:420ms;
+
+  /* MOTION IS TIERED, and one curve for everything was the bug rather than the discipline.
+   *
+   * Measured on the real zoom: cubic-bezier(.32,.72,0,1) over 420ms reaches 95 per cent of the
+   * distance in 203ms and then spends the remaining 217ms creeping through the last five per
+   * cent. Fifty-two per cent of the duration is spent on motion the eye cannot see, and what it
+   * can see is a snap followed by a long dead pause. That reads as lag, not as smoothness, and
+   * it is what "barely working" was describing.
+   *
+   * (.22,.8,.36,1) over 300ms spends 41 per cent on that tail instead of 52, and finishes in
+   * three fifths of the time. Same family of curve, same absence of bounce, but it uses the
+   * time it takes. The pair comes from salt-command, which tiers its motion the same way.
+   *
+   * FAST is for anything that answers a finger: a press, a hover, a colour. At 140ms it is
+   * under the threshold where a response starts to feel detached from the touch that caused it.
+   * Slow feedback is the single easiest way to make an interface feel broken. */
+  --ease:cubic-bezier(.22,.8,.36,1);
+  --dur:300ms;
+  --ease-fast:cubic-bezier(.22,1,.36,1);
+  --dur-fast:140ms;
+  --t:var(--dur) var(--ease);
+  --t-fast:var(--dur-fast) var(--ease-fast);
   --tap:44px;
   --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",
          Roboto,Helvetica,Arial,sans-serif;
@@ -165,7 +181,7 @@ body.view-code .codeview{
   border-radius:var(--r-sm);
   background:rgba(255,255,255,0.05);
   color:var(--ink);
-  transition:background-color 180ms,border-color 180ms,transform 120ms;
+  transition:background-color var(--t-fast),border-color var(--t-fast),transform var(--t-fast);
 }
 .tile:hover{background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
 .tile:active{transform:scale(.975);}
@@ -205,7 +221,7 @@ body.view-code .codeview{
   border-radius:var(--pill);
   background:none;
   color:var(--brand-soft);
-  transition:background-color 180ms,color var(--t);
+  transition:background-color var(--t-fast),color var(--t-fast);
 }
 .back:hover{background-color:rgba(255,255,255,0.08);}
 .back:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
@@ -338,7 +354,7 @@ body.view-code .codeview{
   60%  {transform:translateY(-4px) scale(1.01);}
   100% {transform:translateY(0) scale(1);}
 }
-.coinbtn.tuck{animation:tuck 520ms cubic-bezier(.4,0,.2,1);}
+.coinbtn.tuck{animation:tuck 380ms cubic-bezier(.4,0,.2,1);}
 
 .tools{
   flex:0 0 auto;
@@ -369,7 +385,7 @@ body.view-code .codeview{
   border-radius:var(--pill);
   padding:0 14px;
   min-height:34px;
-  transition:background-color 200ms,border-color 200ms,color 200ms;
+  transition:background-color var(--t-fast),border-color var(--t-fast),color var(--t-fast);
 }
 .pill:hover:not(:disabled){background-color:rgba(255,255,255,0.10);color:var(--ink-2);}
 .pill:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
@@ -387,7 +403,7 @@ body.view-code .codeview{
  * to zero rather than waiting on animationend, or a reduced-motion phone would sit for ever
  * waiting for an event that is never coming. */
 :root{
-  --in:340ms var(--ease);
+  --in:260ms var(--ease);
   --out:150ms cubic-bezier(.4,0,1,1);
 }
 
@@ -398,7 +414,7 @@ body.view-code .codeview{
 /* The list deals itself out, top left to bottom right. Capped at the twelfth so a longer
  * account list can never turn the stagger into a wait. */
 body.view-list.fresh .tile{
-  animation:tile-in 320ms var(--ease) backwards;
+  animation:tile-in 260ms var(--ease) backwards;
   animation-delay:calc(min(var(--i,0),12) * 22ms);
 }
 
@@ -412,13 +428,13 @@ body.view-list.fresh .tile{
   from{opacity:0;transform:translateX(-10px);}
   to{opacity:1;transform:none;}
 }
-body.view-code .bar{animation:bar-in 300ms var(--ease) 40ms backwards;}
+body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 
 @keyframes coin-in{
   from{opacity:0;transform:scale(.90);}
   to{opacity:1;transform:none;}
 }
-.coinbtn.enter{animation:coin-in 300ms cubic-bezier(.2,.8,.2,1) backwards;}
+.coinbtn.enter{animation:coin-in 260ms var(--ease) backwards;}
 
 /* Stepping between accounts: the coin leaves the way the thumb went and the next one comes in
  * from the far side, so the direction of travel is legible rather than a straight cross-fade. */
@@ -428,8 +444,8 @@ body.view-code .bar{animation:bar-in 300ms var(--ease) 40ms backwards;}
 @keyframes coin-in-right{ from{opacity:0;transform:translateX(34px) scale(.94);} to{opacity:1;transform:none;} }
 .coinbtn.out-left{animation:coin-out-left var(--out) forwards;}
 .coinbtn.out-right{animation:coin-out-right var(--out) forwards;}
-.coinbtn.in-left{animation:coin-in-left 260ms cubic-bezier(.2,.8,.2,1) backwards;}
-.coinbtn.in-right{animation:coin-in-right 260ms cubic-bezier(.2,.8,.2,1) backwards;}
+.coinbtn.in-left{animation:coin-in-left 220ms var(--ease) backwards;}
+.coinbtn.in-right{animation:coin-in-right 220ms var(--ease) backwards;}
 
 /* The flier: the coin itself, in transit between the tile and the code view. It carries the
  * full-size render and is only ever scaled DOWN, so it stays crisp at both ends. Transform
@@ -445,16 +461,16 @@ body.view-code .bar{animation:bar-in 300ms var(--ease) 40ms backwards;}
 /* The ring that leaves the coin when a save starts: confirmation you can see from the corner
  * of your eye, gone before it can become clutter. */
 @keyframes flash{
-  from{opacity:.7;transform:scale(1);}
-  to{opacity:0;transform:scale(1.28);}
+  from{opacity:.34;transform:scale(1);}
+  to{opacity:0;transform:scale(1.12);}
 }
 .flash{
   position:fixed;
   border-radius:50%;
-  border:2px solid var(--brand-soft);
+  border:1px solid var(--brand-soft);
   pointer-events:none;
   z-index:5;
-  animation:flash 520ms cubic-bezier(.2,.8,.2,1) forwards;
+  animation:flash 380ms var(--ease) forwards;
 }
 
 /* --------------------------------------------------------------------- fallbacks */

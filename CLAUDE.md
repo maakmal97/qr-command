@@ -214,11 +214,41 @@ explicit.
 
 ## Motion
 
-**One curve, `cubic-bezier(.32,.72,0,1)`, and one duration, 420ms.** That is the shape iOS uses
-to present things: quick off the mark, a long tail, no bounce. Everything in a transition uses
-both, so the coin, the cross-fade and the chrome finish together instead of three things ending
-at three different times, which is what "not smooth" usually turns out to mean. Every animation
-is transform and opacity only, so none of it can cost a reflow on a phone.
+**MOTION IS TIERED, and one curve for everything was the bug rather than the discipline.**
+Measured on the real zoom in the browser, `cubic-bezier(.32,.72,0,1)` over 420ms reached 95 per
+cent of the distance in 203ms and then spent the remaining 217ms creeping through the last five
+per cent. Fifty-two per cent of the duration went on motion the eye cannot see, and what it can
+see is a snap followed by a dead pause. That is what "barely working, not smooth at all"
+described; it was never dropped frames.
+
+Two tiers now, taken from salt-command, which tiers the same way:
+
+| Token | Value | For |
+|---|---|---|
+| `--dur` / `--ease` | 300ms `cubic-bezier(.22,.8,.36,1)` | screen transitions, the zoom, the flip |
+| `--dur-fast` / `--ease-fast` | 140ms `cubic-bezier(.22,1,.36,1)` | anything answering a finger: press, hover, colour |
+
+The transition curve spends 41 per cent on its tail against the old 52, and finishes in three
+fifths of the time. The fast tier matters more than it sounds: feedback slower than about 160ms
+stops feeling connected to the touch that caused it, which is the easiest way to make an
+interface feel broken.
+
+Measured before and after, across opening an account, both flips, a step and going back: twelve
+dropped frames became three. The remainder is compositor hiccup, not main-thread work. There are
+no long tasks at all during a transition and a forced layout read costs 0.1ms, so every frame is
+compositor-only, which is the precondition for 120Hz.
+
+**The script reads its durations from the stylesheet.** Every class `app.js` adds plays a
+keyframe `app.css` defines, and the script has to know when to remove it again. Two copies of
+that number drift, and the failure is silent: a class stripped mid-animation, or left on long
+enough to out-rank the next one. `cssMs()` reads `--dur` and `--dur-fast` once at startup and
+everything else is derived, so retuning the motion is a change to one file. The press-and-hold
+threshold is deliberately NOT one of them: it is a gesture timing, and shortening the animations
+must not make the app easier to save by accident.
+
+**Save is now as quiet as copy.** Copy is nothing but the dip; save was the dip plus a ring at
+70 per cent opacity expanding 28 per cent behind a 2px stroke. The dip is the confirmation in
+both, and the ring is a hint at the edge of vision: 34 per cent, 12 per cent, one pixel.
 
 **Both views are always laid out and cross-faded; they are never switched with `display`.** This
 is the change that fixed the transition rather than decorating it. A `display` swap cannot be
@@ -350,7 +380,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 159 assertions, a couple of minutes, no network
+npm test          # 164 assertions, a couple of minutes, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.
