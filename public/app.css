@@ -271,6 +271,7 @@ body.view-code .codeview{
 body.maintenance .maint{opacity:1;visibility:visible;transition:opacity var(--t), visibility 0s linear 0s;}
 /* The coin is drawn blank for a code under maintenance, so this only hides an empty canvas. */
 body.maintenance .coinbtn{opacity:0;pointer-events:none;}
+body.maintenance .pills{opacity:0;pointer-events:none;}
 .maint-h{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
 
 /* On the list, the account is still there and still named. Hiding it would be worse: you would

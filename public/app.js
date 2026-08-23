@@ -288,8 +288,9 @@
       document.body.classList.add("maintenance");
       elCoin.setAttribute("aria-label", a.name + " is under maintenance and its code is not shown");
       elBtn.setAttribute("aria-label", a.name + " is under maintenance");
+      // The pill is hidden rather than relabelled. The panel already says it, and saying it
+      // twice in two different words is worse than saying it once.
       elFlip.disabled = true;
-      elFlip.textContent = "Unavailable";
       say("");
       return { plain: false, fellBack: false, maintenance: true };
     }
