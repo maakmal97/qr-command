@@ -507,6 +507,38 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   }
 }
 
+{
+  /* UNDER MAINTENANCE, AND THE ONLY THING THAT MATTERS IS THAT NO CODE IS DRAWN.
+   *
+   * An account is marked while it is being changed on the laptop, so the payload on the phone
+   * may already be the wrong one, and a wrong DuitNow code still scans and still pays, just to
+   * somebody else. Dimming a code would not do; the code must not exist on the canvas. A coin
+   * drawn and then covered by a panel is a screenshot away from being scanned, and the panel is
+   * a stylesheet away from not being there. */
+  const appJsSrc = read(path.join(REPO, "src", "app", "app.js"));
+  ok("the flag is read in one place, and only a real boolean counts",
+    /function down\(a\) \{ return !!\(a && a\.maintenance === true\); \}/.test(appJsSrc));
+  ok("the build normalises the flag rather than shipping whatever the master had",
+    /rec\.maintenance = a\.maintenance === true;/.test(read(path.join(REPO, "tools", "build.mjs"))));
+  ok("a suspended account is cleared off the canvas, not merely covered",
+    /if \(down\(a\)\) \{[\s\S]{0,400}?elCoin\.width = 8; elCoin\.height = 8;/.test(appJsSrc) &&
+    /elBackFace\.width = 8; elBackFace\.height = 8;/.test(appJsSrc));
+  ok("nothing is pre-rendered for a suspended account either",
+    /function prerender\(i\) \{[\s\S]{0,40}?if \(down\(CODES\[i\]\)\) return null;/.test(appJsSrc));
+  ok("no miniature is drawn for a suspended account", /if \(down\(a\)\) continue;/.test(appJsSrc));
+  ok("saving and copying are both refused while suspended",
+    (appJsSrc.match(/if \(down\(a\)\) \{ say\("Under maintenance"\); return; \}/g) || []).length === 2);
+
+  // And the same in the pixels, which is the assertion that would survive all of the above being
+  // rewritten: the shipped bundle must mark it, and the renderer must never be asked for it.
+  const susp = shipped.filter((c) => c.maintenance === true);
+  ok("the bundle marks exactly the accounts the master suspended",
+    susp.length === master.accounts.filter((a) => a.maintenance === true).length,
+    susp.map((c) => c.key).join(", ") || "none");
+  ok("every record carries the flag as a boolean, never absent and never a string",
+    shipped.every((c) => typeof c.maintenance === "boolean"));
+}
+
 section("2. The bundle carries the codes and nothing else");
 
 {
@@ -517,9 +549,9 @@ section("2. The bundle carries the codes and nothing else");
 }
 
 {
-  const SHIP = ["acct", "brand", "key", "name", "payload"];
+  const SHIP = ["acct", "brand", "key", "maintenance", "name", "payload"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
-  ok("every shipped record has exactly key, name, brand, payload, acct", wrong.length === 0,
+  ok("every shipped record has exactly key, name, brand, payload, acct, maintenance", wrong.length === 0,
     wrong.map((w) => w.key + ": " + Object.keys(w).join(",")).join("; "));
 }
 
@@ -661,7 +693,8 @@ section("2. The bundle carries the codes and nothing else");
     /transition:opacity var\(--dur\) var\(--ease\), visibility/.test(cssCode));
 
   ok("every account is a named tile on that first screen",
-    /id="grid"/.test(indexHtml) && /className = "tile"/.test(appJs) && /tiletext/.test(appJs));
+    /id="grid"/.test(indexHtml) && /className = down\(a\) \? "tile down" : "tile"/.test(appJs) &&
+    /tiletext/.test(appJs));
   ok("a code has an explicit way back to the accounts",
     /id="back"/.test(indexHtml) && /elBack\.addEventListener\("click", close\)/.test(appJs));
 

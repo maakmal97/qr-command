@@ -49,6 +49,14 @@
           <canvas id="coinback" class="coin face back" role="img" aria-label="Account number"></canvas>
         </span>
       </button>
+      <!-- Shown OVER the coin rather than in place of it. The coin box stays laid out, because
+           the zoom measures it and an element inside a display:none view reports a zero rect,
+           which cancels the animation silently. -->
+      <div class="maint" id="maint" aria-hidden="true">
+        <p class="maint-h">Under maintenance</p>
+        <p class="maint-b" id="maint-b">This code is being changed on the laptop. It is not shown
+          here until that is finished, so nobody can pay into it meanwhile.</p>
+      </div>
     </div>
 
     <div class="tools">

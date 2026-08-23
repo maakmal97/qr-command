@@ -258,7 +258,55 @@ body.view-code .codeview{
   .name{-webkit-text-fill-color:currentColor;}
 }
 
+/* UNDER MAINTENANCE.
+ *
+ * The panel is laid over the coin, not swapped in for it: the coin box has to keep its size or
+ * the zoom measures a zero rect and cancels without a word, which is a bug this app has already
+ * had once. Cross-faded by opacity and taken out of hit-testing by visibility, exactly as the
+ * two screens are. */
+.maint{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:0 28px;
+  text-align:center;
+  border-radius:var(--r);
+  background:var(--well);
+  border:1px solid var(--brd);
+  /* No backdrop-filter. What is behind this panel is a canvas that has been cleared to nothing,
+     so a blur would cost a full-screen re-raster to smear an empty rectangle. The suite forbids
+     any blur filter outright, which is the rule that caught this one. */
+  opacity:0;
+  visibility:hidden;
+  transition:opacity var(--t), visibility 0s linear var(--dur);
+}
+body.maintenance .maint{opacity:1;visibility:visible;transition:opacity var(--t), visibility 0s linear 0s;}
+/* The coin is drawn blank for a code under maintenance, so this only hides an empty canvas. */
+body.maintenance .coinbtn{opacity:0;pointer-events:none;}
+.maint-h{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
+.maint-b{margin:0;font-size:14px;line-height:1.5;color:var(--ink-2);max-width:30ch;}
+
+/* On the list, the account is still there and still named. Hiding it would be worse: you would
+   wonder where it went. It is dimmed, and the miniature is not drawn. */
+.tile.down{opacity:.52;}
+.tile.down .tiledot{filter:grayscale(1);}
+.tile.down .tiletext::after{
+  content:"Maintenance";
+  display:block;
+  margin-top:2px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+}
+
 .coinwrap{
+  position:relative;
   flex:1 1 auto;
   min-height:0;
   min-width:0;

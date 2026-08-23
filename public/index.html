@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=9bc5a30ae69b">
+<link rel="stylesheet" href="./app.css?v=8956438c5c4d">
 </head>
 <body class="view-list">
 
@@ -49,6 +49,14 @@
           <canvas id="coinback" class="coin face back" role="img" aria-label="Account number"></canvas>
         </span>
       </button>
+      <!-- Shown OVER the coin rather than in place of it. The coin box stays laid out, because
+           the zoom measures it and an element inside a display:none view reports a zero rect,
+           which cancels the animation silently. -->
+      <div class="maint" id="maint" aria-hidden="true">
+        <p class="maint-h">Under maintenance</p>
+        <p class="maint-b" id="maint-b">This code is being changed on the laptop. It is not shown
+          here until that is finished, so nobody can pay into it meanwhile.</p>
+      </div>
     </div>
 
     <div class="tools">
@@ -65,10 +73,10 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=9bc5a30ae69b"></script>
-<script src="./duitnow-mark.js?v=9bc5a30ae69b"></script>
-<script src="./qr-art.js?v=9bc5a30ae69b"></script>
-<script src="./data.js?v=9bc5a30ae69b"></script>
-<script src="./app.js?v=9bc5a30ae69b"></script>
+<script src="./qrcode.js?v=8956438c5c4d"></script>
+<script src="./duitnow-mark.js?v=8956438c5c4d"></script>
+<script src="./qr-art.js?v=8956438c5c4d"></script>
+<script src="./data.js?v=8956438c5c4d"></script>
+<script src="./app.js?v=8956438c5c4d"></script>
 </body>
 </html>

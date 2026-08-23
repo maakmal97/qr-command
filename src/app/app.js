@@ -171,6 +171,7 @@
    * and spent halfway through a transition it drops one exactly where the eye is following the
    * coin. Rendered up front, the swap becomes a drawImage of about a hundredth of that. */
   function prerender(i) {
+    if (down(CODES[i])) return null;
     var a = CODES[i];
     if (!a) return null;
     var off = document.createElement("canvas");
@@ -197,10 +198,41 @@
     backs.key = key;
   }
 
+  /* UNDER MAINTENANCE. One reading of one normalised boolean, in one place, and everything that
+   * could put a code or a number in front of somebody asks it first.
+   *
+   * The rule is not cosmetic. An account is marked while it is being changed on the laptop, so
+   * the code on the phone may already be the wrong one, and a wrong DuitNow code still scans and
+   * still pays, just to somebody else. So this does not dim a code, it refuses to draw one. */
+  function down(a) { return !!(a && a.maintenance === true); }
+
   function paint(pre) {
     var a = CODES[idx];
     if (!a) return null;
     var meta;
+
+    if (down(a)) {
+      /* NOTHING SCANNABLE IS DRAWN AT ALL. The canvas is cleared rather than covered: a coin
+       * drawn and then hidden behind a panel is still a photograph away from being scanned, and
+       * the panel is a stylesheet away from not being there. */
+      elCoin.width = 8; elCoin.height = 8;
+      elCoin.getContext("2d").clearRect(0, 0, 8, 8);
+      elBackFace.width = 8; elBackFace.height = 8;
+      elBackFace.getContext("2d").clearRect(0, 0, 8, 8);
+      backs.key = "";
+      document.body.classList.add("maintenance");
+      elCoin.setAttribute("aria-label", a.name + " is under maintenance and its code is not shown");
+      elBtn.setAttribute("aria-label", a.name + " is under maintenance");
+      elFlip.disabled = true;
+      elPlain.disabled = true;
+      elFlip.textContent = "Unavailable";
+      elPlain.textContent = "Unavailable";
+      say("");
+      return { plain: false, fellBack: false, maintenance: true };
+    }
+    document.body.classList.remove("maintenance");
+    elFlip.disabled = false;
+    elFlip.textContent = flipped ? "Show the code" : "DuitNow number";
     if (pre && pre.canvas) {
       elCoin.width = pre.canvas.width;
       elCoin.height = pre.canvas.height;
@@ -245,6 +277,8 @@
   function copyAcct() {
     var a = CODES[idx];
     if (!a || !a.acct) return;
+    // The number may be the one being changed, so it is not handed out either.
+    if (down(a)) { say("Under maintenance"); return; }
     var digits = a.acct.replace(/\s+/g, "");
     var done = function () { say("Copied " + a.acct); tuck(); };
     var fallback = function () {
@@ -546,6 +580,8 @@
   function save() {
     var a = CODES[idx];
     if (!a) return;
+    // Nothing to save, and nothing that should be saved: see down().
+    if (down(a)) { say("Under maintenance"); return; }
     var card;
     try { card = cardOf(a); }
     catch (e) { say("Could not draw the image"); return; }
@@ -579,7 +615,7 @@
     CODES.forEach(function (a, i) {
       var b = document.createElement("button");
       b.type = "button";
-      b.className = "tile";
+      b.className = down(a) ? "tile down" : "tile";
       b.style.setProperty("--dot", a.brand);
       b.style.setProperty("--soft", softOf(a.brand));
       b.style.setProperty("--i", String(i));
@@ -616,6 +652,9 @@
     for (var i = 0; i < CODES.length; i++) {
       var a = CODES[i], el = thumbOf(i);
       if (!el || !el.getContext) continue;
+      // A suspended account keeps its plain brand disc. Even a 36px miniature is a picture of a
+      // code, and the rule is that a code under maintenance is not drawn anywhere.
+      if (down(a)) continue;
       try {
         self.QRArt.draw(el, a.payload, artFor(a, {
           size: THUMB, pixelRatio: self.devicePixelRatio || 1,
