@@ -11,7 +11,13 @@ import { createCanvas } from "@napi-rs/canvas";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
-const URL_BASE = (process.argv[2] || "https://jb3zkzyqguu5.maakmal97.workers.dev").replace(/\/+$/, "");
+/* THE DEFAULT HOST IS A CONVENIENCE, NOT A FACT, and it has gone stale twice in one day:
+ * once when the Worker was renamed and once when the account subdomain was changed in the
+ * dashboard, which wrangler follows automatically and this file does not. `wrangler deploy`
+ * prints the address it actually deployed to; that is the authority, and QR_HOST or argv[2]
+ * overrides this line without editing it. */
+const URL_BASE = (process.argv[2] || process.env.QR_HOST ||
+  "https://jb3zkzyqguu5.qyts8mh72kyg.workers.dev").replace(/\/+$/, "");
 const MASTER = process.env.QR_MASTER ||
   "C:/Users/maakm/Claude/Code/pay-afif-site";
 
