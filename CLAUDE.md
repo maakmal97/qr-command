@@ -4,9 +4,9 @@ The payment-QR consolidator, read-only, on the phone. A Cloudflare Worker servin
 bundle built from the master at `Code\pay-afif-site`. Two screens: the accounts, which is where
 it opens, and one code drawn on the device as a struck coin held in a gravitational lens: light
 from behind it smeared into arcs, and the one closed Einstein ring. The coin turns over: its reverse is
-struck metal carrying PayNet's own DuitNow QR brand graphic and the account number, embossed. A
-tap saves, whichever face is up; pressing and holding the reverse copies the number. Nothing else
-is shown and nothing else is shipped.
+struck metal carrying PayNet's own DuitNow QR brand graphic and the account number, struck into
+it, and tapping it copies the number. Each face says what a tap does. Nothing else is shown and
+nothing else is shipped.
 
 ## Hard rules
 
@@ -179,18 +179,31 @@ which is under a pixel once snapped, and flipped those corners on ten of the thi
 
 ## The reverse, and PayNet's rules
 
-The back of the coin carries the account number, embossed, under the DuitNow QR mark.
+The back of the coin carries the account number, struck into the metal, under the DuitNow QR
+mark, and a tap copies it. It copies the DIGITS, `1571 5788 9482` going to the clipboard as
+`157157889482`, because that is what a banking app wants pasted into it; the status line echoes
+the grouped form so the eye can check it.
 
-**A TAP SAVES, WHICHEVER FACE IS UP, and copying keeps press-and-hold.** A tap used to copy on
-the reverse, which made one gesture mean two different things depending on a state your own
-thumb is covering the moment you reach for it. Saving is now the only thing a tap does, on
-either face; the clipboard belongs to the deliberate gesture, and is only offered on the face
-that actually shows a number. `C` does it from a keyboard, so it is not pointer-only.
+**BOTH FACES NAME THEIR OWN TAP.** The reverse always said "Tap to copy". The code side said
+nothing at all, so the same gesture read as a feature on one face and a secret on the other; it
+now says "Tap to save". The label is held open rather than timed out, because it describes what
+is on screen rather than reporting something that just happened, and it is written by
+`setFlipped()`, which is therefore called unconditionally on arrival rather than only when there
+is a coin to turn back. Guarded, the very first account you opened had no caption at all.
 
-It copies the DIGITS, `1571 5788 9482` going to the clipboard as `157157889482`, because that is
-what a banking app wants pasted into it; the status line echoes the grouped form so the eye can
-check it, and the hint under the coin reads "Hold to copy" so it names the gesture that is
-actually wired.
+**The number is an inscription, not a slab.** At 0.17 of the face in 700 weight it filled the
+metal edge to edge and read as a block of mass. Struck lettering is smaller than the space it
+sits in, lighter than a headline, and tracked open so the eye can go digit by digit, which is
+what anyone checking a number against a banking app is doing: 0.125 of the face, weight 600,
+tracked 0.055 of the type size.
+
+**The caption is fitted to the CHORD it sits on, not to the face's widest point.** Everything
+else measures the block's height, which is the right check for the stack colliding with itself
+and the wrong one for the caption colliding with the coin. A circle's width falls away fast
+towards the rim: at four fifths of the radius down there is only three fifths of the diameter to
+write on. Fitted to the flat width, the tracked caption ran straight over the rim legend on most
+of the book the moment the number was opened up. What gives is the caption's size, which is
+ours, never the tracking, which is what makes it legible as an inscription at all.
 
 **The mark is PayNet's artwork, never ours.** `tools/mark.mjs` reads the official SVG out of the
 logo pack in the Vault and writes `src/vendor/duitnow-mark.js`: path data byte for byte, each

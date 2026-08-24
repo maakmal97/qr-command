@@ -799,8 +799,9 @@ self.QRArt = (function () {
     return true;
   }
 
-  function emboss(g, text, cx, cy, px, weight, ink, depth) {
+  function emboss(g, text, cx, cy, px, weight, ink, depth, track) {
     g.font = weight + " " + px.toFixed(1) + "px " + FONT;
+    if ("letterSpacing" in g) g.letterSpacing = ((track || 0) * px).toFixed(2) + "px";
     g.textAlign = "center";
     g.textBaseline = "middle";
     var d = Math.max(1, px * (depth || 0.055));
@@ -812,6 +813,7 @@ self.QRArt = (function () {
     g.fillText(text, cx - d * 0.85, cy - d * 0.85);
     g.fillStyle = ink;
     g.fillText(text, cx, cy);
+    if ("letterSpacing" in g) g.letterSpacing = "0px";
   }
 
   function drawBack(canvas, opts) {
@@ -920,9 +922,16 @@ self.QRArt = (function () {
      * Balance is measured in rendered width, not in characters, and a tie keeps more on the
      * first line. */
     var groups = acct.split(/\s+/).filter(Boolean);
-    var base = D * 0.17;
-    g.font = "700 " + base + "px " + FONT;
-    var room = D * 0.78;
+    /* An inscription rather than a slab. 0.17 of the face at 700 filled the metal edge to edge
+     * and read as a block of mass; struck lettering is smaller than the space it sits in,
+     * lighter than a headline, and tracked open so the eye can go digit by digit, which is what
+     * anyone checking a number against a banking app is actually doing. The grouping already
+     * gives the rhythm, so the tracking only has to separate, not divide. */
+    var TRACK = 0.055;                 // as a fraction of the type size
+    var base = D * 0.125;
+    g.font = "600 " + base + "px " + FONT;
+    if ("letterSpacing" in g) g.letterSpacing = (TRACK * base).toFixed(2) + "px";
+    var room = D * 0.70;
     var oneLine = g.measureText(acct).width;
 
     var lines, px;
@@ -931,6 +940,7 @@ self.QRArt = (function () {
       px = base * Math.min(1, room / oneLine);
     } else {
       var bestK = 1, bestGap = Infinity, bestWide = Infinity;
+      // measured in the same face it will be drawn in, tracking included
       for (var k = 1; k < groups.length; k++) {
         var w1 = g.measureText(groups.slice(0, k).join(" ")).width;
         var w2 = g.measureText(groups.slice(k).join(" ")).width;
@@ -943,7 +953,8 @@ self.QRArt = (function () {
       px = base * Math.min(1, room / bestWide);
     }
     var widest = 0;
-    g.font = "700 " + px + "px " + FONT;
+    g.font = "600 " + px + "px " + FONT;
+    if ("letterSpacing" in g) g.letterSpacing = (TRACK * px).toFixed(2) + "px";
     for (var i = 0; i < lines.length; i++) widest = Math.max(widest, g.measureText(lines[i]).width);
     if (widest > room) px *= room / widest;
 
@@ -954,7 +965,7 @@ self.QRArt = (function () {
      * before anything is committed. */
     var clear = markH * mark_clearRatio(mark);        // 1.5X, and nothing may enter it
     var capPx = D * 0.055;
-    var linesH = px + (lines.length - 1) * px * 1.22;
+    var linesH = px + (lines.length - 1) * px * 1.34;
     var gap = px * 0.62;
     var blockH = (markH ? markH + clear : 0) + linesH + gap + capPx;
 
@@ -980,7 +991,7 @@ self.QRArt = (function () {
       }
       k = Math.min(1, k);
       px *= k; capPx *= k; gap *= k;
-      linesH = px + (lines.length - 1) * px * 1.22;
+      linesH = px + (lines.length - 1) * px * 1.34;
       g.font = "700 " + px + "px " + FONT;
       blockH = (markH ? markH + clear : 0) + linesH + gap + capPx;
     }
@@ -991,10 +1002,34 @@ self.QRArt = (function () {
       top += markH + clear;
     }
     for (var k = 0; k < lines.length; k++) {
-      emboss(g, lines[k], R, top + px * 0.5 + k * px * 1.22, px, "700", pal.faceInk, 0.05);
+      emboss(g, lines[k], R, top + px * 0.5 + k * px * 1.34, px, "600", pal.faceInk, 0.042, TRACK);
     }
     top += linesH + gap;
-    emboss(g, "ACCOUNT NUMBER", R, top + capPx * 0.5, capPx, "700", pal.faceDim, 0.045);
+
+    /* THE FACE IS A CIRCLE, AND THE CAPTION SITS NEAR THE BOTTOM OF IT.
+     *
+     * Everything above measures the block's HEIGHT against the face, which is the right check
+     * for the stack colliding with itself but the wrong one for the caption colliding with the
+     * coin. A circle's width falls away fast towards the rim: at four fifths of the radius down
+     * there is only three fifths of the diameter to write on. Fitted to the flat width instead,
+     * a tracked caption ran straight over the rim legend on most of the book, which is what
+     * happened the moment the number was opened up and the caption widened with it.
+     *
+     * So the caption is fitted to the CHORD at its own height, not to the face's widest point.
+     * Half-chord = sqrt(Rd^2 - y^2), and what gives is the caption's size, which is ours, never
+     * the tracking, which is what makes it legible as an inscription in the first place. */
+    var capY = top + capPx * 0.5;
+    var capTrack = 0.16;
+    var dy = Math.abs(capY - R) + capPx * 0.5;
+    var half = f.Rd > dy ? Math.sqrt(f.Rd * f.Rd - dy * dy) : f.Rd * 0.1;
+    var capRoom = half * 2 * 0.86;                      // a little undisturbed metal either side
+    g.font = "600 " + capPx.toFixed(1) + "px " + FONT;
+    if ("letterSpacing" in g) g.letterSpacing = (capTrack * capPx).toFixed(2) + "px";
+    var capW = g.measureText("ACCOUNT NUMBER").width;
+    if ("letterSpacing" in g) g.letterSpacing = "0px";
+    if (capW > capRoom) capPx *= capRoom / capW;
+
+    emboss(g, "ACCOUNT NUMBER", R, capY, capPx, "600", pal.faceDim, 0.03, capTrack);
 
     g.restore();
     if (lensOn) lensRim(g, size, coinPx, f, pal);

@@ -327,11 +327,14 @@
     var a = CODES[idx];
     if (a) {
       elBtn.setAttribute("aria-label", flipped
-        ? a.name + " account number " + a.acct +
-          ". Tap to save the code. Press and hold to copy the number."
-        : a.name + " payment code. Tap or press and hold to save it to your photos.");
+        ? a.name + " account number " + a.acct + ". Tap to copy."
+        : a.name + " payment code. Tap to save it to your photos.");
     }
-    say(flipped ? "Hold to copy" : "");
+    /* BOTH FACES NAME THEIR OWN TAP. The reverse has always said "Tap to copy"; the code side
+     * said nothing at all, so the same gesture read as a feature on one face and a secret on
+     * the other. Held open rather than timed out, because it is a label for what is on screen,
+     * not a report of something that just happened. */
+    say(flipped ? "Tap to copy" : "Tap to save", false);
   }
 
   /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
@@ -523,9 +526,13 @@
     for (var k = 0; k < tiles.length; k++) {
       tiles[k].setAttribute("aria-current", k === idx ? "true" : "false");
     }
-    say("");
-    // A different account always arrives face up. Its number is not the one just on screen.
-    if (flipped) setFlipped(false);
+    /* A different account always arrives face up. Its number is not the one just on screen.
+     *
+     * setFlipped writes the hint as well as turning the coin, so it is called unconditionally
+     * rather than only when there is something to turn back: called only on a change, the very
+     * first account you open has no hint at all, and the label appeared only after a flip and a
+     * flip back. It is idempotent, so calling it when nothing moves costs a class toggle. */
+    setFlipped(false);
     paint(pre);
     remember("last", a.key);
     idle(function () { cardOf(a); });
@@ -747,8 +754,6 @@
       holdTimer = setTimeout(function () {
         if (moved) return;
         held = true;
-        // On the reverse this is the only route to the clipboard, so it must not be the same
-        // action as the tap; on the front there is nothing else to do, so it saves.
         if (flipped) copyAcct(); else save();
       }, HOLD_MS);
     }
@@ -762,15 +767,10 @@
     elBtn.addEventListener("pointercancel", function () { moved = true; endHold(); });
     elBtn.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
-    /* A TAP SAVES, whichever face is up. It used to copy on the reverse, which made the same
-     * gesture mean two different things depending on a state you cannot see once your thumb is
-     * over the coin. Saving is now the one thing a tap does, and copying keeps press-and-hold:
-     * the deliberate gesture for the deliberate act, and it is only offered on the face that
-     * actually shows a number. */
     elBtn.addEventListener("click", function (e) {
       if (held) { held = false; e.preventDefault(); return; }   // the hold already acted
       if (swiped) { swiped = false; return; }                   // a swipe is not a tap
-      save();
+      if (flipped) copyAcct(); else save();
     });
 
     elFlip.addEventListener("click", function (e) {
@@ -785,9 +785,8 @@
       if (!onCode) return;
       if (e.key === "ArrowRight") { step(idx + 1, 1); e.preventDefault(); }
       else if (e.key === "ArrowLeft") { step(idx - 1, -1); e.preventDefault(); }
-      else if (e.key === "s" || e.key === "Enter") { save(); e.preventDefault(); }
-      else if (e.key === "c") { if (flipped) copyAcct(); e.preventDefault(); }
-      else if (e.key === "d") { setFlipped(!flipped); e.preventDefault(); }
+      else if (e.key === "s" || e.key === "Enter") { if (flipped) copyAcct(); else save(); e.preventDefault(); }
+      else if (e.key === "d" || e.key === "c") { setFlipped(!flipped); e.preventDefault(); }
     });
 
     /* Swipe across the code to step. A swipe must never also register as a tap, or every swipe

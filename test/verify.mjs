@@ -743,20 +743,17 @@ section("2. The bundle carries the codes and nothing else");
    * save is the only explanation the action ever gets. */
   ok("press and hold saves, which is the gesture phones already teach for keeping a picture",
     /pointerdown/.test(appJs) &&
-    /held = true;[\s\S]{0,400}?if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
+    /held = true;[\s\S]{0,200}?if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
+  ok("a tap does the same as the hold on whichever face is up",
+    /if \(swiped\) \{ swiped = false; return; }[\s\S]{0,80}?if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
 
-  /* A TAP SAVES, WHICHEVER FACE IS UP. It used to copy on the reverse, which made one
-   * gesture mean two different things depending on a state your thumb is covering. Saving
-   * is now the only thing a tap does; copying keeps press-and-hold, the deliberate gesture
-   * for the deliberate act, offered only on the face that actually shows a number. */
-  ok("a tap saves on either face, and never copies",
-    /if \(swiped\) \{ swiped = false; return; }[\s\S]{0,120}?save\(\);[\s\S]{0,20}?\}\);/.test(appJs) &&
-    !/if \(swiped\) \{ swiped = false; return; }[\s\S]{0,120}?copyAcct/.test(appJs));
-  ok("copying is still reachable without a pointer",
-    /e\.key === "c"\)[^;]*\{ if \(flipped\) copyAcct\(\);/.test(appJs));
-  ok("the hint names the gesture that is actually wired",
-    /say\(flipped \? "Hold to copy" : ""\);/.test(appJs) &&
-    /Press and hold to copy the number/.test(appJs));
+  /* BOTH FACES NAME THEIR OWN TAP. The reverse always said "Tap to copy" and the code side
+   * said nothing, so the same gesture read as a feature on one face and a secret on the
+   * other. The label is held open rather than timed out, because it describes what is on
+   * screen rather than reporting something that just happened. */
+  ok("both faces say what a tap does, and the label does not time out",
+    /say\(flipped \? "Tap to copy" : "Tap to save", false\);/.test(appJs) &&
+    /if \(msg && hold !== false\)/.test(appJs));
   ok("a hold does not then also fire the tap, so one press never saves twice",
     /if \(held\)/.test(appJs));
   /* The coin's shadow is cast from its ALPHA, not from a box around it.
@@ -872,8 +869,12 @@ section("2. The bundle carries the codes and nothing else");
     /navigator\.clipboard\.writeText/.test(appJs) && /execCommand\("copy"\)/.test(appJs));
   ok("the number is real text for a screen reader, not only pixels on a canvas",
     /aria-label", a\.name \+ " account number " \+ a\.acct/.test(appJs));
-  ok("changing account always returns the coin to its front",
-    /if \(flipped\) setFlipped\(false\);/.test(appJs));
+  /* Unconditionally, not only when there is something to turn back: setFlipped writes the
+   * hint as well as turning the coin, so guarding it left the very first account you open
+   * with no label at all, and "Tap to save" appeared only after a flip and a flip back. */
+  ok("changing account always returns the coin to its front, and always sets the hint",
+    /\n    setFlipped\(false\);/.test(appJs) &&
+    !/if \(flipped\) setFlipped\(false\);/.test(appJs));
 
   /* The zoom sets its own first frame before the browser can paint the element. Without it the
    * flier is painted once at full size and then snaps small to grow, which is the skipped beat
