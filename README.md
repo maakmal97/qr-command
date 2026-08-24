@@ -23,11 +23,11 @@ back, and so does your phone's own back gesture.
 
 | | |
 |---|---|
-| **Save the code to your photos** | **Press and hold it**, the same way you would keep any picture on a phone. A plain tap does it too. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
+| **Save the code to your photos** | **Tap it**, or press and hold, the same way you would keep any picture on a phone. A tap saves from either face. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
 | Next or previous | Swipe left and right across the code. A swipe never counts as a tap, so changing code cannot save one by accident. |
-| **The account number** | Press **DuitNow number** and the coin turns over. Its back is struck metal with the number embossed into it. **Tap it to copy**, digits only, ready to paste into a banking app. Changing account always turns it back to the code. |
+| **The account number** | Press **DuitNow number** and the coin turns over. Its back is struck metal with the number embossed into it. **Press and hold to copy**, digits only, ready to paste into a banking app. Changing account always turns it back to the code. |
 | Under maintenance | An account being changed on the laptop shows **Under maintenance** and no code at all. Flip it from the local page; the phone follows within seconds. |
-| Keyboard | Left and right arrows step through, `Enter` or `S` saves, `P` toggles plain, `Esc` goes back. |
+| Keyboard | Left and right arrows step through, `Enter` or `S` saves, `C` copies the number when the coin is turned over, `D` turns it over, `P` toggles plain, `Esc` goes back. |
 | One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
 
 The app remembers whether you left it in plain mode.
@@ -111,7 +111,7 @@ is the only explanation the action ever needs, and a tap does the same for anyon
 runs that way.
 
 **The back is the same coin, turned over.** It carries the DuitNow QR mark and your account
-number struck into the metal, and a tap copies the number. The mark is PayNet's own artwork,
+number struck into the metal, and pressing and holding copies it. The mark is PayNet's own artwork,
 taken path for path out of the official logo pack rather than traced, and it is the version of
 it PayNet supplies as a container, on white, because the coin behind it is a different colour
 for every provider and their guidelines allow the logo on only three backgrounds. Nothing but

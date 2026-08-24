@@ -742,7 +742,21 @@ section("2. The bundle carries the codes and nothing else");
    * keeping a picture; the coin has to look like an object worth pressing; and the motion on
    * save is the only explanation the action ever gets. */
   ok("press and hold saves, which is the gesture phones already teach for keeping a picture",
-    /pointerdown/.test(appJs) && /setTimeout\(function \(\) \{[\s\S]{0,200}?save\(\);/.test(appJs));
+    /pointerdown/.test(appJs) &&
+    /held = true;[\s\S]{0,400}?if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
+
+  /* A TAP SAVES, WHICHEVER FACE IS UP. It used to copy on the reverse, which made one
+   * gesture mean two different things depending on a state your thumb is covering. Saving
+   * is now the only thing a tap does; copying keeps press-and-hold, the deliberate gesture
+   * for the deliberate act, offered only on the face that actually shows a number. */
+  ok("a tap saves on either face, and never copies",
+    /if \(swiped\) \{ swiped = false; return; }[\s\S]{0,120}?save\(\);[\s\S]{0,20}?\}\);/.test(appJs) &&
+    !/if \(swiped\) \{ swiped = false; return; }[\s\S]{0,120}?copyAcct/.test(appJs));
+  ok("copying is still reachable without a pointer",
+    /e\.key === "c"\)[^;]*\{ if \(flipped\) copyAcct\(\);/.test(appJs));
+  ok("the hint names the gesture that is actually wired",
+    /say\(flipped \? "Hold to copy" : ""\);/.test(appJs) &&
+    /Press and hold to copy the number/.test(appJs));
   ok("a hold does not then also fire the tap, so one press never saves twice",
     /if \(held\)/.test(appJs));
   /* The coin's shadow is cast from its ALPHA, not from a box around it.

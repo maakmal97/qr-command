@@ -4,8 +4,9 @@ The payment-QR consolidator, read-only, on the phone. A Cloudflare Worker servin
 bundle built from the master at `Code\pay-afif-site`. Two screens: the accounts, which is where
 it opens, and one code drawn on the device as a struck coin held in a gravitational lens: light
 from behind it smeared into arcs, and the one closed Einstein ring. The coin turns over: its reverse is
-struck metal carrying PayNet's own DuitNow QR brand graphic and the account number, embossed, and
-tapping it copies the number. Nothing else is shown and nothing else is shipped.
+struck metal carrying PayNet's own DuitNow QR brand graphic and the account number, embossed. A
+tap saves, whichever face is up; pressing and holding the reverse copies the number. Nothing else
+is shown and nothing else is shipped.
 
 ## Hard rules
 
@@ -178,10 +179,18 @@ which is under a pixel once snapped, and flipped those corners on ten of the thi
 
 ## The reverse, and PayNet's rules
 
-The back of the coin carries the account number, embossed, under the DuitNow QR mark, and a tap
-copies the number. It copies the DIGITS, `1571 5788 9482` going to the clipboard as
-`157157889482`, because that is what a banking app wants pasted into it; the status line echoes
-the grouped form so the eye can check it.
+The back of the coin carries the account number, embossed, under the DuitNow QR mark.
+
+**A TAP SAVES, WHICHEVER FACE IS UP, and copying keeps press-and-hold.** A tap used to copy on
+the reverse, which made one gesture mean two different things depending on a state your own
+thumb is covering the moment you reach for it. Saving is now the only thing a tap does, on
+either face; the clipboard belongs to the deliberate gesture, and is only offered on the face
+that actually shows a number. `C` does it from a keyboard, so it is not pointer-only.
+
+It copies the DIGITS, `1571 5788 9482` going to the clipboard as `157157889482`, because that is
+what a banking app wants pasted into it; the status line echoes the grouped form so the eye can
+check it, and the hint under the coin reads "Hold to copy" so it names the gesture that is
+actually wired.
 
 **The mark is PayNet's artwork, never ours.** `tools/mark.mjs` reads the official SVG out of the
 logo pack in the Vault and writes `src/vendor/duitnow-mark.js`: path data byte for byte, each
@@ -422,7 +431,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 
 ```
 npm run build     # master -> public/
-npm test          # 177 assertions, about ten seconds, no network
+npm test          # 180 assertions, about ten seconds, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy. The test is not optional here.

@@ -327,10 +327,11 @@
     var a = CODES[idx];
     if (a) {
       elBtn.setAttribute("aria-label", flipped
-        ? a.name + " account number " + a.acct + ". Tap to copy."
-        : a.name + " payment code. Press and hold to save it to your photos.");
+        ? a.name + " account number " + a.acct +
+          ". Tap to save the code. Press and hold to copy the number."
+        : a.name + " payment code. Tap or press and hold to save it to your photos.");
     }
-    say(flipped ? "Tap to copy" : "");
+    say(flipped ? "Hold to copy" : "");
   }
 
   /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
@@ -746,6 +747,8 @@
       holdTimer = setTimeout(function () {
         if (moved) return;
         held = true;
+        // On the reverse this is the only route to the clipboard, so it must not be the same
+        // action as the tap; on the front there is nothing else to do, so it saves.
         if (flipped) copyAcct(); else save();
       }, HOLD_MS);
     }
@@ -759,10 +762,15 @@
     elBtn.addEventListener("pointercancel", function () { moved = true; endHold(); });
     elBtn.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
+    /* A TAP SAVES, whichever face is up. It used to copy on the reverse, which made the same
+     * gesture mean two different things depending on a state you cannot see once your thumb is
+     * over the coin. Saving is now the one thing a tap does, and copying keeps press-and-hold:
+     * the deliberate gesture for the deliberate act, and it is only offered on the face that
+     * actually shows a number. */
     elBtn.addEventListener("click", function (e) {
       if (held) { held = false; e.preventDefault(); return; }   // the hold already acted
       if (swiped) { swiped = false; return; }                   // a swipe is not a tap
-      if (flipped) copyAcct(); else save();
+      save();
     });
 
     elFlip.addEventListener("click", function (e) {
@@ -777,8 +785,9 @@
       if (!onCode) return;
       if (e.key === "ArrowRight") { step(idx + 1, 1); e.preventDefault(); }
       else if (e.key === "ArrowLeft") { step(idx - 1, -1); e.preventDefault(); }
-      else if (e.key === "s" || e.key === "Enter") { if (flipped) copyAcct(); else save(); e.preventDefault(); }
-      else if (e.key === "d" || e.key === "c") { setFlipped(!flipped); e.preventDefault(); }
+      else if (e.key === "s" || e.key === "Enter") { save(); e.preventDefault(); }
+      else if (e.key === "c") { if (flipped) copyAcct(); e.preventDefault(); }
+      else if (e.key === "d") { setFlipped(!flipped); e.preventDefault(); }
     });
 
     /* Swipe across the code to step. A swipe must never also register as a tap, or every swipe
