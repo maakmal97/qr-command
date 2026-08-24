@@ -11,7 +11,7 @@ import { createCanvas } from "@napi-rs/canvas";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
-const URL_BASE = (process.argv[2] || "https://qr-command.maakmal97.workers.dev").replace(/\/+$/, "");
+const URL_BASE = (process.argv[2] || "https://jb3zkzyqguu5.maakmal97.workers.dev").replace(/\/+$/, "");
 const MASTER = process.env.QR_MASTER ||
   "C:/Users/maakm/Claude/Code/pay-afif-site";
 

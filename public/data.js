@@ -27,7 +27,7 @@ self.QR_CODES = [
     "brand": "#7A2FF5",
     "payload": "00020201021126480014A000000615000101066292790216aAe3JBl7P7ncQunH5204000053034585802MY5925Muhammad Afif Akmal Bin A6002MY62110507fjuJk3n64350002EN0125Muhammad Afif Akmal Bin A6304C989",
     "acct": "8888 00299586 8",
-    "maintenance": false
+    "maintenance": true
   },
   {
     "key": "boostbank",
@@ -51,7 +51,7 @@ self.QR_CODES = [
     "brand": "#1F1FE0",
     "payload": "00020201021126420014A00000061500010106629287021086220942325204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY63043F42",
     "acct": "86 2209 4232",
-    "maintenance": false
+    "maintenance": true
   },
   {
     "key": "kaf",
@@ -107,7 +107,7 @@ self.QR_CODES = [
     "brand": "#EA1824",
     "payload": "00020201021126440014A0000006150001010689017802122236902645345204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6012KAULA LUMPUR6304B96F",
     "acct": "2236 9026 4534",
-    "maintenance": false
+    "maintenance": true
   }
 ];
-self.QR_BUILD = "20b6693cb083";
+self.QR_BUILD = "af7c56ae50a6";

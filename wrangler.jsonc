@@ -1,6 +1,17 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "qr-command",
+	// DELIBERATELY MEANINGLESS, and line comments only: the suite strips `//` and nothing else,
+	// so a block comment here fails "wrangler.jsonc parses once its comments are stripped".
+	//
+	// The Worker name is the first label of the public address, so it is a random string rather
+	// than a description. The page is public by decision, and an unguessable address is the only
+	// thing between it and somebody typing likely names. That is obscurity, not security, and it
+	// is worth exactly what that is worth: anyone who has ever seen the URL still has it, and
+	// X-Robots-Tag is what keeps it out of a search index.
+	//
+	// Renaming again is one edit and one deploy, plus deleting the Worker left behind, or the
+	// old address keeps serving the codes.
+	"name": "jb3zkzyqguu5",
 	"main": "src/worker.js",
 	// Do not raise this past what the installed workers runtime supports: wrangler 4.120.0
 	// tops out at 2026-08-08 and refuses to start on anything later, locally and on deploy.
