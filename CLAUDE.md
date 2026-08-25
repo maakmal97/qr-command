@@ -472,9 +472,38 @@ Six things that will bite:
   `toBlob` is enough to lose that permission. The failure is silent: the share sheet simply
   never appears. `cardOf()` is synchronous and cached for that reason, and the suite asserts
   `toBlob` does not come back.
-- **The grid's `minmax` is 132px and must not grow.** At 148px, `auto-fill` dropped to a single
-  column on a 375px phone, which made the list scroll. Two columns must fit the narrowest phone
-  so every account is on screen at once with nothing to hunt for.
+- **The grid's `minmax` is 132px and must not grow.** Two columns must fit the narrowest phone,
+  or the list becomes a single file to hunt up and down. At 375px, 132px yields two 167.5px
+  columns, measured.
+- **THE LIST SCROLLS, AND THE ROW HEIGHT IS WHAT MAKES IT.** `grid-auto-rows` was
+  `minmax(60px,1fr)`, so the rows divided up whatever height was left and thirteen accounts
+  always fitted exactly: `overflow-y:auto` below it could never fire. The visible symptom was
+  not the missing scroll, it was that the tiles were large and empty while the coin and the
+  name inside them stayed at 36px and 13.5px. Fixed at 138px the content sets the size and the
+  list overflows, 1,018px of rows against 736px of room on a 375x812 phone. Ripping out "every
+  account on screen at once" in exchange for a list that can be read at arm's length is the
+  owner's call, made 25 Aug 2026.
+- **THE TILE STACKS, and side by side was measured and rejected.** A two-column tile on a 375px
+  phone is 168px. With the coin beside the name, padding and gap left 72px of text column, and
+  72px is narrower than the words this app contains: `overflow-wrap:break-word` then split them
+  MID-WORD, giving "ShopeePa / y" and a maintenance label reading "MAINTENA / NCE", which looks
+  like a rendering fault rather than a layout. Stacked, the name gets the full 148px and all
+  thirteen sit on one line, "Touch 'n Go Business" included. Anything that puts the coin back
+  beside the text has to re-check the longest name and the maintenance label, not just the
+  average one.
+- **`--thumb` and `THUMB` in `app.js` are one number in two files and must be changed together.**
+  56px now, from 36px.
+- **`.accounts` overrides all four paddings, so the safe-area insets have to be added back with
+  `calc()`.** `.accounts,.codeview` sets them in one `padding` shorthand and every longhand in
+  `.accounts` overrides it, so plain `16px` threw them away silently. It barely showed while the
+  list could not scroll; once it could, the last row scrolled under the home indicator and into
+  the strip iOS reserves for the swipe-up gesture. `.codeview` adds no longhands and is fine.
+- **Closing an account scrolls its TILE back into view before measuring, not its coin.** An
+  off-screen tile still reports a perfectly valid rect, so without this the coin flies off the
+  edge to a place the eye cannot follow, silently. `block:"nearest"` is deliberate: it moves the
+  list only when the tile is actually out of view, so returning does not otherwise throw away
+  the scroll position. Scrolling the `.tiledot` instead is not enough, because the coin sits
+  22px inside the tile and the tile's bottom edge stays clipped.
 - **There is no plain-code pill and no title above the coin.** The pill went on the owner's
 instruction; what remains is the renderer dropping to the plain code BY ITSELF below
 `safePhysicalPx`, which is a safety net rather than a preference and is still asserted. The

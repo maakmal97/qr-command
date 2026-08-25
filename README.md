@@ -17,9 +17,11 @@ fetched when you open it.
 
 ## Using it
 
-**The app opens on your accounts.** All of them, named, on one screen, nothing hidden and
-nothing to scroll. Tap one and its code fills the screen. **Accounts** at the top left goes
-back, and so does your phone's own back gesture.
+**The app opens on your accounts.** Two columns, each one named, with its own coin beside it
+big enough to tell apart at a glance. The list scrolls if your phone is not tall enough to hold
+all of them, and the row cut off at the bottom edge is how you know there is more. Tap one and
+its code fills the screen. **Accounts** at the top left goes back, and so does your phone's own
+back gesture; whichever account you came from is scrolled back into view for you.
 
 | | |
 |---|---|

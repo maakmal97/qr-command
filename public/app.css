@@ -32,7 +32,7 @@
   --r:22px;
   --r-sm:16px;
   --pill:999px;
-  --thumb:36px;
+  --thumb:56px;
   --sh:0 8px 40px rgba(0,0,0,0.35);
 
   /* MOTION IS TIERED, and one curve for everything was the bug rather than the discipline.
@@ -141,12 +141,17 @@ body.view-code .codeview{
 
 /* ==================================================================== accounts */
 
+/* THE SAFE AREA HAS TO BE ADDED BACK, not restated. The rule above sets all four insets in one
+ * `padding` shorthand, and every longhand here overrides it, so writing plain 16px silently
+ * threw the insets away on every notched phone. It hardly showed while the list could not
+ * scroll; the moment it could, the last row went under the home indicator, into the strip iOS
+ * reserves for the swipe-up gesture, which is the definition of awkward to use. */
 .accounts{
   gap:14px;
-  padding-top:clamp(16px,3.4vh,30px);
-  padding-left:16px;
-  padding-right:16px;
-  padding-bottom:16px;
+  padding-top:calc(env(safe-area-inset-top) + clamp(16px,3.4vh,30px));
+  padding-left:calc(env(safe-area-inset-left) + 16px);
+  padding-right:calc(env(safe-area-inset-right) + 16px);
+  padding-bottom:calc(env(safe-area-inset-bottom) + 16px);
 }
 
 .atitle{
@@ -156,17 +161,32 @@ body.view-code .codeview{
   color:var(--ink-3);
 }
 
-/* Two columns on the narrowest phone, so all thirteen accounts are on screen at once with no
- * scrolling and no hunting. 132px, not more: at 148px auto-fill dropped to a single column on
- * a 375px phone and the list started to scroll, which is the problem this replaced. */
+/* Two columns on the narrowest phone. 132px is the floor, not the target: at 375px it gives two
+ * 167px columns, and one column would mean hunting up and down a single file.
+ *
+ * THE ROWS ARE A FIXED HEIGHT, AND THAT IS WHAT MAKES THE LIST SCROLL. They were
+ * minmax(60px,1fr), which stretched every row to divide up whatever height was left, so
+ * thirteen accounts always fitted exactly and overflow-y below could never fire. The tiles
+ * were big and empty while the coin and the name inside them stayed tiny, which is the wrong
+ * way round: it is the CONTENT that has to be legible at arm's length, not the box.
+ *
+ * Fixed at 104px the content sets the size, the list overflows on a normal phone, and the row
+ * that is cut off at the bottom edge is the signal that there is more below. Trading "all
+ * thirteen on screen at once" for a list you can actually read is the owner's call, made
+ * 25 Aug 2026. */
 .grid{
   flex:1 1 auto;
   min-height:0;
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
-  grid-auto-rows:minmax(60px,1fr);
+  grid-auto-rows:138px;
   gap:8px;
+  padding-bottom:4px;
   overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  /* Breathing room for the scrollIntoView on the way back, so a tile that had to be scrolled
+   * to arrives sitting in the list rather than jammed flush against its edge. */
+  scroll-padding-block:10px;
   overscroll-behavior:contain;
   align-content:start;
 }
@@ -174,9 +194,17 @@ body.view-code .codeview{
 .tile{
   appearance:none;-webkit-appearance:none;
   font:inherit;cursor:pointer;text-align:left;
-  display:flex;align-items:center;gap:11px;
-  min-height:60px;
-  padding:8px 11px;
+  /* THE TILE STACKS: coin above, name below. Side by side, the coin ate the width the name
+   * needed. At two columns on a 375px phone a tile is 168px, so a 56px coin plus the padding
+   * and the gap left about 72px of text column, and 72px is not enough for the words this app
+   * actually contains: "ShopeePay" broke as "ShopeePa / y" and the maintenance label as
+   * "MAINTENA / NCE", mid-word, which reads as a rendering fault rather than a layout.
+   * Stacked, the name gets the full 148px, and a wallet of coins with their names under them
+   * is the pattern every phone home screen already teaches. */
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:9px;
+  min-height:138px;
+  padding:12px 10px;
   border:1px solid var(--brd);
   border-radius:var(--r-sm);
   background:rgba(255,255,255,0.05);
@@ -197,7 +225,10 @@ body.view-code .codeview{
   display:block;
   filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));
 }
-.tiletext{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:break-word;min-width:0;}
+/* `overflow-wrap:break-word` is the last resort and it is what produced "ShopeePa / y": with
+ * too little room it will split inside a word rather than overflow. The width above is the real
+ * fix; this keeps a freakishly long single word from spilling out of the tile instead. */
+.tiletext{font-size:14.5px;font-weight:600;line-height:1.28;overflow-wrap:break-word;min-width:0;}
 
 /* ==================================================================== the code */
 

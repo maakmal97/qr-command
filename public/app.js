@@ -38,7 +38,7 @@
   var skyOn = 0;
 
   // The miniature on a tile, in CSS pixels. Must match --thumb in app.css.
-  var THUMB = 36;
+  var THUMB = 56;
 
   /* THE DURATIONS COME FROM THE STYLESHEET, not from numbers typed here as well.
    *
@@ -575,7 +575,14 @@
     else history.replaceState({ n: 0 }, "", "#");
     showList();
 
+    /* THE LIST SCROLLS NOW, so the tile we are flying back to may be off screen, and an
+     * off-screen tile still reports a perfectly valid rect. Left alone the coin would sail
+     * off past the edge to a place the eye cannot follow and land on nothing. "nearest" is
+     * deliberate: it moves the list only when the tile is actually out of view, so coming
+     * back does not otherwise throw away the scroll position. It has to happen BEFORE the
+     * measurement, and instantly, or we would measure a position the list has not reached. */
     var thumb = thumbOf(was);
+    if (tiles[was]) tiles[was].scrollIntoView({ block: "nearest", inline: "nearest" });
     var to = rectOf(thumb);
     if (!shot || !to) return;
     if (thumb) thumb.style.visibility = "hidden";
