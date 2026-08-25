@@ -326,10 +326,11 @@
        *
        * The holder is usually absent, and a screen reader must not announce a trailing "in the
        * name of" with nothing after it. */
-      elCoin.setAttribute("aria-label", a.name + ", held at " + a.bank +
-        (a.holder ? ", in the name of " + a.holder : ""));
+      elCoin.setAttribute("aria-label", "Bank, " + a.bank +
+        (a.holder ? ". Receiver, " + a.holder : "") + ".");
       elBtn.setAttribute("aria-label",
-        a.name + ", held at " + a.bank + ". Tap to copy the account number.");
+        a.name + ". Bank, " + a.bank + (a.holder ? ". Receiver, " + a.holder : "") +
+        ". Tap to copy the account number.");
     } else {
       elCoin.setAttribute("aria-label", a.name + " payment code");
       elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");

@@ -240,16 +240,33 @@ function auditPublic(doc, codes, V) {
   const stems = nameStems(doc);
   const payloads = codes.map((c) => c.payload).filter(Boolean).sort((a, b) => b.length - a.length);
 
-  /* THE SANCTIONED NAME IS PINNED, NOT EXEMPTED, and the difference is the whole design.
+  /* A HOLDER IS A BENEFICIARY, AND A BENEFICIARY IS NOT THE OWNER.
    *
-   * An account with no DuitNow code is paid by naming the bank, the number and the person, so
-   * one legal name now has to reach the page. The lazy way to allow that is to drop the payee
-   * out of the forbidden set, which would switch off the check that stopped a truncated slug of
-   * his name from becoming the public URL of this site. Instead the expected occurrences are
-   * removed here, exactly as payloads are, and then asserted to have been in exactly one file
-   * and exactly the right number of times. Anything else carrying the name still dies, and the
-   * stem check below is untouched, so a key or a filename derived from a person is caught as
-   * before: a slug is not the same bytes as the name, so it is never stripped. */
+   * An account with no DuitNow code is paid by naming the bank and the receiver, and the
+   * receiver on such an account is typically an institution: Wise's MYR account is held at
+   * JPMorgan Chase in the name of Wise Payments Malaysia Sdn Bhd, and a payer who is not warned
+   * of that aborts the transfer. A company name is not personal data and publishing one is not
+   * the decision this guard exists to police.
+   *
+   * The OWNER'S OWN name is a different thing entirely, and it is refused outright: a holder
+   * that matches the payee or an owner, by exact string or by squashed stem, kills the build
+   * below rather than being stripped and pinned. That is the owner's standing choice of
+   * 25 Aug 2026, and it is enforced here rather than merely written down.
+   *
+   * The sanctioned names are removed exactly as payloads are, and then asserted to have been in
+   * exactly one file the right number of times. A slug is never stripped, because a slug is not
+   * the same bytes as the name, so the stem check below still catches a key derived from a
+   * person. */
+  const squashOf = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const person = codes.filter((c) => c.holder &&
+    stems.some((st) => squashOf(c.holder).includes(st)));
+  if (person.length) {
+    die("the holder on " + person.map((c) => c.key).join(", ") + " is the payee or an owner. " +
+        "A holder names the BENEFICIARY of an account, which for a code-less account is normally " +
+        "an institution; publishing the owner's own legal name is refused. Remove `holder` in " +
+        "the master, or set it to the institution the account is actually held in the name of.");
+  }
+
   const holders = [...new Set(codes.map((c) => c.holder).filter(Boolean))]
     .sort((a, b) => b.length - a.length);
   const holderSeen = new Map(holders.map((h) => [h, []]));
@@ -434,24 +451,27 @@ console.log("  " + codes.length + " codes, " + shipped.length + " files in publi
 console.log("  shipped per account: " + SHIP.join(", "));
 console.log("  dropped: " + [...new Set(doc.accounts.flatMap(Object.keys))].filter((k) => !SHIP.includes(k)).join(", ") +
             ", plus the top-level payee, owners and groups");
-console.log("  the page displays: the provider name, the code, and the account number embossed");
-console.log("    on the back of the coin. THE ACCOUNT NUMBERS ARE PUBLIC AS TEXT, by decision,");
-console.log("    so that they can be copied and sent to somebody who needs one.");
+console.log("  the page displays the provider name and the code, and NEVER an account number:");
+console.log("    the number goes to the clipboard without being drawn. It still SHIPS in data.js,");
+console.log("    because a copy needs something to copy, so every account number remains readable");
+console.log("    to anyone who views source. That is unchanged, and it is not what taking it off");
+console.log("    the screen was for.");
 /* Printed either way, because "no name is published" is exactly the kind of fact that stops
  * being true quietly. Silence here would read the same as the field not existing. */
 if (d.named.length) {
-  console.log("  THE PAGE ALSO PRINTS A PERSON'S LEGAL NAME AS TEXT, for " + d.named.length +
-              " account(s) with no");
-  console.log("    DuitNow code (" + d.named.map((c) => c.key).join(", ") + "), because a transfer to one " +
-              "needs the bank, the");
-  console.log("    number and the name together. Nothing else carries it: the leak check pins it to");
-  console.log("    exactly those records in data.js and dies if it appears anywhere else.");
+  console.log("  the page names a BENEFICIARY for " + d.named.length + " account(s) with no DuitNow " +
+              "code (" + d.named.map((c) => c.key).join(", ") + "),");
+  console.log("    because a payer has to confirm a receiver name that is not the person they think");
+  console.log("    they are paying: " + d.named.map((c) => JSON.stringify(c.holder)).join(", ") + ".");
+  console.log("    NONE of these is the owner or the payee; a holder that matched one would have");
+  console.log("    stopped this build. The leak check pins each to its own record in data.js.");
 } else {
-  console.log("  no legal name is published: `holder` is set on no account, so the leak check");
-  console.log("    refuses the payee's name outright. " + d.plates.length + " account(s) have no code and " +
-              "ship bank");
-  console.log("    plus number only.");
+  console.log("  no beneficiary name is published: `holder` is set on no account. " + d.plates.length +
+              " account(s)");
+  console.log("    have no code and ship bank plus number only.");
 }
+console.log("  the owner's own legal name is published NOWHERE, and a `holder` matching it is");
+console.log("    refused outright rather than pinned.");
 console.log("  inside the codes themselves, which no page design can change:");
 console.log("    the account-holder name is readable in " + d.inName + " of " + codes.length + " payloads (EMVCo tag 59)");
 console.log("    the account number is readable in " + d.inAcct + " of " + codes.length + " payloads (tag 26)");

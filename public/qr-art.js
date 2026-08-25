@@ -868,6 +868,46 @@ self.QRArt = (function () {
     return w > room ? px * (room / w) : px;
   }
 
+  /* WRAP RATHER THAN SHRINK PAST LEGIBILITY, because a circle punishes long text twice over.
+   *
+   * A chord is the widest thing this face has, so fitting a 30-character name to it on one line
+   * drives the type down to about a fifth of the size the vertical room would allow: measured,
+   * "WISE PAYMENTS MALAYSIA SDN BHD" fitted to one line comes out near 10 CSS px on a phone,
+   * where broken at its most balanced word boundary it holds about 18. Height was never the
+   * constraint here; width was, and two lines buy width back.
+   *
+   * The split is chosen by RENDERED WIDTH rather than by word count, and the most balanced break
+   * wins. Splitting down the middle of the word list left "WISE" alone above "PAYMENTS MALAYSIA
+   * SDN BHD", which looks like a mistake rather than a line break. */
+  function layoutValue(g, text, px, track, maxW, minPx) {
+    var measure = function (s, size) {
+      g.font = "600 " + size.toFixed(1) + "px " + FONT;
+      if ("letterSpacing" in g) g.letterSpacing = (track * size).toFixed(2) + "px";
+      var w = g.measureText(s).width;
+      if ("letterSpacing" in g) g.letterSpacing = "0px";
+      return w;
+    };
+    var one = measure(text, px);
+    if (one <= maxW) return { lines: [text], px: px };
+
+    var fitted = px * (maxW / one);
+    var words = text.split(/\s+/).filter(Boolean);
+    // One line is preferred while it stays readable, and is the only option for a single word.
+    if (fitted >= minPx || words.length < 2) return { lines: [text], px: fitted };
+
+    var bestK = 1, bestGap = Infinity, bestWide = Infinity;
+    for (var k = 1; k < words.length; k++) {
+      var w1 = measure(words.slice(0, k).join(" "), px);
+      var w2 = measure(words.slice(k).join(" "), px);
+      var d = Math.abs(w1 - w2);
+      if (d < bestGap) { bestGap = d; bestK = k; bestWide = Math.max(w1, w2); }
+    }
+    return {
+      lines: [words.slice(0, bestK).join(" "), words.slice(bestK).join(" ")],
+      px: bestWide > maxW ? px * (maxW / bestWide) : px
+    };
+  }
+
   /* ---------------------------------------------------------------- the plate */
 
   /* An account with NO CODE AT ALL, paid by naming the bank, the number and the person.
@@ -915,43 +955,65 @@ self.QRArt = (function () {
      * The bank is therefore the PRIMARY inscription now rather than a caption over the number,
      * and it is sized as one. Bank names run long, so it is started generously and fitted to its
      * chord, which is what stops "JPMORGAN CHASE BANK BERHAD" running over the rim legend. */
-    var capTrack = 0.14;
-    var bankPx = D * 0.105;
-    var holdPx = D * 0.052;
+    /* THE FACE IS AN INSTRUCTION, not a label. Somebody paying this account picks a bank from a
+     * list and then has to confirm a receiver name that is NOT the person they think they are
+     * paying, so both are set out under their own headings. Being surprised by that second name
+     * is how a payer aborts a transfer half way through. */
+    var LTRACK = 0.16, VTRACK = 0.05;
+    var labelPx = D * 0.045;
+    var valuePx = D * 0.086;
+    var minValuePx = D * 0.058;   // below this a value wraps rather than shrinking further
+    var maxW = D * 0.78;          // the working chord; each line is refitted to its own below
 
-    /* ONLY THE LINES THAT EXIST TAKE UP ROOM. The holder is usually absent, and counting its
-     * height anyway made the block taller than its contents, so what was drawn sat visibly above
-     * the middle of the face while the space it was centred in ran off the bottom. Height is
-     * summed from what is actually drawn. */
-    if (!bank) bankPx = 0;
-    if (!holder) holdPx = 0;
-    var gap = bankPx * 0.52;
-    var blockH = bankPx + holdPx + (bankPx && holdPx ? gap : 0);
+    var rows = [];
+    if (bank) rows.push({ label: "BANK", value: bank });
+    if (holder) rows.push({ label: "RECEIVER", value: holder });
+    for (var r = 0; r < rows.length; r++) {
+      rows[r].fit = layoutValue(g, rows[r].value, valuePx, VTRACK, maxW, minValuePx);
+    }
+
+    var lineStep = 1.2;
+    var labelGap = labelPx * 0.5;
+    var rowGap = valuePx * 0.7;
+    var heightOf = function (row) {
+      return labelPx + labelGap + row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep);
+    };
+    var sumH = function () {
+      var t = rowGap * Math.max(0, rows.length - 1);
+      for (var i = 0; i < rows.length; i++) t += heightOf(rows[i]);
+      return t;
+    };
+
+    var blockH = sumH();
     var room = D * 0.84;
     if (blockH > room) {
       var k = room / blockH;
-      bankPx *= k; holdPx *= k; gap *= k;
-      blockH = bankPx + holdPx + (bankPx && holdPx ? gap : 0);
+      labelPx *= k; labelGap *= k; rowGap *= k;
+      for (var i3 = 0; i3 < rows.length; i3++) rows[i3].fit.px *= k;
+      blockH = sumH();
     }
 
-    var top = R - blockH / 2;
-    var bankY = top + bankPx * 0.5;
-    var holdY = top + bankPx + gap + holdPx * 0.5;
-
-    if (bank) {
-      emboss(g, bank, R, bankY, fitChord(g, bank, bankY, R, f.Rd, bankPx, capTrack),
-             "600", pal.faceInk, 0.042, capTrack);
-    }
-    if (holder) {
-      emboss(g, holder, R, holdY, fitChord(g, holder, holdY, R, f.Rd, holdPx, capTrack),
-             "600", pal.faceDim, 0.03, capTrack);
+    var y = R - blockH / 2;
+    for (var i5 = 0; i5 < rows.length; i5++) {
+      var row = rows[i5];
+      var ly = y + labelPx * 0.5;
+      emboss(g, row.label, R, ly, fitChord(g, row.label, ly, R, f.Rd, labelPx, LTRACK),
+             "700", pal.faceDim, 0.03, LTRACK);
+      y += labelPx + labelGap;
+      for (var j = 0; j < row.fit.lines.length; j++) {
+        var vy = y + row.fit.px * 0.5 + j * row.fit.px * lineStep;
+        emboss(g, row.fit.lines[j], R, vy,
+               fitChord(g, row.fit.lines[j], vy, R, f.Rd, row.fit.px, VTRACK),
+               "600", pal.faceInk, 0.042, VTRACK);
+      }
+      y += row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep) + rowGap;
     }
 
     g.restore();
     if (b.lensOn) lensRim(g, size, b.coinPx, f, pal);
 
     return { size: cssSize, deviceSize: size, coinPx: b.coinPx, palette: pal,
-             bank: bank, holder: holder, plate: true };
+             bank: bank, holder: holder, rows: rows.length, plate: true };
   }
 
   /* ----------------------------------------------------------------- the card */

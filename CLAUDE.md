@@ -38,26 +38,32 @@ Nothing else is shown and nothing else is shipped.
    before it, an account number was recoverable only by decoding a code, and only for six of the
    thirteen; now all thirteen are in the page as text. The build prints that on every run.
 
-   **`holder` EXISTS, IS EMPTY, AND STAYS EMPTY UNLESS SOMEBODY TYPES A NAME.** Added 25 Aug
-   2026 for accounts with no DuitNow code, which are paid by naming the bank, the number and the
-   person. **The owner's decision, the same day, was that no name is published**, so no account
-   sets it and none ever appears on the page. The build prints that on every run, because "no name is
-   published" is exactly the kind of fact that stops being true quietly.
+   **`holder` IS THE BENEFICIARY, AND A BENEFICIARY IS NOT THE OWNER.** Added 25 Aug 2026 for
+   accounts with no DuitNow code. Such an account is paid by picking a bank and confirming a
+   receiver name, and that receiver is normally an institution rather than a person: Wise's MYR
+   account is held at JPMorgan Chase in the name of Wise Payments Malaysia Sdn Bhd, and a payer
+   who is not warned of that aborts the transfer half way through. A company name is not personal
+   data, and publishing one is not what this guard exists to police.
+
+   **THE OWNER'S OWN NAME IS REFUSED OUTRIGHT**, and that is the rule, not "no name at all",
+   which is what this said for a few hours and was wrong. A `holder` matching the payee or any
+   owner, by exact string or by squashed stem, KILLS THE BUILD with a message saying so. It is
+   not stripped and pinned like a sanctioned name; it simply cannot ship. Mutation tested with
+   `Muhammad Afif Akmal`, a partial name in different casing that matches nothing byte for byte,
+   and the stem check caught it.
 
    **IT IS NEVER DERIVED, and that is the load-bearing part.** The first version resolved it
-   from the owner's `legal`, so every code-less account would have printed a name automatically.
-   That is the wrong default for the one field that puts a person on a public page: it makes
-   publication a side effect of adding an account rather than a decision about it. Opting in
-   means typing the name into the master, where it can be seen and removed.
+   from the owner's `legal`, so every code-less account would have printed the owner's name
+   automatically. That is the wrong default for a field that puts a name on a public page: it
+   makes publication a side effect of adding an account rather than a decision about it. It ships
+   exactly what the master types, and nothing else.
 
-   **THE GUARD IS TIGHTENED TO ALLOW IT, NOT SWITCHED OFF, if one is ever set.** The lazy way is
-   to drop the payee from the forbidden set, which would disable the stem check described below.
+   **THE SANCTIONED NAME IS PINNED, NOT EXEMPTED.** The lazy way to allow any name through is to
+   drop the payee from the forbidden set, which would disable the stem check described below.
    Instead the expected occurrences are stripped exactly as payloads are, and then asserted:
    **exactly once per entitled record, in `data.js`, and nowhere else at all.** A name reaching
    `app.js`, the manifest or the service worker's shell list still kills the build. Mutation
-   tested twice: by leaking the name into `app.js` (build and suite both die), and by setting a
-   `holder` in the master, where the build shouts the disclosure and the suite fails
-   `no legal name is published at all`, so opting in cannot happen without revisiting this file.
+   tested by leaking a name into `app.js`: build and suite both die.
 
    **A name also travels as a SLUG, and exact matching cannot see one.** On 13 Aug 2026 the
    master keyed a new account `muhammad-afif-akmal-bin`, a truncated lowercase slug of the
@@ -233,28 +239,45 @@ same failure as showing a stale code.
 
 ## Accounts with no code at all
 
-Some accounts have no DuitNow code and are paid by naming the bank, the number and the person.
-`payload` became optional on 25 Aug 2026 to allow it, and **that is a change to the master's
+Some accounts have no DuitNow code and are paid by picking a bank, pasting an account number and
+confirming a receiver name. `payload` became optional on 25 Aug 2026 to allow it, and **that is a change to the master's
 contract, so it had to be made in `store.js` and `serve.py` together.** They are two
 implementations of one rule with nothing asserting they agree, and they have drifted before;
 the two were checked against seven documents, message for message, after the change.
 
-**One face, and it carries the BANK, not the number.** `drawPlate()` draws the same struck coin
-inscribed with the bank it is held at, and the holder underneath if one is ever set, which today
-it is not. The provider is already around the rim so it is not repeated.
+**THE FACE IS AN INSTRUCTION, not a label.** `drawPlate()` draws the same struck coin inscribed
+with two headed rows, in the order a payer needs them: **BANK**, the bank to pick from the list,
+and **RECEIVER**, the name their app will show them before they confirm. The provider is already
+around the rim so it is not repeated.
 
-**THE NUMBER IS NOT DRAWN HERE EITHER, and `acct` is deliberately not read by `drawPlate`.** It
-used to be the largest thing on this face. Once the coin's reverse stopped showing a number,
-leaving it on this one would have made a single account the odd one out: twelve that never show
-a number and one that does, which reads as an oversight rather than a decision. The number
-reaches a banking app through `Copy account number` without being displayed, so the face carries
-what you cannot copy instead: the bank, which somebody filling in a transfer has to read and
-type themselves. Owner's decision, 25 Aug 2026. The suite reads `drawPlate`'s body with comments
-stripped and fails if it so much as mentions `acct`.
+**The RECEIVER row is the point of the whole face.** For an account like this the receiver is an
+institution, not the owner: Wise's MYR account is held at JPMorgan Chase in the name of Wise
+Payments Malaysia Sdn Bhd. A payer who taps confirm and sees a company they have never heard of
+stops, so being told in advance is the difference between a transfer that completes and one that
+does not.
 
-**The bank is therefore the PRIMARY inscription** rather than a caption over a number, and it is
-sized as one. Bank names run long, so it starts generously and is fitted to its chord, which is
-what stops "JPMORGAN CHASE BANK BERHAD" running over the rim legend.
+**That the owner's name does not appear is the POINT of this account, not a side effect.** It is
+kept for discreet transfers, where the receiver showing as an institution rather than as him is
+exactly what is wanted (owner, 25 Aug 2026). Which is also why the guard above matters more here
+than anywhere: a future change that helpfully filled `holder` in from the owner record would
+quietly undo the whole reason the account exists.
+
+**THE NUMBER IS NOT DRAWN HERE, and `acct` is deliberately not read by `drawPlate`.** It used to
+be the largest thing on this face. Once the coin's reverse stopped showing a number, leaving it
+on this one would have made a single account the odd one out: twelve that never show a number
+and one that does, which reads as an oversight rather than a decision. The number reaches a
+banking app through `Copy account number` without being displayed, so the face carries what you
+cannot copy instead. Owner's decision, 25 Aug 2026. The suite reads `drawPlate`'s body with
+comments stripped and fails if it so much as mentions `acct`.
+
+**VALUES WRAP RATHER THAN SHRINK PAST LEGIBILITY, because a circle punishes long text twice
+over.** A chord is the widest thing this face has, so fitting a 30-character name to one line
+drives the type down to about a fifth of what the vertical room would allow: measured,
+"WISE PAYMENTS MALAYSIA SDN BHD" comes out near 10 CSS px on one line against about 18 broken at
+its most balanced word boundary. Height was never the constraint here, width was, and a second
+line buys width back. The split is chosen by RENDERED WIDTH, not word count: splitting down the
+middle of the word list left "WISE" alone above the rest, which reads as a mistake rather than a
+line break.
 
 **The screen reader is not told the number either.** A label describes what is drawn, and out
 loud is the last place you want an account number in a room with other people. The button says

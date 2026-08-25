@@ -1083,18 +1083,36 @@ section("2. The bundle carries the codes and nothing else");
      (names.length ? "" : " (none set)"),
     stray.length === 0, stray.join("; "));
 
-  /* And the state we are actually in, asserted rather than assumed. The owner chose bank and
-   * number only on 25 Aug 2026; if that ever changes, this fails and forces the docs and the
-   * disclosure to be revisited rather than the change sliding through unremarked. */
-  const payee = String(JSON.parse(read(path.join(MASTER, "accounts.json"))).payee || "").trim();
+  /* A HOLDER IS A BENEFICIARY, AND A BENEFICIARY IS NOT THE OWNER.
+   *
+   * This assertion used to read "no legal name is published at all", which conflated two very
+   * different things. A code-less account is paid by naming its receiver, and that receiver is
+   * normally an institution: Wise's MYR account is held at JPMorgan Chase in the name of Wise
+   * Payments Malaysia Sdn Bhd, and a payer not warned of that aborts the transfer. A company
+   * name is not personal data.
+   *
+   * What must never be published is the OWNER'S OWN name, and that is what this checks: no
+   * holder may match the payee or an owner, by exact string or by squashed stem, and the payee's
+   * name must appear nowhere outside a payload. The build refuses such a holder outright rather
+   * than stripping and pinning it, so this is the second lock on the same door. */
+  const doc = JSON.parse(read(path.join(MASTER, "accounts.json")));
+  const payee = String(doc.payee || "").trim();
+  const personStems = [payee, ...(doc.owners || []).flatMap((o) => [o && o.name, o && o.legal])]
+    .map((v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12))
+    .filter((v) => v.length === 12);
+  const squash = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const personal = names.filter((n) => personStems.some((st) => squash(n).includes(st)));
+  ok("no published beneficiary name is the owner or the payee",
+    personStems.length > 0 && personal.length === 0, personal.join(", "));
+
   const anywhere = files.filter((f) => /\.(html|js|mjs|css|json|webmanifest|txt|svg|map)$/i.test(f))
     .filter((f) => {
       let body = read(f);
       for (const p of shipped.map((c) => c.payload).filter(Boolean)) body = body.split(p).join(" P ");
       return payee && body.includes(payee);
     });
-  ok("no legal name is published at all, which is the owner's standing choice",
-    names.length === 0 && anywhere.length === 0, anywhere.map(rel).join(", "));
+  ok("the owner's own legal name is published nowhere outside a payload",
+    anywhere.length === 0, anywhere.map(rel).join(", "));
 }
 
 /* PayNet's mark says a DuitNow code is present. These accounts have none, so putting their
