@@ -16,7 +16,7 @@ self.QR_CODES = [
     "holder": "Wise Payments Malaysia Sdn Bhd",
     "bankMark": "jpmc",
     "holderMark": "wise",
-    "tag": "Anonymous transfer"
+    "tag": "Discreet transfer"
   },
   {
     "key": "maybank",
@@ -188,4 +188,4 @@ self.QR_CODES = [
     "tag": ""
   }
 ];
-self.QR_BUILD = "6214138169f6";
+self.QR_BUILD = "184751909d78";
