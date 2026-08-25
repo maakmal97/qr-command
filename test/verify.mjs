@@ -75,7 +75,11 @@ function classicScript(file, extra) {
   return scope;
 }
 const qrcode = new Function("return (function(){" + read(path.join(PUB, "qrcode.js")) + "; return qrcode;})();")();
-const QRArt = classicScript(path.join(PUB, "qr-art.js"), { qrcode }).QRArt;
+/* Path2D IS A BROWSER GLOBAL and the headless canvas does not install one, so it has to be
+ * handed in. Without it drawMark() returns false and every traced mark silently draws nothing
+ * while the layout still reserves its height: a neat empty gap, no error. That is exactly how
+ * the first render of the marks came out. */
+const QRArt = classicScript(path.join(PUB, "qr-art.js"), { qrcode, Path2D }).QRArt;
 const jsQR = classicScript(path.join(HERE, "vendor", "jsqr.js")).jsQR;
 
 function walk(dir) {
@@ -540,9 +544,11 @@ section("2. The bundle carries the codes and nothing else");
 }
 
 {
-  const SHIP = ["acct", "bank", "brand", "holder", "key", "maintenance", "name", "payload"];
+  const SHIP = ["acct", "bank", "bankMark", "brand", "holder", "holderMark", "key",
+                "maintenance", "name", "payload"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
-  ok("every shipped record has exactly key, name, brand, payload, acct, maintenance, bank, holder",
+  ok("every shipped record has exactly key, name, brand, payload, acct, maintenance, bank, " +
+     "holder, bankMark, holderMark",
     wrong.length === 0,
     wrong.map((w) => w.key + ": " + Object.keys(w).join(",")).join("; "));
 }
@@ -805,7 +811,7 @@ section("2. The bundle carries the codes and nothing else");
     !fs.existsSync(path.join(REPO, "tools", "mark.mjs")) &&
     // Comments stripped: the note explaining WHY the mark went names it, and a guard that
     // trips on its own explanation is a guard nobody can document.
-    !/DuitNowMark|drawMark|duitnow-mark/.test(
+    !/DuitNowMark|duitnow-mark|duitnow/i.test(
       read(path.join(PUB, "qr-art.js")).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")) &&
     !/duitnow-mark/.test(indexHtml));
 
@@ -1123,7 +1129,63 @@ section("2. The bundle carries the codes and nothing else");
   const plateFn = art.slice(art.indexOf("function drawPlate("));
   const body = plateFn.slice(0, plateFn.indexOf("\n  function ", 10));
   ok("the code-less face draws no DuitNow mark",
-    !/DuitNowMark|drawMark\(/.test(body), "drawPlate reaches for the mark");
+    !/DuitNowMark|duitnow/i.test(body), "drawPlate reaches for PayNet's mark");
+
+  /* THE TRACED MARKS. Path data, never a raster, and that is the load-bearing part: drawing an
+   * image would need `img-src data:` adding to a Content-Security-Policy that is
+   * `default-src 'none'`, and widening a security header to fit a logo is the wrong trade. */
+  {
+    const marksSrc = read(path.join(PUB, "marks.js"));
+    const scope = {};
+    new Function("self", marksSrc).call(scope, scope);
+    const MARKS = scope.MARKS || {};
+
+    ok("the marks ship as path data, not as an embedded image",
+      !/data:image|base64/i.test(marksSrc) &&
+      Object.values(MARKS).every((m) => typeof m.d === "string" && m.d.length > 200));
+    /* OUR OWN files, not the vendored encoder: qrcode.js carries unused helpers that emit a GIF
+     * data URI and an <img> tag, which nothing in this app ever calls. What matters is that the
+     * app itself never asks the browser to fetch an image. */
+    const ours = ["index.html", "app.js", "app.css", "qr-art.js", "marks.js", "manifest.webmanifest"];
+    const fetchers = ours.filter((f) => /data:image|<img\b/i.test(read(path.join(PUB, f))));
+    ok("nothing the app ships asks the browser to fetch an image", fetchers.length === 0,
+      fetchers.join(", "));
+    /* The policy allows `img-src 'self'` and NOT data:, which is the whole reason the marks are
+     * path data. Embedding the source rasters would have meant widening this line. */
+    const workerSrc = read(path.join(REPO, "src", "worker.js"));
+    ok("the policy still refuses data: images, which is why marks are paths rather than rasters",
+      /img-src 'self'/.test(workerSrc) && !/img-src[^",]*data:/.test(workerSrc));
+
+    // Every id a record names must be a mark that actually shipped, or the face draws a gap.
+    const wanted = [...new Set(shipped.flatMap((c) => [c.bankMark, c.holderMark]).filter(Boolean))];
+    ok("every mark an account names is in the bundle (" + wanted.join(", ") + ")",
+      wanted.length > 0 && wanted.every((id) => MARKS[id]),
+      wanted.filter((id) => !MARKS[id]).join(", "));
+    ok("marks.js is stamped with the build id like every other script",
+      indexHtml.includes("./marks.js?v=" + rev.id));
+
+    /* And it actually paints. A mark that silently draws nothing is exactly what happened when
+     * Path2D was missing from the scope: the layout still reserved its height, so the face came
+     * out with a neat empty gap and no error anywhere. */
+    const c2 = plates.find((c) => c.bankMark) || plates[0];
+    const withMark = createCanvas(8, 8), without = createCanvas(8, 8);
+    const o2 = { size: 700, pixelRatio: 1, brand: c2.brand, label: c2.name, seed: c2.key,
+                 bank: c2.bank, holder: c2.holder };
+    QRArt.drawPlate(withMark, Object.assign({ bankMark: MARKS[c2.bankMark],
+                                              holderMark: MARKS[c2.holderMark] }, o2));
+    QRArt.drawPlate(without, o2);
+    /* Counting opaque pixels proves nothing here: the mark is painted ON a disc that is already
+     * opaque, so the alpha count is identical either way. That was the first version of this
+     * assertion and it failed while the drawing was perfectly correct. Diff the two renders. */
+    const px2 = (cv) => cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+    const a2 = px2(withMark), b2 = px2(without);
+    let differ = 0;
+    for (let i = 0; i < a2.length; i += 4) {
+      if (a2[i] !== b2[i] || a2[i + 1] !== b2[i + 1] || a2[i + 2] !== b2[i + 2]) differ++;
+    }
+    ok("a named mark is actually painted, not merely allotted space", differ > 2000,
+      differ + " pixels differ with the marks against without them");
+  }
 
   /* NO FACE DRAWS THE ACCOUNT NUMBER, and this is the last one that did. Taking it off the
    * coin's reverse and leaving it here would have made one account the odd one out: twelve that

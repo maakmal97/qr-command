@@ -179,11 +179,16 @@
    * is what the reverse of a coin already does. */
   function plate(a) { return !!a && !a.payload; }
 
+  // A traced mark by id, or nothing. An unknown id draws no mark rather than throwing; the
+  // build already refuses an id with no file behind it, so this is the belt to that brace.
+  function markOf(id) { return (self.MARKS || {})[id] || null; }
+
   function paintFace(canvas, a, extra) {
     // `acct` is deliberately NOT passed: the number is not drawn on any face, here or anywhere.
     return plate(a)
       ? self.QRArt.drawPlate(canvas, artFor(a, Object.assign(
-          { bank: a.bank, holder: a.holder }, extra)))
+          { bank: a.bank, holder: a.holder,
+            bankMark: markOf(a.bankMark), holderMark: markOf(a.holderMark) }, extra)))
       : self.QRArt.draw(canvas, a.payload, artFor(a, extra));
   }
 

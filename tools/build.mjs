@@ -49,11 +49,26 @@ const MASTER = process.env.QR_MASTER ||
  * the name in tag 59 and anyone who scans one sees it; it WOULD BE new for an account with no code,
  * where nothing else would have carried it. It ships ONLY for accounts that have no payload, and
  * the leak check below asserts exactly that rather than being switched off. */
-const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder"];
+const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder",
+              "bankMark", "holderMark"];
 
 const die = (m) => { console.error("\nbuild failed: " + m + "\n"); process.exit(1); };
 const read = (p) => fs.readFileSync(p, "utf8");
 const write = (p, s) => fs.writeFileSync(p, s.replace(/\r\n/g, "\n"), "utf8");
+
+/* THE TRACED MARKS, concatenated into one shipped file rather than one request each.
+ *
+ * Each src/vendor/*-mark.js registers itself on self.MARKS, so load order does not matter and
+ * adding a mark is a matter of dropping a file in. They are PATH DATA, not rasters: a Path2D
+ * built from a string needs nothing from the Content-Security-Policy, where an image would need
+ * `img-src data:` adding to a policy that is currently `default-src 'none'`.
+ *
+ * Declared HERE, above sanitise(), because sanitise checks every mark id against this list and
+ * a const used before its declaration is a temporal dead zone error, not an undefined. */
+const VENDOR = path.join(REPO, "src", "vendor");
+const markFiles = fs.existsSync(VENDOR)
+  ? fs.readdirSync(VENDOR).filter((f) => /-mark\.js$/.test(f)).sort()
+  : [];
 
 /* ------------------------------------------------------------------ validation */
 
@@ -132,6 +147,17 @@ function sanitise(doc, V) {
        * rather than a decision about it. Silence is the default now, and opting in means
        * typing the name into the master where it can be seen and removed. */
       rec.holder = String(a.holder || "").trim();
+    }
+    /* Mark ids, normalised to real strings and checked against what was actually traced. An id
+     * with no file behind it would draw nothing and say nothing, which is the quiet kind of
+     * wrong; naming it here means a typo stops the build instead. */
+    rec.bankMark = rec.payload ? "" : String(a.bankMark || "").trim();
+    rec.holderMark = rec.payload ? "" : String(a.holderMark || "").trim();
+    for (const [f, id] of [["bankMark", rec.bankMark], ["holderMark", rec.holderMark]]) {
+      if (id && markFiles.indexOf(id + "-mark.js") === -1) {
+        die(where + " names " + f + ' "' + id + '", but src/vendor/' + id + "-mark.js does not " +
+            "exist. Trace it with tools/vectorise.mjs, or remove the field.");
+      }
     }
     // The master calls it `sub`; the bundle calls it `acct`, because on the phone it is not a
     // sub-label, it is the number somebody is about to type into their banking app.
@@ -389,7 +415,7 @@ for (const [, src] of sources) h.update(lf(read(src)));
 h.update(lf(dataBody));
 const BUILD = h.digest("hex").slice(0, 12);
 
-const stamped = ["app.css", "app.js", "qr-art.js", "qrcode.js", "data.js"];
+const stamped = ["app.css", "app.js", "qr-art.js", "qrcode.js", "marks.js", "data.js"];
 const SHELL = ["./"].concat(stamped.map((f) => "./" + f + "?v=" + BUILD));
 
 fs.mkdirSync(PUB, { recursive: true });
@@ -400,6 +426,11 @@ for (const [name, src] of sources) {
   write(path.join(PUB, name), read(src).replace(/__BUILD__/g, BUILD));
 }
 write(path.join(PUB, "data.js"), dataBody + 'self.QR_BUILD = "' + BUILD + '";\n');
+// Every traced mark in one file, so a mark costs no extra request. Always written, even empty,
+// because it is in the stamped list and the service worker's shell expects it to exist.
+write(path.join(PUB, "marks.js"),
+  markFiles.length ? markFiles.map((f) => read(path.join(VENDOR, f))).join("\n")
+                   : "self.MARKS = self.MARKS || {};\n");
 write(path.join(PUB, "sw.js"),
   read(path.join(APP, "sw.js"))
     .replace(/__BUILD__/g, BUILD)

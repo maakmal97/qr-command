@@ -73,6 +73,9 @@
 </noscript>
 
 <script src="./qrcode.js?v=__BUILD__"></script>
+<!-- The traced marks, registering themselves on self.MARKS. Path data, so no image is fetched
+     and the Content-Security-Policy stays `default-src 'none'` with no img-src at all. -->
+<script src="./marks.js?v=__BUILD__"></script>
 <script src="./qr-art.js?v=__BUILD__"></script>
 <script src="./data.js?v=__BUILD__"></script>
 <script src="./app.js?v=__BUILD__"></script>

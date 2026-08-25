@@ -26,9 +26,9 @@ Nothing else is shown and nothing else is shipped.
    drifted. A third copy here would be the same mistake again, and a first attempt at one
    rejected all thirteen live payloads over a prefix it had guessed wrong. If the master moves,
    the build fails loudly rather than falling back to a guess.
-4. **The bundle carries eight fields per account and no more:** `key`, `name`, `brand`,
-   `payload`, `acct`, `maintenance`, `bank`, `holder`. The owner, the group and the DuitNow
-   member number stay on the laptop. The build reads `public/` back and searches it for every
+4. **The bundle carries ten fields per account and no more:** `key`, `name`, `brand`,
+   `payload`, `acct`, `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`. The owner, the
+   group and the DuitNow member number stay on the laptop. The build reads `public/` back and searches it for every
    dropped value; the suite repeats the search, and also asserts the other way, that every
    account number IS there, so a feature cannot vanish silently either. Adding a field means
    adding it to `SHIP` in `tools/build.mjs` deliberately, in one place, where it is visible.
@@ -279,6 +279,37 @@ line buys width back. The split is chosen by RENDERED WIDTH, not word count: spl
 middle of the word list left "WISE" alone above the rest, which reads as a mistake rather than a
 line break.
 
+**Each row carries its brand's MARK, traced from the artwork rather than redrawn.** Added 26 Aug
+2026 on the owner's instruction, after a version that set the wordmarks in type was rejected:
+"just vectorise them, no need for recreation".
+
+**THIS IS NOT THE THING THIS REPO REFUSED.** The rule recorded when PayNet's mark was vendored
+is about a trademark REDRAWN FROM MEMORY, which comes out subtly wrong. `tools/vectorise.mjs`
+invents nothing: it measures the ground from the border ring, thresholds the actual pixels,
+walks the boundary between ink and ground and emits those boundaries. It is still a derivative
+of a raster, so an official vector should replace it the day one exists, and the generated file
+says so at the top.
+
+**PATH DATA, NOT A RASTER, and that is the whole reason it is affordable.** Drawing an image
+would need `img-src data:` added to a policy that is `default-src 'none'` with `img-src 'self'`;
+a `Path2D` built from a string needs nothing. The suite asserts the policy still refuses `data:`
+images, so the reasoning cannot rot. Both marks together are about 2.3 KB.
+
+**Filled FLAT and EVEN-ODD.** Even-odd means a counter inside a P subtracts itself with no
+winding order to maintain. Flat means never embossed: embossing is our own typographic treatment
+applied to our own lettering, and somebody else's logotype gets no effects.
+
+**TWO WAYS A MARK DRAWS NOTHING AND SAYS NOTHING, both of which happened.** `Path2D` is a browser
+global that the headless canvas does not install, so `drawMark` returned false and the face came
+out with a neat empty gap where the logo should be, no error anywhere; the suite now passes
+`Path2D` into the renderer's scope for exactly that reason. And an id naming a file that does not
+exist would do the same, so the build checks every id against `src/vendor/` and dies on a typo.
+
+**Counting opaque pixels cannot prove a mark painted**, because it is painted onto a disc that is
+already opaque: the alpha count is identical either way, and the first version of that assertion
+passed while proving nothing. The suite renders the face with and without its marks and diffs the
+two.
+
 **The screen reader is not told the number either.** A label describes what is drawn, and out
 loud is the last place you want an account number in a room with other people. The button says
 how to get it.
@@ -511,7 +542,10 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 | `src/app/qr-art.js` | The coin, and `drawCard` for the gallery. Read the note at the top before touching it. |
 | `src/app/sw.js` | Service worker template. `__BUILD__` and `__SHELL__` are stamped by the build. |
 | `src/vendor/qrcode.js` | The encoder, copied from the master unchanged. |
+| `src/vendor/*-mark.js` | **Generated. Do not edit.** A traced logo, registering itself on `self.MARKS`. |
+| `tools/vectorise.mjs` | A bitmap logo in, path data out. Run by hand when a mark is added. |
 | `tools/build.mjs` | Master store in, `public/` out, with the leak check and the disclosure. |
+| `public/marks.js` | Every traced mark in one file, so a logo costs no extra request. |
 | `test/verify.mjs` | The whole suite. No network, no browser. |
 | `test/vendor/jsqr.js` | The decoder. **Test only, never shipped.** |
 | `public/` | Build output, committed so the deployed bytes are the reviewed bytes. |

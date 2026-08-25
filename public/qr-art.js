@@ -771,8 +771,9 @@ self.QRArt = (function () {
    * What survives is struckFace, because an account with NO DuitNow code still draws one:
    * see drawPlate. */
 
-  function emboss(g, text, cx, cy, px, weight, ink, depth, track) {
-    g.font = weight + " " + px.toFixed(1) + "px " + FONT;
+  // `family` is optional and defaults to the system sans.
+  function emboss(g, text, cx, cy, px, weight, ink, depth, track, family) {
+    g.font = weight + " " + px.toFixed(1) + "px " + (family || FONT);
     if ("letterSpacing" in g) g.letterSpacing = ((track || 0) * px).toFixed(2) + "px";
     g.textAlign = "center";
     g.textBaseline = "middle";
@@ -857,15 +858,39 @@ self.QRArt = (function () {
    * moment the account number was opened up. Half-chord = sqrt(Rd^2 - y^2). What gives is the
    * type size, which is ours, never the tracking, which is what makes it read as an inscription.
    */
-  function fitChord(g, text, y, R, Rd, px, track, weight) {
+  function fitChord(g, text, y, R, Rd, px, track, weight, family) {
     var dy = Math.abs(y - R) + px * 0.5;
     var half = Rd > dy ? Math.sqrt(Rd * Rd - dy * dy) : Rd * 0.1;
     var room = half * 2 * 0.86;                        // a little undisturbed metal either side
-    g.font = (weight || "600") + " " + px.toFixed(1) + "px " + FONT;
+    g.font = (weight || "600") + " " + px.toFixed(1) + "px " + (family || FONT);
     if ("letterSpacing" in g) g.letterSpacing = (track * px).toFixed(2) + "px";
     var w = g.measureText(text).width;
     if ("letterSpacing" in g) g.letterSpacing = "0px";
     return w > room ? px * (room / w) : px;
+  }
+
+  /* Draw a traced mark centred on (cx, cy), `h` tall, scaled down if its width would overrun the
+   * chord at that height. A circle narrows away from the middle, and a wordmark is wide, so the
+   * width is the binding constraint every time. */
+  function drawMark(g, mark, cx, cy, h, R, Rd, ink) {
+    var P = (typeof Path2D !== "undefined") ? Path2D
+          : (typeof self !== "undefined" && self.Path2D) ? self.Path2D : null;
+    if (!P) return false;
+    var w = h * mark.aspect;
+    // R is the face CENTRE, Rd its radius. Measuring from the radius instead put every mark's
+    // chord out by the difference, which on a small face is most of the face.
+    var dy = Math.abs(cy - R) + h * 0.5;
+    var half = Rd > dy ? Math.sqrt(Rd * Rd - dy * dy) : Rd * 0.1;
+    var room = half * 2 * 0.86;
+    if (w > room) { var k = room / w; w *= k; h *= k; }
+    g.save();
+    g.translate(cx - w / 2, cy - h / 2);
+    g.scale(w / mark.viewBox[2], h / mark.viewBox[3]);
+    g.translate(-mark.viewBox[0], -mark.viewBox[1]);
+    g.fillStyle = ink;
+    g.fill(new P(mark.d), "evenodd");
+    g.restore();
+    return true;
   }
 
   /* WRAP RATHER THAN SHRINK PAST LEGIBILITY, because a circle punishes long text twice over.
@@ -965,9 +990,30 @@ self.QRArt = (function () {
     var minValuePx = D * 0.058;   // below this a value wraps rather than shrinking further
     var maxW = D * 0.78;          // the working chord; each line is refitted to its own below
 
+    /* A MARK IS THE ARTWORK'S OWN OUTLINE, traced from the supplied file by tools/vectorise.mjs.
+     *
+     * This is not the thing this repo refused. That rule is about a trademark REDRAWN FROM
+     * MEMORY, which comes out subtly wrong; a trace invents nothing, it follows the pixels of
+     * the artwork it was given. It is still a derivative of a raster, so an official vector
+     * should replace it the day one exists.
+     *
+     * PATH DATA, NOT A RASTER, and that is why it is affordable. Drawing an image would need
+     * `img-src data:` added to a Content-Security-Policy that is `default-src 'none'`; a Path2D
+     * built from a string needs nothing. The security header stays shut and the mark stays sharp.
+     *
+     * Filled FLAT and EVEN-ODD, in one ink: even-odd means a counter inside a P subtracts itself
+     * with no winding order to maintain, and flat means the mark is never embossed. Embossing is
+     * our own typographic treatment and ours to apply to our own lettering; somebody else's
+     * logotype gets no effects. */
+    var markOf = function (m) {
+      return (m && typeof m.d === "string" && m.d && m.viewBox) ? m : null;
+    };
+
     var rows = [];
-    if (bank) rows.push({ label: "BANK", value: bank });
-    if (holder) rows.push({ label: "RECEIVER", value: holder });
+    if (bank) rows.push({ label: "BANK", value: bank, mark: markOf(opts.bankMark) });
+    if (holder) rows.push({ label: "RECEIVER", value: holder, mark: markOf(opts.holderMark) });
+    var markPx = D * 0.10;
+    var markGap = markPx * 0.2;
     for (var r = 0; r < rows.length; r++) {
       rows[r].fit = layoutValue(g, rows[r].value, valuePx, VTRACK, maxW, minValuePx);
     }
@@ -976,7 +1022,9 @@ self.QRArt = (function () {
     var labelGap = labelPx * 0.5;
     var rowGap = valuePx * 0.7;
     var heightOf = function (row) {
-      return labelPx + labelGap + row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep);
+      return labelPx + labelGap +
+             (row.mark ? markPx + markGap : 0) +
+             row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep);
     };
     var sumH = function () {
       var t = rowGap * Math.max(0, rows.length - 1);
@@ -988,7 +1036,7 @@ self.QRArt = (function () {
     var room = D * 0.84;
     if (blockH > room) {
       var k = room / blockH;
-      labelPx *= k; labelGap *= k; rowGap *= k;
+      labelPx *= k; labelGap *= k; rowGap *= k; markPx *= k; markGap *= k;
       for (var i3 = 0; i3 < rows.length; i3++) rows[i3].fit.px *= k;
       blockH = sumH();
     }
@@ -1000,11 +1048,24 @@ self.QRArt = (function () {
       emboss(g, row.label, R, ly, fitChord(g, row.label, ly, R, f.Rd, labelPx, LTRACK),
              "700", pal.faceDim, 0.03, LTRACK);
       y += labelPx + labelGap;
+      if (row.mark) {
+        var my = y + markPx * 0.5;
+        drawMark(g, row.mark, R, my, markPx, R, f.Rd, pal.faceInk);
+        y += markPx + markGap;
+      }
+      /* ONE NAME IS ONE SIZE. Fitting each line to its own chord independently made the lower
+       * line of a wrapped name smaller than the upper one, because a circle narrows as you go
+       * down: "WISE PAYMENTS" came out visibly bigger than "MALAYSIA SDN BHD" beneath it, which
+       * reads as a rendering fault rather than a line break. Every line is measured first and
+       * the whole name takes the smallest size any of them needs. */
+      var vPx = row.fit.px;
+      for (var j0 = 0; j0 < row.fit.lines.length; j0++) {
+        var y0 = y + row.fit.px * 0.5 + j0 * row.fit.px * lineStep;
+        vPx = Math.min(vPx, fitChord(g, row.fit.lines[j0], y0, R, f.Rd, row.fit.px, VTRACK));
+      }
       for (var j = 0; j < row.fit.lines.length; j++) {
         var vy = y + row.fit.px * 0.5 + j * row.fit.px * lineStep;
-        emboss(g, row.fit.lines[j], R, vy,
-               fitChord(g, row.fit.lines[j], vy, R, f.Rd, row.fit.px, VTRACK),
-               "600", pal.faceInk, 0.042, VTRACK);
+        emboss(g, row.fit.lines[j], R, vy, vPx, "600", pal.faceInk, 0.042, VTRACK);
       }
       y += row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep) + rowGap;
     }
