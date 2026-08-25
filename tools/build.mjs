@@ -34,7 +34,14 @@ const MASTER = process.env.QR_MASTER ||
  * decoding a code, and only for six of the thirteen; now all thirteen are in the page as text.
  * Everything else still stays behind: the payee's legal name, the owner, the group and the
  * DuitNow member number. */
-const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance"];
+/* `bank` and `holder` were added on 25 Aug 2026, for accounts that have NO DuitNow code at all
+ * and are paid by naming the bank, the number and the person. `holder` is the second deliberate
+ * widening after `acct`, and the larger of the two: it puts a person's legal name on the page as
+ * text. It is not a new exposure for a code account, because a DuitNow payload already carries
+ * the name in tag 59 and anyone who scans one sees it; it IS new for an account with no code,
+ * where nothing else would have carried it. It ships ONLY for accounts that have no payload, and
+ * the leak check below asserts exactly that rather than being switched off. */
+const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder"];
 
 const die = (m) => { console.error("\nbuild failed: " + m + "\n"); process.exit(1); };
 const read = (p) => fs.readFileSync(p, "utf8");
@@ -92,6 +99,29 @@ function sanitise(doc, V) {
     if (!String(a.name || "").trim()) die(where + " has an empty name");
     const rec = {};
     for (const f of SHIP) rec[f] = a[f];
+
+    /* AN ACCOUNT WITH NO PAYLOAD CARRIES DETAILS INSTEAD, and the two shapes are kept apart
+     * here rather than left for the phone to infer. `payload` is normalised to a real empty
+     * string when absent, for the same reason `maintenance` is normalised to a real boolean:
+     * a field present on some records and missing from others is a field every reader has to
+     * guess about, and this one decides whether a scannable code is drawn at all. */
+    rec.payload = typeof a.payload === "string" ? a.payload : "";
+    if (rec.payload) {
+      // A code account says nothing about a bank or a holder. The name is inside the payload,
+      // which is not ours to change, but the page does not repeat it.
+      rec.bank = "";
+      rec.holder = "";
+    } else {
+      rec.bank = String(a.bank || "").trim();
+      if (!rec.bank) die(where + " has no payload and no bank, so there is nothing to show");
+      /* The holder's name is RESOLVED FROM THE OWNER, not retyped onto the account. One copy
+       * of a person's legal name in the master means one place to change it and one place for
+       * the leak check to reason about. An explicit `holder` overrides, for the day an account
+       * is held in a name that is not the owner's. */
+      const owner = (doc.owners || []).find((o) => o && o.id === a.owner);
+      rec.holder = String(a.holder || (owner && owner.legal) || "").trim();
+      if (!rec.holder) die(where + " has no payload, so it needs a holder name to be payable");
+    }
     // The master calls it `sub`; the bundle calls it `acct`, because on the phone it is not a
     // sub-label, it is the number somebody is about to type into their banking app.
     rec.acct = typeof a.sub === "string" ? a.sub.trim() : "";
@@ -197,11 +227,33 @@ function auditPublic(doc, codes, V) {
    * asserts that not one of those values appears anywhere else. */
   const forbidden = secrets(doc);
   const stems = nameStems(doc);
-  const payloads = codes.map((c) => c.payload).sort((a, b) => b.length - a.length);
+  const payloads = codes.map((c) => c.payload).filter(Boolean).sort((a, b) => b.length - a.length);
+
+  /* THE SANCTIONED NAME IS PINNED, NOT EXEMPTED, and the difference is the whole design.
+   *
+   * An account with no DuitNow code is paid by naming the bank, the number and the person, so
+   * one legal name now has to reach the page. The lazy way to allow that is to drop the payee
+   * out of the forbidden set, which would switch off the check that stopped a truncated slug of
+   * his name from becoming the public URL of this site. Instead the expected occurrences are
+   * removed here, exactly as payloads are, and then asserted to have been in exactly one file
+   * and exactly the right number of times. Anything else carrying the name still dies, and the
+   * stem check below is untouched, so a key or a filename derived from a person is caught as
+   * before: a slug is not the same bytes as the name, so it is never stripped. */
+  const holders = [...new Set(codes.map((c) => c.holder).filter(Boolean))]
+    .sort((a, b) => b.length - a.length);
+  const holderSeen = new Map(holders.map((h) => [h, []]));
+
   for (const f of files) {
     if (!TEXT.test(f)) continue;
     let body = read(f);
     for (const p of payloads) body = body.split(p).join(" PAYLOAD ");
+    for (const h of holders) {
+      const n = body.split(h).length - 1;
+      if (n > 0) {
+        holderSeen.get(h).push(rel(f) + " x" + n);
+        body = body.split(h).join(" HOLDER ");
+      }
+    }
     const hay = body.toLowerCase();
     for (const s of forbidden) {
       if (hay.includes(s.toLowerCase())) {
@@ -221,6 +273,21 @@ function auditPublic(doc, codes, V) {
     }
   }
 
+  /* And the other direction for the name: it must be in ONE file, the data file, once per
+   * account that is entitled to it, and nowhere else at all. A name that has spread to app.js,
+   * to the manifest or to the service worker's shell list is a name that has escaped the one
+   * record it belongs to, and this is what says so. */
+  for (const h of holders) {
+    const want = codes.filter((c) => c.holder === h).length;
+    const found = holderSeen.get(h);
+    const expected = "data.js x" + want;
+    if (found.join(", ") !== expected) {
+      die("a holder's name should appear only in " + expected + ", but the built bundle has it " +
+          "in: " + (found.join(", ") || "nothing at all") + ". A name has either escaped the one " +
+          "record it belongs to, or been dropped from it.");
+    }
+  }
+
   // Every payload must have survived the trip byte for byte, and must still pass the master's
   // checksum after the round trip through JSON.
   const data = read(path.join(PUB, "data.js"));
@@ -228,7 +295,9 @@ function auditPublic(doc, codes, V) {
   if (back.length !== codes.length) die("data.js does not hold every code");
   for (let i = 0; i < codes.length; i++) {
     if (back[i].payload !== codes[i].payload) die("the payload for " + codes[i].key + " changed on the way into data.js");
-    const fault = V.payloadError(back[i].payload);
+    // An account with no code has an empty payload by construction, checked above. The master's
+    // payload rules apply to the ones that HAVE a payload, and only to those.
+    const fault = back[i].payload ? V.payloadError(back[i].payload) : null;
     if (fault) die("the payload for " + codes[i].key + " no longer passes the master's check: " + fault);
     if (Object.keys(back[i]).sort().join() !== [...SHIP].sort().join()) {
       die("the record for " + codes[i].key + " in data.js carries fields beyond " + SHIP.join(", "));
@@ -341,9 +410,11 @@ function disclosure() {
   const inName = codes.filter((c) => name && c.payload.toUpperCase().includes(name.toUpperCase().slice(0, 12))).length;
   const inAcct = doc.accounts.filter((a) => {
     const s = String(a.sub || "").replace(/[^0-9A-Za-z]/g, "");
-    return s.length >= 6 && a.payload.includes(s);
+    // An account with no code has no payload to look inside.
+    return s.length >= 6 && String(a.payload || "").includes(s);
   }).length;
-  return { inName, inAcct };
+  const named = codes.filter((c) => c.holder);
+  return { inName, inAcct, named };
 }
 const d = disclosure();
 
@@ -355,6 +426,14 @@ console.log("  dropped: " + [...new Set(doc.accounts.flatMap(Object.keys))].filt
 console.log("  the page displays: the provider name, the code, and the account number embossed");
 console.log("    on the back of the coin. THE ACCOUNT NUMBERS ARE PUBLIC AS TEXT, by decision,");
 console.log("    so that they can be copied and sent to somebody who needs one.");
+if (d.named.length) {
+  console.log("  THE PAGE ALSO PRINTS A PERSON'S LEGAL NAME AS TEXT, for " + d.named.length +
+              " account(s) with no");
+  console.log("    DuitNow code (" + d.named.map((c) => c.key).join(", ") + "), because a transfer to one " +
+              "needs the bank, the");
+  console.log("    number and the name together. Nothing else carries it: the leak check pins it to");
+  console.log("    exactly those records in data.js and dies if it appears anywhere else.");
+}
 console.log("  inside the codes themselves, which no page design can change:");
 console.log("    the account-holder name is readable in " + d.inName + " of " + codes.length + " payloads (EMVCo tag 59)");
 console.log("    the account number is readable in " + d.inAcct + " of " + codes.length + " payloads (tag 26)");

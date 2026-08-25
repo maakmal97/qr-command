@@ -53,6 +53,19 @@ const V = await import(pathToFileURL(path.join(MASTER, "functions", "_lib", "sto
 const rev = JSON.parse(read(path.join(PUB, "rev.json")));
 const dataSrc = read(path.join(PUB, "data.js"));
 const shipped = JSON.parse(dataSrc.match(/self\.QR_CODES = ([\s\S]*?);\nself\.QR_BUILD/)[1]);
+
+/* CODES AND PLATES ARE NOT THE SAME THING, and section 1 must never be handed a plate.
+ *
+ * An account with no DuitNow code ships with an empty payload. Fed to the renderer anyway, the
+ * encoder happily encodes the empty string, jsQR reads back "" and the assertion `got.data ===
+ * c.payload` compares "" with "" and PASSES. Every decode assertion in section 1 would then be
+ * vacuously true for that account, while claiming to have proved something about a code that
+ * the app never draws for it. That is worse than no coverage, because the count goes up.
+ *
+ * So the rendering section walks `codes`, the bundle section still walks `shipped`, and the
+ * plates get assertions of their own that say what should be true of them instead. */
+const codes = shipped.filter((c) => c.payload);
+const plates = shipped.filter((c) => !c.payload);
 const indexHtml = read(path.join(PUB, "index.html"));
 const swSrc = read(path.join(PUB, "sw.js"));
 
@@ -114,7 +127,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   const sizes = [SAFE, 620, 700, 820, 1000, 1240];
   const bad = [];
   let n = 0;
-  for (const c of shipped) for (const px of sizes) {
+  for (const c of codes) for (const px of sizes) {
     const r = decode(c, px);
     n++;
     if (r.meta.plain) bad.push(c.key + " at " + px + "px fell back to plain above the safe size");
@@ -128,7 +141,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   // Below the safe size the renderer must drop to the plain code by itself, and that code must
   // read. This is the guard that stops a small window silently producing an unscannable badge.
   const bad = [];
-  for (const c of shipped) for (const px of [240, 300, 380, 460, SAFE - 1]) {
+  for (const c of codes) for (const px of [240, 300, 380, 460, SAFE - 1]) {
     const r = decode(c, px);
     if (!r.meta.plain) bad.push(c.key + " at " + px + "px still drew a coin");
     if (!r.meta.fellBack) bad.push(c.key + " at " + px + "px did not report the fallback");
@@ -142,7 +155,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   // The safe size must be a measurement with headroom, not a number someone liked. Re-measure
   // the worst code's floor and assert the threshold still sits above it.
   let worst = 0, who = "";
-  for (const c of shipped) {
+  for (const c of codes) {
     let floor = null, streak = 0;
     for (let px = 120; px <= 1000; px += 20) {
       if (decode(c, px, { safePhysicalPx: 0 }).ok) { if (!streak) floor = px; streak++; if (streak >= 6) break; }
@@ -157,7 +170,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 
 {
   const bad = [];
-  for (const c of shipped) for (const px of [240, 400, 700]) {
+  for (const c of codes) for (const px of [240, 400, 700]) {
     if (!decode(c, px, { plain: true }).ok) bad.push(c.key + " at " + px);
   }
   ok("the plain fallback decodes for every code, down to 240px", bad.length === 0, bad.join(", "));
@@ -165,7 +178,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 
 {
   const levels = {};
-  for (const c of shipped) {
+  for (const c of codes) {
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
     levels[p.ecl] = (levels[p.ecl] || 0) + 1;
   }
@@ -181,7 +194,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   }
 
   ok("every code encodes at M, the level the master page and the printed card use " +
-     "(" + JSON.stringify(levels) + ")", levels.M === shipped.length);
+     "(" + JSON.stringify(levels) + ")", levels.M === codes.length);
 }
 
 {
@@ -190,7 +203,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
    * it, and there is nobody there to pinch and zoom if it will not read. */
   const bad = [];
   let minCoin = Infinity;
-  for (const c of shipped) {
+  for (const c of codes) {
     const canvas = createCanvas(8, 8);
     const meta = QRArt.drawCard(canvas, c.payload, { brand: c.brand, label: c.name, seed: c.key });
     const g = canvas.getContext("2d");
@@ -209,7 +222,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 {
   // Halving a saved card, as a messaging app would, must not make it unreadable.
   const bad = [];
-  for (const c of shipped) {
+  for (const c of codes) {
     const full = createCanvas(8, 8);
     QRArt.drawCard(full, c.payload, { brand: c.brand, label: c.name, seed: c.key, cardWidth: 700 });
     const g = full.getContext("2d");
@@ -230,8 +243,8 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     return crypto.createHash("sha256").update(Buffer.from(
       cv.getContext("2d").getImageData(0, 0, 60, cv.height / 2).data)).digest("hex");
   };
-  const first = shipped.map(shot);
-  const again = shipped.map(shot);
+  const first = codes.map(shot);
+  const again = codes.map(shot);
   ok("the same account draws the same coin every time", first.join() === again.join());
   ok("no two accounts share an outline and a colour", new Set(first).size === first.length);
   void opts;
@@ -251,7 +264,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 
 {
   let worst = Infinity, who = "";
-  for (const c of shipped) {
+  for (const c of codes) {
     const p = QRArt.palette(c.brand, QRArt.DEFAULTS.minContrast);
     if (p.contrast < worst) { worst = p.contrast; who = c.key; }
   }
@@ -262,7 +275,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 {
   // The floor that makes the decode stable at small display sizes must actually be enforced.
   let bad = [];
-  for (const c of shipped) {
+  for (const c of codes) {
     const canvas = createCanvas(8, 8);
     const meta = QRArt.draw(canvas, c.payload, { size: 90, pixelRatio: 1, brand: c.brand });
     if (meta.modulePxDevice < QRArt.DEFAULTS.minModulePx - 0.001) bad.push(c.key + " " + meta.modulePxDevice.toFixed(2));
@@ -275,7 +288,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   // Quiet zone: the light field must circumscribe the code plus four modules, corners and
   // all. Assert the geometry rather than trusting the comment above it.
   let bad = [];
-  for (const c of shipped) {
+  for (const c of codes) {
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
     const geo = QRArt.coinGeometry(p.n, 1000, QRArt.DEFAULTS);
     const halfMargin = (p.n / 2 + QRArt.DEFAULTS.quiet) * geo.m;   // half the margin square
@@ -309,7 +322,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   }
 
   const bad = [];
-  for (const c of shipped) {
+  for (const c of codes) {
     const canvas = createCanvas(8, 8);
     const meta = QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
@@ -346,7 +359,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
    * code. The eyes are the only place the drawing departs from the matrix, and only at their
    * outermost diagonal corners. */
   const bad = [];
-  for (const c of shipped) {
+  for (const c of codes) {
     const canvas = createCanvas(8, 8);
     const meta = QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
@@ -383,7 +396,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 {
   // The quiet zone must be light all the way round, four modules out.
   const bad = [];
-  for (const c of shipped) {
+  for (const c of codes) {
     const canvas = createCanvas(8, 8);
     const meta = QRArt.draw(canvas, c.payload, { size: 420, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
@@ -408,7 +421,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 
 {
   const levels = {};
-  for (const c of shipped) {
+  for (const c of codes) {
     const p = QRArt.plan(c.payload, Object.assign({}, QRArt.DEFAULTS, { encoder: qrcode }));
     levels[p.ecl] = (levels[p.ecl] || 0) + 1;
     if (p.n > QRArt.DEFAULTS.maxModules) levels.OVER = (levels.OVER || 0) + 1;
@@ -568,9 +581,10 @@ section("2. The bundle carries the codes and nothing else");
 }
 
 {
-  const SHIP = ["acct", "brand", "key", "maintenance", "name", "payload"];
+  const SHIP = ["acct", "bank", "brand", "holder", "key", "maintenance", "name", "payload"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
-  ok("every shipped record has exactly key, name, brand, payload, acct, maintenance", wrong.length === 0,
+  ok("every shipped record has exactly key, name, brand, payload, acct, maintenance, bank, holder",
+    wrong.length === 0,
     wrong.map((w) => w.key + ": " + Object.keys(w).join(",")).join("; "));
 }
 
@@ -593,12 +607,26 @@ section("2. The bundle carries the codes and nothing else");
   (master.owners || []).forEach((o) => { add(o && o.name); add(o && o.legal); });
   master.accounts.forEach((a) => { add(a.mid); });
 
-  const payloads = shipped.map((c) => c.payload).sort((a, b) => b.length - a.length);
+  /* `filter(Boolean)` IS LOAD-BEARING, not tidiness. An account with no code ships an empty
+   * payload, and `body.split("")` splits a string into its individual characters, so a single
+   * empty entry here would blow every file apart into " PAYLOAD "-separated letters and leave
+   * the leak search looking at rubble. It would not fail loudly; it would simply stop finding
+   * anything, which is the worst way for a guard to break. */
+  const payloads = shipped.map((c) => c.payload).filter(Boolean).sort((a, b) => b.length - a.length);
+  const holderNames = [...new Set(plates.map((c) => c.holder).filter(Boolean))]
+    .sort((a, b) => b.length - a.length);
   const hits = [];
   for (const f of files) {
     if (!/\.(html|js|mjs|css|json|webmanifest|txt|svg|map)$/i.test(f)) continue;
     let body = read(f);
     for (const p of payloads) body = body.split(p).join(" PAYLOAD ");
+    /* THE SANCTIONED NAME IS STRIPPED, NOT EXEMPTED, exactly as the build does it. An account
+     * with no code has to print the holder, so its name reaches data.js on purpose. Dropping
+     * the payee from the forbidden set instead would switch off the check that stopped a
+     * truncated slug of it from becoming this site's public URL. The expected occurrences are
+     * counted and pinned by their own assertion below; what remains here is everything else,
+     * and a slug is not the same bytes as the name, so it is never stripped by this. */
+    for (const h of holderNames) body = body.split(h).join(" HOLDER ");
     const hay = body.toLowerCase();
     for (const s of secret) if (hay.includes(s.toLowerCase())) hits.push(rel(f) + " <- " + s.length + " chars");
   }
@@ -628,6 +656,13 @@ section("2. The bundle carries the codes and nothing else");
     if (!/\.(html|js|mjs|css|json|webmanifest|txt|svg|map)$/i.test(f)) continue;
     let body = read(f);
     for (const p of payloads) body = body.split(p).join(" PAYLOAD ");
+    /* THE SANCTIONED NAME IS STRIPPED, NOT EXEMPTED, exactly as the build does it. An account
+     * with no code has to print the holder, so its name reaches data.js on purpose. Dropping
+     * the payee from the forbidden set instead would switch off the check that stopped a
+     * truncated slug of it from becoming this site's public URL. The expected occurrences are
+     * counted and pinned by their own assertion below; what remains here is everything else,
+     * and a slug is not the same bytes as the name, so it is never stripped by this. */
+    for (const h of holderNames) body = body.split(h).join(" HOLDER ");
     const flat = squash(body);
     for (const s of stems) if (flat.includes(s)) slugHits.push(rel(f) + " <- " + JSON.stringify(s));
   }
@@ -651,8 +686,8 @@ section("2. The bundle carries the codes and nothing else");
   // property of DuitNow, not of this site. Assert it, so the fact stays visible in the suite
   // rather than being quietly forgotten the next time somebody reads the check above.
   const name = String(master.payee || "").trim().toUpperCase().slice(0, 12);
-  const inside = shipped.filter((c) => c.payload.toUpperCase().includes(name)).length;
-  ok("recorded: the account-holder name is inside " + inside + " of " + shipped.length +
+  const inside = codes.filter((c) => c.payload.toUpperCase().includes(name)).length;
+  ok("recorded: the account-holder name is inside " + inside + " of " + codes.length +
      " payloads and cannot be removed without breaking payment", inside > 0);
 }
 
@@ -661,8 +696,12 @@ section("2. The bundle carries the codes and nothing else");
   for (const c of shipped) {
     const src = master.accounts.find((a) => a.key === c.key);
     if (!src) { bad.push(c.key + " is not in the master"); continue; }
-    if (src.payload !== c.payload) bad.push(c.key + " payload differs from the master");
-    if (V.payloadError(c.payload)) bad.push(c.key + ": " + V.payloadError(c.payload));
+    /* An account with no code carries an empty payload BY CONSTRUCTION, normalised by the build
+     * so the field is never absent. The master's payload rules apply to the accounts that have
+     * a payload, and to those only; an empty one is checked against the master being empty too,
+     * so a payload cannot be silently dropped on the way through either. */
+    if (String(src.payload || "") !== c.payload) bad.push(c.key + " payload differs from the master");
+    if (c.payload && V.payloadError(c.payload)) bad.push(c.key + ": " + V.payloadError(c.payload));
   }
   ok("every payload is byte-identical to the master and passes the master's own validator",
     bad.length === 0, bad.join("; "));
@@ -752,7 +791,7 @@ section("2. The bundle carries the codes and nothing else");
    * other. The label is held open rather than timed out, because it describes what is on
    * screen rather than reporting something that just happened. */
   ok("both faces say what a tap does, and the label does not time out",
-    /say\(flipped \? "Tap to copy" : "Tap to save", false\);/.test(appJs) &&
+    /say\(plate\(a\) \|\| flipped \? "Tap to copy" : "Tap to save", false\);/.test(appJs) &&
     /if \(msg && hold !== false\)/.test(appJs));
   ok("a hold does not then also fire the tap, so one press never saves twice",
     /if \(held\)/.test(appJs));
@@ -956,7 +995,7 @@ section("2. The bundle carries the codes and nothing else");
    * because decorative mode draws each module as a plain rect rather than a rounded blob, which
    * at a module of about one pixel is identical to look at and several times cheaper. */
   ok("every thumbnail is drawn at once, not one at a time",
-    /for \(var i = 0; i < CODES\.length; i\+\+\) \{[\s\S]{0,400}?QRArt\.draw\(el/.test(appJs) &&
+    /for \(var i = 0; i < CODES\.length; i\+\+\) \{[\s\S]{0,400}?paintFace\(el/.test(appJs) &&
     !/idle\(step\)/.test(appJs));
   ok("a thumbnail's modules are plain rects, which is what makes drawing them all affordable",
     /if \(opts\.decorative\) \{[\s\S]{0,400}?g\.fillRect\(bx, by/.test(read(path.join(PUB, "qr-art.js"))));
@@ -1056,6 +1095,103 @@ section("2. The bundle carries the codes and nothing else");
     catch (e) { bad.push(rel(f)); }
   }
   ok("every shipped script parses (" + scripts.length + " files)", bad.length === 0, bad.join(", "));
+}
+
+/* -------------------------------------------------- accounts that carry no code */
+
+/* An account with no DuitNow code is paid by naming the bank, the number and the person, and
+ * every one of those three has to survive the trip or the account is unusable in a way nobody
+ * would notice from looking at it: three quarters of a transfer instruction still draws a
+ * perfectly handsome coin. */
+{
+  const thin = plates.filter((c) => !c.bank || !c.holder || !c.acct);
+  ok("every code-less account names its bank, its number and its holder (" + plates.length + ")",
+    thin.length === 0, thin.map((c) => c.key).join(", "));
+
+  // And the other way, so the two shapes cannot blur into one another.
+  const muddled = codes.filter((c) => c.bank || c.holder);
+  ok("an account WITH a code carries no bank and no holder; the name is in the payload already",
+    muddled.length === 0, muddled.map((c) => c.key).join(", "));
+
+  const master2 = JSON.parse(read(path.join(MASTER, "accounts.json")));
+  const want = master2.accounts.filter((a) => !a.payload).map((a) => a.key).sort().join();
+  ok("the code-less accounts are exactly the ones the master has no payload for",
+    plates.map((c) => c.key).sort().join() === want, "master: " + want);
+}
+
+/* THE PERSON'S NAME IS PINNED TO ONE PLACE. The build asserts this too, and it is repeated here
+ * because the build can be edited: this reads the finished bundle on disk and counts, so a name
+ * that has spread into app.js, the manifest or the service worker's shell list is caught by
+ * whichever of the two runs. Exactly once per plate, in data.js, and nowhere else at all. */
+{
+  const names = [...new Set(plates.map((c) => c.holder).filter(Boolean))];
+  const stray = [];
+  for (const f of files) {
+    if (!/\.(html|js|mjs|css|json|webmanifest|txt|svg|map)$/i.test(f)) continue;
+    let body = read(f);
+    for (const p of shipped.map((c) => c.payload).filter(Boolean)) body = body.split(p).join(" P ");
+    for (const n of names) {
+      const seen = body.split(n).length - 1;
+      const allowed = rel(f) === "data.js" ? plates.filter((c) => c.holder === n).length : 0;
+      if (seen !== allowed) stray.push(rel(f) + ": " + seen + ", expected " + allowed);
+    }
+  }
+  ok("a holder's name is served once per code-less account, in data.js, and nowhere else",
+    names.length > 0 && stray.length === 0, stray.join("; "));
+}
+
+/* PayNet's mark says a DuitNow code is present. These accounts have none, so putting their
+ * artwork on one would be using their brand to label something it does not cover. The plate
+ * never reaches for it, and this is what says so. */
+{
+  const art = read(path.join(PUB, "qr-art.js"));
+  const plateFn = art.slice(art.indexOf("function drawPlate("));
+  const body = plateFn.slice(0, plateFn.indexOf("\n  function ", 10));
+  ok("the code-less face draws no DuitNow mark",
+    !/DuitNowMark|drawMark\(/.test(body), "drawPlate reaches for the mark");
+  ok("the code-less face is still the same struck coin, not a second drawing of one",
+    /struckFace\(/.test(body) && /struckFace\(/.test(art.slice(art.indexOf("function drawBack("))));
+}
+
+/* The plate renders, and obeys the same rule as every other face: nothing opaque outside the
+ * artwork, because the coin's shadow is cast from its alpha and an opaque fill would put a hard
+ * square behind a round object. */
+{
+  const c = plates[0];
+  const cv = createCanvas(8, 8);
+  const meta = QRArt.drawPlate(cv, { size: 700, pixelRatio: 1, brand: c.brand, label: c.name,
+    seed: c.key, acct: c.acct, bank: c.bank, holder: c.holder });
+  const g = cv.getContext("2d");
+  const corners = [[2, 2], [cv.width - 3, 2], [2, cv.height - 3], [cv.width - 3, cv.height - 3]];
+  const opaque = corners.filter(([x, y]) => g.getImageData(x, y, 1, 1).data[3] > 8);
+  ok("the code-less face draws, at the size the app asks for", meta.size === 700 && cv.width === 700);
+  ok("the code-less face leaves the canvas transparent outside the artwork", opaque.length === 0);
+
+  // Deterministic, for the same reason every other face is: the thumbnail and the full-size
+  // render have to be the same object, or the zoom stops being one thing moving.
+  const shot = () => {
+    const x = createCanvas(8, 8);
+    QRArt.drawPlate(x, { size: 300, pixelRatio: 1, brand: c.brand, label: c.name, seed: c.key,
+      acct: c.acct, bank: c.bank, holder: c.holder });
+    return crypto.createHash("sha256").update(Buffer.from(
+      x.getContext("2d").getImageData(0, 0, 300, 300).data)).digest("hex");
+  };
+  ok("the code-less face draws the same picture every time", shot() === shot());
+}
+
+/* The app must not offer what a plate cannot do. No flip, because there is no second face; no
+ * save, because there is no code to scan out of a saved picture. The tap copies instead, which
+ * is what the caption on that face promises. */
+{
+  const appJs = read(path.join(PUB, "app.js"));
+  ok("a code-less account is detected by its empty payload, in one place",
+    /function plate\(a\) \{ return !!a && !a\.payload; }/.test(appJs));
+  ok("the flip control is hidden for an account with only one face",
+    /elFlip\.hidden = plate\(a\);/.test(appJs));
+  ok("a hold or tap on a code-less account copies the number instead of saving nothing",
+    /if \(plate\(a\)\) \{ copyAcct\(\); return; }/.test(appJs));
+  ok("no card is built for an account with no code",
+    /if \(!plate\(a\)\) idle\(function \(\) \{ cardOf\(a\); }\);/.test(appJs));
 }
 
 /* ================================================ 3. the config matches the code */

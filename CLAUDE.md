@@ -27,17 +27,32 @@ nothing else is shipped.
    drifted. A third copy here would be the same mistake again, and a first attempt at one
    rejected all thirteen live payloads over a prefix it had guessed wrong. If the master moves,
    the build fails loudly rather than falling back to a guess.
-4. **The bundle carries five fields per account and no more:** `key`, `name`, `brand`,
-   `payload`, `acct`. The owner, the group, the DuitNow member number and the payee's legal name
-   stay on the laptop. The build reads `public/` back and searches it for every dropped value;
-   the suite repeats the search, and also asserts the other way, that every account number IS
-   there, so a feature cannot vanish silently either. Adding a field means adding it to `SHIP`
-   in `tools/build.mjs` deliberately, in one place, where it is visible.
+4. **The bundle carries eight fields per account and no more:** `key`, `name`, `brand`,
+   `payload`, `acct`, `maintenance`, `bank`, `holder`. The owner, the group and the DuitNow
+   member number stay on the laptop. The build reads `public/` back and searches it for every
+   dropped value; the suite repeats the search, and also asserts the other way, that every
+   account number IS there, so a feature cannot vanish silently either. Adding a field means
+   adding it to `SHIP` in `tools/build.mjs` deliberately, in one place, where it is visible.
 
    `acct` was added on 11 Aug 2026 at the owner's request, for the back of the coin. **It is a
    real widening of what a stranger with the address can read** and it was made deliberately:
    before it, an account number was recoverable only by decoding a code, and only for six of the
    thirteen; now all thirteen are in the page as text. The build prints that on every run.
+
+   **`holder` is the second widening, and the larger one.** Added 25 Aug 2026 for accounts with
+   no DuitNow code, which are paid by naming the bank, the number and the person. For a code
+   account this would change nothing, because the payload already carries the name in tag 59 and
+   anyone who scans sees it; for a code-less one **nothing else would have carried it**, so this
+   puts a legal name on a public page as text for the first time. It ships only for accounts
+   with no payload, and the build prints it on every run.
+
+   **THE GUARD WAS TIGHTENED TO ALLOW IT, NOT SWITCHED OFF, and the difference is the whole
+   design.** The lazy way is to drop the payee from the forbidden set, which would disable the
+   stem check described below. Instead the expected occurrences are stripped exactly as payloads
+   are, and then asserted: **exactly once per entitled record, in `data.js`, and nowhere else at
+   all.** A name that reaches `app.js`, the manifest or the service worker's shell list still
+   kills the build. Both the build and the suite carry this, and both were mutation-tested by
+   leaking the name and watching them die.
 
    **A name also travels as a SLUG, and exact matching cannot see one.** On 13 Aug 2026 the
    master keyed a new account `muhammad-afif-akmal-bin`, a truncated lowercase slug of the
@@ -233,6 +248,46 @@ the band of undisturbed metal outside it.
 The mark is drawn flat. The account number beneath it is embossed, because that is our own
 typography and ours to treat; the mark is not, and "DO NOT use shadows or other effects" is
 explicit.
+
+## Accounts with no code at all
+
+Some accounts have no DuitNow code and are paid by naming the bank, the number and the person.
+`payload` became optional on 25 Aug 2026 to allow it, and **that is a change to the master's
+contract, so it had to be made in `store.js` and `serve.py` together.** They are two
+implementations of one rule with nothing asserting they agree, and they have drifted before;
+the two were checked against seven documents, message for message, after the change.
+
+**One face, not two.** `drawPlate()` draws the same struck coin with three inscriptions in the
+order somebody filling in a transfer needs them: the bank, the number, the name. The provider is
+already around the rim so it is not repeated. There is nothing to turn over to, so the flip
+control is hidden rather than disabled: a greyed control invites a second tap and then explains
+nothing.
+
+**NO DUITNOW MARK, and that is a rule rather than an oversight.** The mark is PayNet's and it
+says a DuitNow code is present. These accounts have none, so putting their artwork on one would
+be using their brand to label something it does not cover. The suite reads `drawPlate`'s body
+and fails if it so much as mentions the mark.
+
+**The tap copies rather than saves.** A saved image exists to be scanned out of somebody's photo
+library, and a picture of a number is not that. So `save()` diverts to `copyAcct()`, no card is
+built, and the caption on that face reads "Tap to copy", which is what the reverse of a coin
+already says.
+
+**`struckFace()` is shared, and that is why.** The reverse of a coin and the single face of a
+code-less account are the same object down to the pixel; only the inscription differs. Drawn
+twice they would drift, and invisibly, because the two are never on screen together to compare.
+
+**AN EMPTY PAYLOAD PASSES A DECODE TEST, and that nearly bought thirteen false assertions.**
+Handed `""` the encoder happily encodes the empty string, jsQR reads back `""`, and
+`got.data === c.payload` compares `""` with `""` and PASSES. Every decode assertion in section 1
+would have been vacuously true for that account while claiming to prove something about a code
+that is never drawn. The suite now splits `codes` from `plates` and section 1 walks `codes`
+only; `live.mjs` skips it the same way.
+
+**`filter(Boolean)` on the payload list is load-bearing in three files.** The leak checks strip
+payloads out of each file before searching, and `body.split("")` splits a string into its
+individual characters. One empty entry would blow every file apart into fragments and leave the
+search finding nothing at all, silently. `build.mjs`, `verify.mjs` and `live.mjs` each filter.
 
 ## Under maintenance
 

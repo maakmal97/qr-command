@@ -170,6 +170,24 @@
     }, extra || {});
   }
 
+  /* A PLATE IS AN ACCOUNT WITH NO CODE, and the whole of the test is that it has no payload.
+   *
+   * Some accounts have no DuitNow code at all and are paid by naming the bank, the number and
+   * the person. The build gives every record a real payload string, empty when there is none,
+   * so this is one reading of one field rather than a guess about which fields are present.
+   *
+   * Everything a code makes possible is off for these: there is nothing to scan, so nothing to
+   * save and no second face to turn over to. What remains is the number, and copying it, which
+   * is what the reverse of a coin already does. */
+  function plate(a) { return !!a && !a.payload; }
+
+  function paintFace(canvas, a, extra) {
+    return plate(a)
+      ? self.QRArt.drawPlate(canvas, artFor(a, Object.assign(
+          { acct: a.acct, bank: a.bank, holder: a.holder }, extra)))
+      : self.QRArt.draw(canvas, a.payload, artFor(a, extra));
+  }
+
   /* Draw an account's coin into a canvas of its own, without touching the page. Used to keep
    * the cost of a redraw OFF the animation: six to fourteen milliseconds is most of a frame,
    * and spent halfway through a transition it drops one exactly where the eye is following the
@@ -179,9 +197,9 @@
     var a = CODES[i];
     if (!a) return null;
     var off = document.createElement("canvas");
-    var meta = self.QRArt.draw(off, a.payload, artFor(a, {
+    var meta = paintFace(off, a, {
       size: fit(), pixelRatio: self.devicePixelRatio || 1
-    }));
+    });
     return { canvas: off, meta: meta };
   }
 
@@ -295,6 +313,11 @@
       return { plain: false, fellBack: false, maintenance: true };
     }
     document.body.classList.remove("maintenance");
+    /* A PLATE HAS ONE FACE, so there is nothing to turn it over to. The button is hidden rather
+     * than disabled: a greyed control invites a second tap and then explains nothing, where an
+     * absent one says the choice does not exist here. `.pill` sets no display of its own, so
+     * the UA rule for [hidden] applies and no stylesheet change is needed. */
+    elFlip.hidden = plate(a);
     elFlip.disabled = false;
     elFlip.textContent = flipped ? "Show the code" : "DuitNow number";
     if (pre && pre.canvas) {
@@ -303,14 +326,21 @@
       elCoin.getContext("2d").drawImage(pre.canvas, 0, 0);
       meta = pre.meta;
     } else {
-      meta = self.QRArt.draw(elCoin, a.payload, artFor(a, {
+      meta = paintFace(elCoin, a, {
         size: fit(), pixelRatio: self.devicePixelRatio || 1
-      }));
+      });
     }
     // meta.plain, not the local flag: the renderer drops to the plain code by itself when the
     // screen is too small to draw a coin anyone could scan, and the page must follow it.
-    elCoin.setAttribute("aria-label", a.name + " payment code");
-    elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");
+    if (plate(a)) {
+      elCoin.setAttribute("aria-label",
+        a.name + ", account " + a.acct + " at " + a.bank + ", in the name of " + a.holder);
+      elBtn.setAttribute("aria-label",
+        a.name + ", account " + a.acct + " at " + a.bank + ". Tap to copy the number.");
+    } else {
+      elCoin.setAttribute("aria-label", a.name + " payment code");
+      elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");
+    }
     elBtn.classList.toggle("plainmode", meta.plain);
     if (flipped) paintBack();
     return meta;
@@ -319,22 +349,24 @@
   /* Turning the coin over. The number is real text on the button, not only pixels on a canvas,
    * so a screen reader can read it and the copy never depends on the drawing. */
   function setFlipped(on) {
-    flipped = !!on;
+    var a = CODES[idx];
+    // A plate cannot be turned over; asking for it is a no-op rather than a half-flipped coin.
+    flipped = !!on && !plate(a);
     if (flipped) paintBack();
     elBtn.classList.toggle("flipped", flipped);
     elFlip.setAttribute("aria-pressed", flipped ? "true" : "false");
     elFlip.textContent = flipped ? "Show the code" : "DuitNow number";
-    var a = CODES[idx];
-    if (a) {
+    if (a && !plate(a)) {
       elBtn.setAttribute("aria-label", flipped
         ? a.name + " account number " + a.acct + ". Tap to copy."
         : a.name + " payment code. Tap to save it to your photos.");
     }
-    /* BOTH FACES NAME THEIR OWN TAP. The reverse has always said "Tap to copy"; the code side
+    /* EVERY FACE NAMES ITS OWN TAP. The reverse has always said "Tap to copy"; the code side
      * said nothing at all, so the same gesture read as a feature on one face and a secret on
      * the other. Held open rather than timed out, because it is a label for what is on screen,
-     * not a report of something that just happened. */
-    say(flipped ? "Tap to copy" : "Tap to save", false);
+     * not a report of something that just happened. A plate has a number and no code, so its
+     * tap is the reverse's tap. */
+    say(plate(a) || flipped ? "Tap to copy" : "Tap to save", false);
   }
 
   /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
@@ -535,7 +567,8 @@
     setFlipped(false);
     paint(pre);
     remember("last", a.key);
-    idle(function () { cardOf(a); });
+    // A plate has no code, so there is no card to build and nothing to keep warm for a save.
+    if (!plate(a)) idle(function () { cardOf(a); });
     return arriving;
   }
 
@@ -656,6 +689,11 @@
     if (!a) return;
     // Nothing to save, and nothing that should be saved: see down().
     if (down(a)) { say("Under maintenance"); return; }
+    /* A PLATE HAS NO CODE TO SAVE, so the gesture does the useful thing instead of refusing.
+     * The saved image exists to be scanned out of somebody's photo library; a picture of a
+     * number is not that, and the number itself is what anyone asking for these details wants.
+     * This is why the caption on a plate reads "Tap to copy" rather than "Tap to save". */
+    if (plate(a)) { copyAcct(); return; }
     var card;
     try { card = cardOf(a); }
     catch (e) { say("Could not draw the image"); return; }
@@ -730,10 +768,10 @@
       // code, and the rule is that a code under maintenance is not drawn anywhere.
       if (down(a)) continue;
       try {
-        self.QRArt.draw(el, a.payload, artFor(a, {
+        paintFace(el, a, {
           size: THUMB, pixelRatio: self.devicePixelRatio || 1,
           plain: false, decorative: true
-        }));
+        });
         el.style.background = "none";
       } catch (e) { /* the brand disc stays; nothing is lost */ }
     }

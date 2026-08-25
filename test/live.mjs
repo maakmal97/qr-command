@@ -141,7 +141,11 @@ ok("index.html served byte for byte as built",
   (master.owners || []).forEach((o) => { add(o && o.name); add(o && o.legal); });
   master.accounts.forEach((a) => { add(a.mid); });
 
-  const payloads = master.accounts.map((a) => a.payload).sort((a, b) => b.length - a.length);
+  /* filter(Boolean) is load-bearing: an account with no DuitNow code has no payload, and
+   * `body.split("")` would split every served file into its individual characters, leaving the
+   * leak search reading rubble and quietly finding nothing. */
+  const payloads = master.accounts.map((a) => a.payload).filter(Boolean)
+    .sort((a, b) => b.length - a.length);
   const hits = [];
   for (const [name, body] of Object.entries({ "index.html": root.text, ...fetched })) {
     let t = body;
@@ -193,9 +197,15 @@ ok("index.html served byte for byte as built",
 
   const master = JSON.parse(fs.readFileSync(path.join(MASTER, "accounts.json"), "utf8"));
   const bad = [];
+  /* AN ACCOUNT WITH NO CODE IS NOT DECODED, and skipping it is not the same as ignoring it.
+   * Handed an empty payload the encoder encodes the empty string and jsQR reads back "", so
+   * `got.data === c.payload` compares "" with "" and passes, claiming to have proved something
+   * about a code that does not exist. The served-vs-master comparison above still covers it. */
+  const withCode = codes.filter((c) => c.payload);
   for (const c of codes) {
     const src = master.accounts.find((a) => a.key === c.key);
-    if (!src || src.payload !== c.payload) { bad.push(c.key + ": served payload differs from the master"); continue; }
+    if (!src || String(src.payload || "") !== c.payload) { bad.push(c.key + ": served payload differs from the master"); continue; }
+    if (!c.payload) continue;
     for (const px of [QRArt.DEFAULTS.safePhysicalPx, 700, 1000]) {
       const canvas = createCanvas(8, 8);
       QRArt.draw(canvas, c.payload, { size: px, pixelRatio: 1, brand: c.brand });
@@ -207,8 +217,15 @@ ok("index.html served byte for byte as built",
     }
   }
   ok("every code the live site serves renders and decodes back to the master's payload " +
-     "(" + codes.length + " codes)", bad.length === 0, bad.slice(0, 6).join("\n        "));
+     "(" + withCode.length + " codes, " + (codes.length - withCode.length) + " without one)",
+    bad.length === 0, bad.slice(0, 6).join("\n        "));
   ok("the live site serves every account the master has", codes.length === master.accounts.length);
+
+  /* And the code-less ones carry what makes them payable. A plate with no bank or no holder is
+   * three quarters of a transfer instruction, which is worse than not being there at all. */
+  const thin = codes.filter((c) => !c.payload).filter((c) => !c.bank || !c.holder || !c.acct);
+  ok("every account served without a code names its bank, its number and its holder",
+    thin.length === 0, thin.map((c) => c.key).join(", "));
 }
 
 console.log("\n" + (fail ? "FAILED: " : "ok: ") + pass + " passed, " + fail + " failed\n");

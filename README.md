@@ -28,6 +28,7 @@ back gesture; whichever account you came from is scrolled back into view for you
 | **Save the code to your photos** | **Tap it**, or press and hold, the same way you would keep any picture on a phone. The caption under the coin says **Tap to save** so you never have to guess. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
 | Next or previous | Swipe left and right across the code. A swipe never counts as a tap, so changing code cannot save one by accident. |
 | **The account number** | Press **DuitNow number** and the coin turns over. Its back is struck metal with the number struck into it, and the caption changes to **Tap to copy**. Digits only, ready to paste into a banking app. Changing account always turns it back to the code. |
+| **An account with no code** | Some accounts have no DuitNow code and are paid by typing the details in. Those show one face instead of two, with the bank, the number and the name it is in struck into the metal, ready to read out or copy. There is nothing to turn over to and nothing to save, so a tap copies the number. |
 | Under maintenance | An account being changed on the laptop shows **Under maintenance** and no code at all. Flip it from the local page; the phone follows within seconds. |
 | Keyboard | Left and right arrows step through, `Enter` or `S` does whatever a tap would, `D` or `C` turns the coin over, `Esc` goes back. |
 | One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
@@ -78,9 +79,16 @@ Two things follow, and the second is the one worth knowing:
   coin**, which you asked for so a number can be copied and sent to somebody. That last one is a
   real widening: before it, an account number could only be got at by decoding a code, and only
   for six of the thirteen. Now all thirteen are readable as text by anyone who opens the site.
-- Your legal name, your groups and the DuitNow member numbers are still dropped at build time
-  and never leave the laptop. The build checks that by reading the bundle back and searching it,
-  and the suite checks it again, in both directions.
+- **Your legal name is now printed, for the one account that has no code.** An account paid by
+  bank transfer rather than by scanning needs the bank, the number and the name together, so all
+  three are on its face. This is the bigger of the two widenings: for a code the name was
+  already inside the payload and anyone scanning saw it, but for this one nothing else would
+  have carried it. It is not a blanket change. The name ships **only** for accounts with no
+  code, and the build and the suite each count the occurrences and refuse to finish unless it
+  appears exactly once, in the data file, and nowhere else at all.
+- Your groups and the DuitNow member numbers are still dropped at build time and never leave the
+  laptop. The build checks that by reading the bundle back and searching it, and the suite
+  checks it again, in both directions.
 - **The codes themselves still carry your name.** A DuitNow payload is an EMVCo string with the
   account-holder name as a mandatory field, and for six of your thirteen the account number is
   in there in the clear too. Anyone who scans a code sees those in their banking app before they

@@ -816,24 +816,22 @@ self.QRArt = (function () {
     if ("letterSpacing" in g) g.letterSpacing = "0px";
   }
 
-  function drawBack(canvas, opts) {
-    opts = Object.assign({}, DEFAULTS, opts || {});
-    var cssSize = Math.max(64, Math.round(opts.size || 512));
-    var dpr = opts.pixelRatio || 1;
-    var size = Math.max(opts.minDevice || 0, Math.round(cssSize * dpr));
-
-    canvas.width = size;
-    canvas.height = size;
-    var g = canvas.getContext("2d");
-    g.clearRect(0, 0, size, size);
-
-    var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
-
-    /* BOTH FACES ARE THE SAME OBJECT, so the reverse is held back from the edge by exactly the
-     * amount the front is. Left full-bleed while the front wore the lens, the coin would grow
-     * as it turned over and shrink as it turned back, which reads as two pictures being swapped
-     * rather than one thing rotating. The lens sky is drawn behind this face too, for the same
-     * reason: it is the same object, seen from the other side. */
+  /* THE BLANK STRUCK FACE, shared by every face that is not the code.
+   *
+   * The reverse of a coin and the single face of an account that has no code are the same object
+   * down to the last pixel: lens, body, rim legend, dished inner face. Only what is inscribed on
+   * them differs. Drawn twice they would drift, and the drift would be invisible, because the
+   * two faces are never on screen at the same moment to be compared.
+   *
+   * BOTH FACES ARE THE SAME OBJECT, so the reverse is held back from the edge by exactly the
+   * amount the front is. Left full-bleed while the front wore the lens, the coin would grow as
+   * it turned over and shrink as it turned back, which reads as two pictures being swapped
+   * rather than one thing rotating. The lens sky is drawn behind this face too, for the same
+   * reason: it is the same object, seen from the other side.
+   *
+   * Leaves the context TRANSLATED into the coin and saved; the caller inscribes, then restores
+   * and draws the rim glow. */
+  function struckFace(g, size, opts, pal) {
     var lensOn = opts.lens && !opts.decorative;
     var lopts = lensOn ? Object.assign({}, opts, { scallop: 0 }) : opts;
     var coinPx = lensOn ? Math.round(size * opts.lensScale) : size;
@@ -876,8 +874,45 @@ self.QRArt = (function () {
     g.lineWidth = Math.max(1, f.Rd * 0.008);
     g.beginPath(); g.arc(R, R, f.Rd, 0, Math.PI * 2); g.stroke();
 
+    return { f: f, R: R, coinPx: coinPx, lensOn: lensOn, D: f.Rd * 2 };
+  }
+
+  /* Fit one line to the CHORD at its own height, not to the face's widest point.
+   *
+   * A circle's width falls away fast towards the rim: at four fifths of the radius down there is
+   * only three fifths of the diameter to write on. Fitted to the flat width instead, tracked
+   * lettering runs straight over the rim legend, which is what happened to the caption the
+   * moment the account number was opened up. Half-chord = sqrt(Rd^2 - y^2). What gives is the
+   * type size, which is ours, never the tracking, which is what makes it read as an inscription.
+   */
+  function fitChord(g, text, y, R, Rd, px, track, weight) {
+    var dy = Math.abs(y - R) + px * 0.5;
+    var half = Rd > dy ? Math.sqrt(Rd * Rd - dy * dy) : Rd * 0.1;
+    var room = half * 2 * 0.86;                        // a little undisturbed metal either side
+    g.font = (weight || "600") + " " + px.toFixed(1) + "px " + FONT;
+    if ("letterSpacing" in g) g.letterSpacing = (track * px).toFixed(2) + "px";
+    var w = g.measureText(text).width;
+    if ("letterSpacing" in g) g.letterSpacing = "0px";
+    return w > room ? px * (room / w) : px;
+  }
+
+  function drawBack(canvas, opts) {
+    opts = Object.assign({}, DEFAULTS, opts || {});
+    var cssSize = Math.max(64, Math.round(opts.size || 512));
+    var dpr = opts.pixelRatio || 1;
+    var size = Math.max(opts.minDevice || 0, Math.round(cssSize * dpr));
+
+    canvas.width = size;
+    canvas.height = size;
+    var g = canvas.getContext("2d");
+    g.clearRect(0, 0, size, size);
+
+    var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
+
+    var b = struckFace(g, size, opts, pal);
+    var f = b.f, R = b.R, coinPx = b.coinPx, lensOn = b.lensOn, D = b.D;
+
     var acct = String(opts.acct || "").trim();
-    var D = f.Rd * 2;
 
     /* THE OFFICIAL MARK, and everything about how it is drawn is a rule rather than a choice.
      *
@@ -1020,14 +1055,7 @@ self.QRArt = (function () {
      * the tracking, which is what makes it legible as an inscription in the first place. */
     var capY = top + capPx * 0.5;
     var capTrack = 0.16;
-    var dy = Math.abs(capY - R) + capPx * 0.5;
-    var half = f.Rd > dy ? Math.sqrt(f.Rd * f.Rd - dy * dy) : f.Rd * 0.1;
-    var capRoom = half * 2 * 0.86;                      // a little undisturbed metal either side
-    g.font = "600 " + capPx.toFixed(1) + "px " + FONT;
-    if ("letterSpacing" in g) g.letterSpacing = (capTrack * capPx).toFixed(2) + "px";
-    var capW = g.measureText("ACCOUNT NUMBER").width;
-    if ("letterSpacing" in g) g.letterSpacing = "0px";
-    if (capW > capRoom) capPx *= capRoom / capW;
+    capPx = fitChord(g, "ACCOUNT NUMBER", capY, R, f.Rd, capPx, capTrack);
 
     emboss(g, "ACCOUNT NUMBER", R, capY, capPx, "600", pal.faceDim, 0.03, capTrack);
 
@@ -1035,6 +1063,85 @@ self.QRArt = (function () {
     if (lensOn) lensRim(g, size, coinPx, f, pal);
 
     return { size: cssSize, deviceSize: size, coinPx: coinPx, palette: pal, acct: acct };
+  }
+
+  /* ---------------------------------------------------------------- the plate */
+
+  /* An account with NO CODE AT ALL, paid by naming the bank, the number and the person.
+   *
+   * It is the same struck coin, with one face instead of two, because there is no code to put on
+   * the other one. Three inscriptions, in the order somebody filling in a transfer form needs
+   * them: the bank it is held at, the number, and the name it is in. The provider is already
+   * around the rim, so it is not repeated here.
+   *
+   * NO DUITNOW MARK, and that is a rule rather than an oversight. The mark is PayNet's, and it
+   * says a DuitNow code is present. This account has none, so putting their artwork on it would
+   * be using their brand to label something it does not cover.
+   *
+   * Everything is laid out as one block and centred, for the reason the reverse is: positioned
+   * piece by piece from the middle, the lower lines drift into the rim legend as soon as the
+   * number runs long. Each line is then fitted to its own chord, because the room on a circle
+   * depends on how far from the middle it sits. */
+  function drawPlate(canvas, opts) {
+    opts = Object.assign({}, DEFAULTS, opts || {});
+    var cssSize = Math.max(64, Math.round(opts.size || 512));
+    var dpr = opts.pixelRatio || 1;
+    var size = Math.max(opts.minDevice || 0, Math.round(cssSize * dpr));
+
+    canvas.width = size;
+    canvas.height = size;
+    var g = canvas.getContext("2d");
+    g.clearRect(0, 0, size, size);
+
+    var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
+    var b = struckFace(g, size, opts, pal);
+    var f = b.f, R = b.R, D = b.D;
+
+    var acct = String(opts.acct || "").trim();
+    var bank = String(opts.bank || "").trim().toUpperCase();
+    var holder = String(opts.holder || "").trim().toUpperCase();
+
+    /* The number is the same inscription as on the reverse: smaller than the space it sits in,
+     * lighter than a headline, tracked open so the eye can go digit by digit, which is what
+     * anyone checking a number against a banking app is doing. It does not wrap here. There are
+     * two more lines on this face than on the reverse, so a number that broke in two would push
+     * the stack past the metal; it is fitted to its chord instead. */
+    var TRACK = 0.055;
+    var numPx = D * 0.125;
+    var capTrack = 0.14;
+    var bankPx = D * 0.058;
+    var holdPx = D * 0.052;
+
+    var gap = numPx * 0.52;
+    var blockH = bankPx + gap + numPx + gap + holdPx;
+    var room = D * 0.84;
+    if (blockH > room) {
+      var k = room / blockH;
+      bankPx *= k; numPx *= k; holdPx *= k; gap *= k;
+      blockH = bankPx + gap + numPx + gap + holdPx;
+    }
+
+    var top = R - blockH / 2;
+    var bankY = top + bankPx * 0.5;
+    var numY = top + bankPx + gap + numPx * 0.5;
+    var holdY = top + bankPx + gap + numPx + gap + holdPx * 0.5;
+
+    if (bank) {
+      emboss(g, bank, R, bankY, fitChord(g, bank, bankY, R, f.Rd, bankPx, capTrack),
+             "600", pal.faceDim, 0.03, capTrack);
+    }
+    emboss(g, acct, R, numY, fitChord(g, acct, numY, R, f.Rd, numPx, TRACK),
+           "600", pal.faceInk, 0.042, TRACK);
+    if (holder) {
+      emboss(g, holder, R, holdY, fitChord(g, holder, holdY, R, f.Rd, holdPx, capTrack),
+             "600", pal.faceDim, 0.03, capTrack);
+    }
+
+    g.restore();
+    if (b.lensOn) lensRim(g, size, b.coinPx, f, pal);
+
+    return { size: cssSize, deviceSize: size, coinPx: b.coinPx, palette: pal,
+             acct: acct, bank: bank, holder: holder, plate: true };
   }
 
   /* ----------------------------------------------------------------- the card */
@@ -1116,6 +1223,7 @@ self.QRArt = (function () {
     DEFAULTS: DEFAULTS,
     draw: draw,
     drawBack: drawBack,
+    drawPlate: drawPlate,
     drawCard: drawCard,
     plan: plan,
     coinFrame: coinFrame,
