@@ -279,6 +279,20 @@ line buys width back. The split is chosen by RENDERED WIDTH, not word count: spl
 middle of the word list left "WISE" alone above the rest, which reads as a mistake rather than a
 line break.
 
+**A MARK REPLACES ITS NAME, it does not sit above it.** Owner's instruction, 26 Aug 2026: "no
+need for bank name and receiver name". What that costs is worth naming rather than glossing: the
+name was there to be MATCHED, letter for letter, against the string a payer's banking app shows
+at the confirm step, and a logo cannot be compared to a string. What it buys is a face readable
+at a glance instead of four lines of legal name. The brands stay unambiguous, the rim still reads
+JPMORGAN CHASE, and the full names remain in the coin's accessibility label, which is where a
+logo's text alternative belongs anyway. A row with no traced mark still draws its name, so a bank
+without a logo is not a blank space.
+
+**MARKS ARE MATCHED ON WIDTH, NOT HEIGHT**, which falls out of the circle rather than being a
+preference: the cap is set high and the chord limits both to the same width, so two wordmarks of
+very different proportions sit as one column. Matched on height, Wise at 4.4:1 would run to the
+rim while JPMC at 2.8:1 looked half empty.
+
 **Each row carries its brand's MARK, traced from the artwork rather than redrawn.** Added 26 Aug
 2026 on the owner's instruction, after a version that set the wordmarks in type was rejected:
 "just vectorise them, no need for recreation".

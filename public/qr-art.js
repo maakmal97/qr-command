@@ -1009,22 +1009,43 @@ self.QRArt = (function () {
       return (m && typeof m.d === "string" && m.d && m.viewBox) ? m : null;
     };
 
+    /* A MARK REPLACES ITS NAME, it does not sit above it. Owner's instruction, 26 Aug 2026.
+     *
+     * What that costs is worth naming: the name was there to be MATCHED, letter for letter,
+     * against the string a payer's banking app shows them at the confirm step, and a logo cannot
+     * be compared to a string. What it buys is a face you can read at a glance instead of four
+     * lines of legal name. The brands are still unambiguous, the rim still reads JPMORGAN CHASE,
+     * and the full names are still in the coin's accessibility label, which is where a logo's
+     * text alternative belongs anyway.
+     *
+     * A row with no traced mark still draws its name, so an account whose bank has no logo is
+     * not a blank space. */
     var rows = [];
     if (bank) rows.push({ label: "BANK", value: bank, mark: markOf(opts.bankMark) });
     if (holder) rows.push({ label: "RECEIVER", value: holder, mark: markOf(opts.holderMark) });
-    var markPx = D * 0.10;
-    var markGap = markPx * 0.2;
+
+    /* MARKS ARE MATCHED ON WIDTH, NOT HEIGHT, and that falls out of the circle rather than being
+     * a preference. Set the cap high and the chord limits both to the same width, so two
+     * wordmarks of very different proportions sit as one column. Matched on height instead, the
+     * wider one (Wise, at 4.4:1) would run to the rim while JPMC at 2.8:1 looked half empty. */
+    var markCap = D * 0.30;
+    var markGap = D * 0.03;
     for (var r = 0; r < rows.length; r++) {
-      rows[r].fit = layoutValue(g, rows[r].value, valuePx, VTRACK, maxW, minValuePx);
+      if (rows[r].mark) {
+        // The height the chord actually allows, so the block reserves what will be drawn.
+        rows[r].markPx = Math.min(markCap, maxW / rows[r].mark.aspect);
+      } else {
+        rows[r].fit = layoutValue(g, rows[r].value, valuePx, VTRACK, maxW, minValuePx);
+      }
     }
 
     var lineStep = 1.2;
     var labelGap = labelPx * 0.5;
-    var rowGap = valuePx * 0.7;
+    var rowGap = D * 0.075;
     var heightOf = function (row) {
-      return labelPx + labelGap +
-             (row.mark ? markPx + markGap : 0) +
-             row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep);
+      return labelPx + labelGap + (row.mark
+        ? row.markPx
+        : row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep));
     };
     var sumH = function () {
       var t = rowGap * Math.max(0, rows.length - 1);
@@ -1036,8 +1057,10 @@ self.QRArt = (function () {
     var room = D * 0.84;
     if (blockH > room) {
       var k = room / blockH;
-      labelPx *= k; labelGap *= k; rowGap *= k; markPx *= k; markGap *= k;
-      for (var i3 = 0; i3 < rows.length; i3++) rows[i3].fit.px *= k;
+      labelPx *= k; labelGap *= k; rowGap *= k;
+      for (var i3 = 0; i3 < rows.length; i3++) {
+        if (rows[i3].mark) rows[i3].markPx *= k; else rows[i3].fit.px *= k;
+      }
       blockH = sumH();
     }
 
@@ -1048,11 +1071,13 @@ self.QRArt = (function () {
       emboss(g, row.label, R, ly, fitChord(g, row.label, ly, R, f.Rd, labelPx, LTRACK),
              "700", pal.faceDim, 0.03, LTRACK);
       y += labelPx + labelGap;
+
       if (row.mark) {
-        var my = y + markPx * 0.5;
-        drawMark(g, row.mark, R, my, markPx, R, f.Rd, pal.faceInk);
-        y += markPx + markGap;
+        drawMark(g, row.mark, R, y + row.markPx * 0.5, row.markPx, R, f.Rd, pal.faceInk);
+        y += row.markPx + rowGap;
+        continue;
       }
+
       /* ONE NAME IS ONE SIZE. Fitting each line to its own chord independently made the lower
        * line of a wrapped name smaller than the upper one, because a circle narrows as you go
        * down: "WISE PAYMENTS" came out visibly bigger than "MALAYSIA SDN BHD" beneath it, which

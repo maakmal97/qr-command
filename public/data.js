@@ -174,4 +174,4 @@ self.QR_CODES = [
     "holderMark": "wise"
   }
 ];
-self.QR_BUILD = "2d05de22c606";
+self.QR_BUILD = "3313f865aae4";

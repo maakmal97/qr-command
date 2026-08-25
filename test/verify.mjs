@@ -1185,6 +1185,21 @@ section("2. The bundle carries the codes and nothing else");
     }
     ok("a named mark is actually painted, not merely allotted space", differ > 2000,
       differ + " pixels differ with the marks against without them");
+
+    /* A MARK REPLACES ITS NAME rather than sitting above it, so the legal name must NOT be drawn
+     * on a row that has a logo. The name is still in the record and still in the coin's
+     * accessibility label, which is where a logo's text alternative belongs. */
+    const plateBody = (() => {
+      const art = read(path.join(PUB, "qr-art.js"));
+      const from = art.indexOf("function drawPlate(");
+      return art.slice(from, art.indexOf("\n  /* -----", from + 10));
+    })();
+    ok("a row with a mark draws the mark instead of the name, not as well as it",
+      /if \(row\.mark\) \{[\s\S]{0,220}?continue;/.test(plateBody));
+    ok("a row with NO mark still draws its name, so a logoless bank is not a blank space",
+      /rows\[r\]\.fit = layoutValue\(/.test(plateBody));
+    ok("the full names survive for a screen reader, which cannot see a logo",
+      /aria-label", "Bank, " \+ a\.bank/.test(read(path.join(PUB, "app.js"))));
   }
 
   /* NO FACE DRAWS THE ACCOUNT NUMBER, and this is the last one that did. Taking it off the
