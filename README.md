@@ -28,7 +28,7 @@ back gesture; whichever account you came from is scrolled back into view for you
 | **Save the code to your photos** | **Tap it**, or press and hold, the same way you would keep any picture on a phone. The caption under the coin says **Tap to save** so you never have to guess. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
 | Next or previous | Swipe left and right across the code. A swipe never counts as a tap, so changing code cannot save one by accident. |
 | **The account number** | Press **Copy account number**. It goes straight to your clipboard, digits only, ready to paste into a banking app. **It is never put on screen**, so it cannot be read over your shoulder or end up in a screenshot of the code. An account under maintenance will not hand it out either. |
-| **An account with no code** | Some accounts have no DuitNow code and are paid by typing the details in. Those show the bank and the number struck into the metal, ready to read out. There is no code to save, so a tap copies the number instead, and the caption says so. |
+| **An account with no code** | Some accounts have no DuitNow code and are paid by typing the details in. Those show the **bank** struck into the metal, because that is the part you have to read and type yourself. The number is not shown here either; **Copy account number** gets it. There is no code to save, so a tap copies too, and the caption says so. |
 | Under maintenance | An account being changed on the laptop shows **Under maintenance** and no code at all. Flip it from the local page; the phone follows within seconds. |
 | Keyboard | Left and right arrows step through, `Enter` or `S` does whatever a tap would, `C` copies the account number, `Esc` goes back. |
 | One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
@@ -80,8 +80,8 @@ Two things follow, and the second is the one worth knowing:
   would have nothing to copy and the app would stop working with the radio off. So anyone who
   views the page source still reads every one of them, exactly as before. Taking the number off
   the coin is about who can see it over your shoulder, not about who can find it.
-- **Your legal name is still not printed anywhere.** The account with no code shows the bank and
-  the number only, which was your call on 25 August 2026. There is a field for a name and it is
+- **Your legal name is still not printed anywhere.** The account with no code shows its bank and
+  nothing else, which was your call on 25 August 2026. There is a field for a name and it is
   deliberately empty; it is never filled in from your owner record, so a name can only ever get
   onto the page by somebody typing one into the master. If one ever is, the build says so in
   capitals on every run and the suite fails until this file is revisited. Whoever you send those

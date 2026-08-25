@@ -900,49 +900,48 @@ self.QRArt = (function () {
     var b = struckFace(g, size, opts, pal);
     var f = b.f, R = b.R, D = b.D;
 
-    var acct = String(opts.acct || "").trim();
     var bank = String(opts.bank || "").trim().toUpperCase();
     var holder = String(opts.holder || "").trim().toUpperCase();
 
-    /* The number is the same inscription as on the reverse: smaller than the space it sits in,
-     * lighter than a headline, tracked open so the eye can go digit by digit, which is what
-     * anyone checking a number against a banking app is doing. It does not wrap here. There are
-     * two more lines on this face than on the reverse, so a number that broke in two would push
-     * the stack past the metal; it is fitted to its chord instead. */
-    var TRACK = 0.055;
-    var numPx = D * 0.125;
+    /* THE ACCOUNT NUMBER IS NOT DRAWN HERE EITHER, and `acct` is deliberately not read.
+     *
+     * It used to be the largest thing on this face. Taking it off the coin's reverse and leaving
+     * it on this one would have been the odd account out: twelve that never show a number and
+     * one that does, which is the sort of inconsistency that reads as an oversight. The number
+     * reaches a banking app through `Copy account number` without being displayed anywhere, so
+     * the face carries what you cannot copy instead: the bank it is held at, which somebody
+     * filling in a transfer has to read and type themselves. Owner's decision, 25 Aug 2026.
+     *
+     * The bank is therefore the PRIMARY inscription now rather than a caption over the number,
+     * and it is sized as one. Bank names run long, so it is started generously and fitted to its
+     * chord, which is what stops "JPMORGAN CHASE BANK BERHAD" running over the rim legend. */
     var capTrack = 0.14;
-    var bankPx = D * 0.058;
+    var bankPx = D * 0.105;
     var holdPx = D * 0.052;
 
     /* ONLY THE LINES THAT EXIST TAKE UP ROOM. The holder is usually absent, and counting its
-     * height anyway made the block taller than its contents, so the two remaining lines sat
-     * visibly above the middle of the face while the space they were centred in ran off the
-     * bottom. Height is summed from what is actually drawn. */
+     * height anyway made the block taller than its contents, so what was drawn sat visibly above
+     * the middle of the face while the space it was centred in ran off the bottom. Height is
+     * summed from what is actually drawn. */
     if (!bank) bankPx = 0;
     if (!holder) holdPx = 0;
-    var gap = numPx * 0.52;
-    var gaps = (bankPx ? gap : 0) + (holdPx ? gap : 0);
-    var blockH = bankPx + numPx + holdPx + gaps;
+    var gap = bankPx * 0.52;
+    var blockH = bankPx + holdPx + (bankPx && holdPx ? gap : 0);
     var room = D * 0.84;
     if (blockH > room) {
       var k = room / blockH;
-      bankPx *= k; numPx *= k; holdPx *= k; gap *= k;
-      gaps = (bankPx ? gap : 0) + (holdPx ? gap : 0);
-      blockH = bankPx + numPx + holdPx + gaps;
+      bankPx *= k; holdPx *= k; gap *= k;
+      blockH = bankPx + holdPx + (bankPx && holdPx ? gap : 0);
     }
 
     var top = R - blockH / 2;
     var bankY = top + bankPx * 0.5;
-    var numY = top + bankPx + (bankPx ? gap : 0) + numPx * 0.5;
-    var holdY = numY + numPx * 0.5 + gap + holdPx * 0.5;
+    var holdY = top + bankPx + gap + holdPx * 0.5;
 
     if (bank) {
       emboss(g, bank, R, bankY, fitChord(g, bank, bankY, R, f.Rd, bankPx, capTrack),
-             "600", pal.faceDim, 0.03, capTrack);
+             "600", pal.faceInk, 0.042, capTrack);
     }
-    emboss(g, acct, R, numY, fitChord(g, acct, numY, R, f.Rd, numPx, TRACK),
-           "600", pal.faceInk, 0.042, TRACK);
     if (holder) {
       emboss(g, holder, R, holdY, fitChord(g, holder, holdY, R, f.Rd, holdPx, capTrack),
              "600", pal.faceDim, 0.03, capTrack);
@@ -952,7 +951,7 @@ self.QRArt = (function () {
     if (b.lensOn) lensRim(g, size, b.coinPx, f, pal);
 
     return { size: cssSize, deviceSize: size, coinPx: b.coinPx, palette: pal,
-             acct: acct, bank: bank, holder: holder, plate: true };
+             bank: bank, holder: holder, plate: true };
   }
 
   /* ----------------------------------------------------------------- the card */

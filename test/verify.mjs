@@ -1106,6 +1106,24 @@ section("2. The bundle carries the codes and nothing else");
   const body = plateFn.slice(0, plateFn.indexOf("\n  function ", 10));
   ok("the code-less face draws no DuitNow mark",
     !/DuitNowMark|drawMark\(/.test(body), "drawPlate reaches for the mark");
+
+  /* NO FACE DRAWS THE ACCOUNT NUMBER, and this is the last one that did. Taking it off the
+   * coin's reverse and leaving it here would have made one account the odd one out: twelve that
+   * never show a number and one that does. The number reaches a banking app through the
+   * clipboard without ever being displayed. */
+  // Comments stripped, for the same reason the mark check strips them: the note explaining why
+  // the number is not read names the field, and a guard that trips on its own explanation is a
+  // guard nobody can document.
+  const plateCode = body.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  ok("the code-less face does not draw the account number either",
+    !/\bacct\b/.test(plateCode), "drawPlate still reads acct");
+  {
+    const src = read(path.join(PUB, "app.js"));
+    ok("nothing in the app hands an account number to a renderer",
+      !/acct: a\.acct/.test(src), "a paint call still passes acct");
+    ok("a screen reader is not read the number that the screen does not show",
+      !/aria-label", a\.name \+ ", account " \+ a\.acct/.test(src));
+  }
   ok("the code-less face is drawn by the shared struck face, not a second drawing of one",
     /struckFace\(/.test(body) && /function struckFace\(/.test(art));
 }
@@ -1117,7 +1135,7 @@ section("2. The bundle carries the codes and nothing else");
   const c = plates[0];
   const cv = createCanvas(8, 8);
   const meta = QRArt.drawPlate(cv, { size: 700, pixelRatio: 1, brand: c.brand, label: c.name,
-    seed: c.key, acct: c.acct, bank: c.bank, holder: c.holder });
+    seed: c.key, bank: c.bank, holder: c.holder });
   const g = cv.getContext("2d");
   const corners = [[2, 2], [cv.width - 3, 2], [2, cv.height - 3], [cv.width - 3, cv.height - 3]];
   const opaque = corners.filter(([x, y]) => g.getImageData(x, y, 1, 1).data[3] > 8);
@@ -1129,7 +1147,7 @@ section("2. The bundle carries the codes and nothing else");
   const shot = () => {
     const x = createCanvas(8, 8);
     QRArt.drawPlate(x, { size: 300, pixelRatio: 1, brand: c.brand, label: c.name, seed: c.key,
-      acct: c.acct, bank: c.bank, holder: c.holder });
+      bank: c.bank, holder: c.holder });
     return crypto.createHash("sha256").update(Buffer.from(
       x.getContext("2d").getImageData(0, 0, 300, 300).data)).digest("hex");
   };

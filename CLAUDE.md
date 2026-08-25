@@ -40,8 +40,8 @@ Nothing else is shown and nothing else is shipped.
 
    **`holder` EXISTS, IS EMPTY, AND STAYS EMPTY UNLESS SOMEBODY TYPES A NAME.** Added 25 Aug
    2026 for accounts with no DuitNow code, which are paid by naming the bank, the number and the
-   person. **The owner's decision, the same day, was bank and number only**, so no account sets
-   it and no legal name is published. The build prints that on every run, because "no name is
+   person. **The owner's decision, the same day, was that no name is published**, so no account
+   sets it and none ever appears on the page. The build prints that on every run, because "no name is
    published" is exactly the kind of fact that stops being true quietly.
 
    **IT IS NEVER DERIVED, and that is the load-bearing part.** The first version resolved it
@@ -239,16 +239,31 @@ contract, so it had to be made in `store.js` and `serve.py` together.** They are
 implementations of one rule with nothing asserting they agree, and they have drifted before;
 the two were checked against seven documents, message for message, after the change.
 
-**One face, not two.** `drawPlate()` draws the same struck coin with up to three inscriptions in
-the order somebody filling in a transfer needs them: the bank, the number, and the name if one
-is set, which today it is not. The provider is already around the rim so it is not repeated.
-There is nothing to turn over to, so the flip control is hidden rather than disabled: a greyed
-control invites a second tap and then explains nothing.
+**One face, and it carries the BANK, not the number.** `drawPlate()` draws the same struck coin
+inscribed with the bank it is held at, and the holder underneath if one is ever set, which today
+it is not. The provider is already around the rim so it is not repeated.
+
+**THE NUMBER IS NOT DRAWN HERE EITHER, and `acct` is deliberately not read by `drawPlate`.** It
+used to be the largest thing on this face. Once the coin's reverse stopped showing a number,
+leaving it on this one would have made a single account the odd one out: twelve that never show
+a number and one that does, which reads as an oversight rather than a decision. The number
+reaches a banking app through `Copy account number` without being displayed, so the face carries
+what you cannot copy instead: the bank, which somebody filling in a transfer has to read and
+type themselves. Owner's decision, 25 Aug 2026. The suite reads `drawPlate`'s body with comments
+stripped and fails if it so much as mentions `acct`.
+
+**The bank is therefore the PRIMARY inscription** rather than a caption over a number, and it is
+sized as one. Bank names run long, so it starts generously and is fitted to its chord, which is
+what stops "JPMORGAN CHASE BANK BERHAD" running over the rim legend.
+
+**The screen reader is not told the number either.** A label describes what is drawn, and out
+loud is the last place you want an account number in a room with other people. The button says
+how to get it.
 
 **Only the lines that exist take up room.** Counting the holder's height when there is no holder
-made the block taller than its contents, so the two remaining lines sat visibly above the middle
-of the face while the space they were centred in ran off the bottom. The height is summed from
-what is actually drawn, gaps included.
+made the block taller than its contents, so what was drawn sat visibly above the middle of the
+face while the space it was centred in ran off the bottom. The height is summed from what is
+actually drawn, gaps included.
 
 **NO DUITNOW MARK, and that is a rule rather than an oversight.** The mark is PayNet's and it
 says a DuitNow code is present. These accounts have none, so putting their artwork on one would

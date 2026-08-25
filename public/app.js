@@ -180,9 +180,10 @@
   function plate(a) { return !!a && !a.payload; }
 
   function paintFace(canvas, a, extra) {
+    // `acct` is deliberately NOT passed: the number is not drawn on any face, here or anywhere.
     return plate(a)
       ? self.QRArt.drawPlate(canvas, artFor(a, Object.assign(
-          { acct: a.acct, bank: a.bank, holder: a.holder }, extra)))
+          { bank: a.bank, holder: a.holder }, extra)))
       : self.QRArt.draw(canvas, a.payload, artFor(a, extra));
   }
 
@@ -319,12 +320,16 @@
     // meta.plain, not the local flag: the renderer drops to the plain code by itself when the
     // screen is too small to draw a coin anyone could scan, and the page must follow it.
     if (plate(a)) {
-      // The holder is usually absent, and a screen reader must not announce a trailing
-      // "in the name of" with nothing after it.
-      elCoin.setAttribute("aria-label", a.name + ", account " + a.acct + " at " + a.bank +
+      /* THE LABEL DESCRIBES WHAT IS DRAWN, and the number is not. Reading it aloud would put it
+       * back on the one output we had just taken it off, and out loud is the last place you want
+       * an account number in a room with other people. The button says how to get it.
+       *
+       * The holder is usually absent, and a screen reader must not announce a trailing "in the
+       * name of" with nothing after it. */
+      elCoin.setAttribute("aria-label", a.name + ", held at " + a.bank +
         (a.holder ? ", in the name of " + a.holder : ""));
       elBtn.setAttribute("aria-label",
-        a.name + ", account " + a.acct + " at " + a.bank + ". Tap to copy the number.");
+        a.name + ", held at " + a.bank + ". Tap to copy the account number.");
     } else {
       elCoin.setAttribute("aria-label", a.name + " payment code");
       elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");
