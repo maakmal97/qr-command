@@ -804,7 +804,15 @@ self.QRArt = (function () {
    *
    * Leaves the context TRANSLATED into the coin and saved; the caller inscribes, then restores
    * and draws the rim glow. */
-  function struckFace(g, size, opts, pal) {
+  /* `rimPal` colours the BODY, which is the part that shows as a ring around the inner face, and
+   * the legend struck into it. It defaults to the coin's own palette, so a coin is one colour
+   * unless somebody asks for two.
+   *
+   * The rim's lettering is measured against the RIM, and the face's inscriptions against the
+   * FACE, which is the whole reason this takes two palettes rather than one colour: pick the
+   * legend's ink from the face's palette and a light ring gets light lettering on it. */
+  function struckFace(g, size, opts, pal, rimPal) {
+    rimPal = rimPal || pal;
     var lensOn = opts.lens && !opts.decorative;
     var lopts = lensOn ? Object.assign({}, opts, { scallop: 0 }) : opts;
     var coinPx = lensOn ? Math.round(size * opts.lensScale) : size;
@@ -820,18 +828,18 @@ self.QRArt = (function () {
     g.save();
     g.translate(off, off);
 
-    // The body, struck from the same die as the front.
+    // The body, struck from the same die as the front. It is what shows as the ring.
     var lg = g.createLinearGradient(0, 0, coinPx, coinPx);
-    lg.addColorStop(0, pal.brandSink);
-    lg.addColorStop(0.42, pal.brandLift);
-    lg.addColorStop(0.62, pal.brand);
-    lg.addColorStop(1, pal.brandSink);
-    g.fillStyle = opts.sheen ? lg : pal.brand;
+    lg.addColorStop(0, rimPal.brandSink);
+    lg.addColorStop(0.42, rimPal.brandLift);
+    lg.addColorStop(0.62, rimPal.brand);
+    lg.addColorStop(1, rimPal.brandSink);
+    g.fillStyle = opts.sheen ? lg : rimPal.brand;
     if (lopts.scallop > 0) scallopPath(g, R, R, f.Rbase, R, lobes, phase);
     else { g.beginPath(); g.arc(R, R, R, 0, Math.PI * 2); }
     g.fill();
 
-    if (opts.legend) rimLegend(g, R, R, f.Rd + f.ring * 0.52, opts.label, pal, f.ring * 0.46);
+    if (opts.legend) rimLegend(g, R, R, f.Rd + f.ring * 0.52, opts.label, rimPal, f.ring * 0.46);
 
     g.strokeStyle = "rgba(0,0,0,0.20)";
     g.lineWidth = Math.max(1, f.ring * 0.055);
@@ -962,7 +970,13 @@ self.QRArt = (function () {
     g.clearRect(0, 0, size, size);
 
     var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
-    var b = struckFace(g, size, opts, pal);
+    /* TWO COLOURS, and the ring is the second. `brand` strikes the face and everything inscribed
+     * on it; `ring` strikes the band around it and the legend struck into that band. It exists
+     * because this account is two brands at once: held at one bank, received by another, and the
+     * coin can say so without a word. Absent, the ring is the brand and the coin is one colour,
+     * which is every other account. */
+    var rimPal = opts.ring ? palette(opts.ring, opts.minContrast) : pal;
+    var b = struckFace(g, size, opts, pal, rimPal);
     var f = b.f, R = b.R, D = b.D;
 
     var bank = String(opts.bank || "").trim().toUpperCase();

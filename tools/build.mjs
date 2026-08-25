@@ -54,7 +54,7 @@ const MASTER = process.env.QR_MASTER ||
  * visible effects. That is deliberate and there is exactly one such account: a tagged account is
  * a featured one, and a featured one is not sharing its row. */
 const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder",
-              "bankMark", "holderMark", "tag"];
+              "bankMark", "holderMark", "tag", "ring"];
 
 const die = (m) => { console.error("\nbuild failed: " + m + "\n"); process.exit(1); };
 const read = (p) => fs.readFileSync(p, "utf8");
@@ -168,6 +168,13 @@ function sanitise(doc, V) {
     // Normalised to a real string for the same reason maintenance is a real boolean: a field
     // present on some records and missing from others is one the phone has to guess about.
     rec.tag = String(a.tag || "").trim();
+    /* The optional SECOND colour, which strikes the ring around the face while `brand` strikes
+     * the face itself. Validated here as well as by the master, because the coin is drawn from
+     * it and a bad colour is a coin nobody can read rather than a document nobody can save. */
+    rec.ring = String(a.ring || "").trim();
+    if (rec.ring && !/^#[0-9a-fA-F]{6}$/.test(rec.ring)) {
+      die(where + " has ring " + JSON.stringify(rec.ring) + ", which is not a 6-digit hex");
+    }
     rec.acct = typeof a.sub === "string" ? a.sub.trim() : "";
     if (!rec.acct) die(where + " has no account number, and the back of the coin needs one");
 

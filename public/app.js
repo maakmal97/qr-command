@@ -187,7 +187,7 @@
     // `acct` is deliberately NOT passed: the number is not drawn on any face, here or anywhere.
     return plate(a)
       ? self.QRArt.drawPlate(canvas, artFor(a, Object.assign(
-          { bank: a.bank, holder: a.holder,
+          { bank: a.bank, holder: a.holder, ring: a.ring,
             bankMark: markOf(a.bankMark), holderMark: markOf(a.holderMark) }, extra)))
       : self.QRArt.draw(canvas, a.payload, artFor(a, extra));
   }

@@ -26,9 +26,9 @@ Nothing else is shown and nothing else is shipped.
    drifted. A third copy here would be the same mistake again, and a first attempt at one
    rejected all thirteen live payloads over a prefix it had guessed wrong. If the master moves,
    the build fails loudly rather than falling back to a guess.
-4. **The bundle carries eleven fields per account and no more:** `key`, `name`, `brand`,
-   `payload`, `acct`, `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`, `tag`. The
-   owner, the group and the DuitNow member number stay on the laptop. The build reads `public/` back and searches it for every
+4. **The bundle carries twelve fields per account and no more:** `key`, `name`, `brand`,
+   `payload`, `acct`, `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`, `tag`, `ring`.
+   The owner, the group and the DuitNow member number stay on the laptop. The build reads `public/` back and searches it for every
    dropped value; the suite repeats the search, and also asserts the other way, that every
    account number IS there, so a feature cannot vanish silently either. Adding a field means
    adding it to `SHIP` in `tools/build.mjs` deliberately, in one place, where it is visible.
@@ -287,6 +287,23 @@ at a glance instead of four lines of legal name. The brands stay unambiguous, th
 JPMORGAN CHASE, and the full names remain in the coin's accessibility label, which is where a
 logo's text alternative belongs anyway. A row with no traced mark still draws its name, so a bank
 without a logo is not a blank space.
+
+**TWO COLOURS, AND THE RING IS THE SECOND.** `brand` strikes the face and everything inscribed
+on it; `ring` strikes the band around it and the legend struck into that band. It exists because
+this account is two brands at once, held at one bank and received by another, and the coin can
+say so without a word: JPMorgan blue face, Wise green ring (owner, 26 Aug 2026). Absent, the ring
+is the brand and the coin is one colour, which is every other account.
+
+**The two palettes are not decoration, they are what keeps the lettering readable.** The rim's
+legend is measured against the RIM and the face's inscriptions against the FACE, which is why
+`struckFace` takes two palettes rather than one colour. It paid for itself immediately: the blue
+face is dark, so `palette()` flipped its inscriptions to light on its own, while the green ring
+kept dark lettering. Pick either from the wrong palette and half the coin goes unreadable.
+Asserted from the PIXELS, because a palette handed to the wrong call reads perfectly well as code.
+
+**`ring` is validated in BOTH master validators**, like `brand`. A colour is presentational, but
+`store.js` and `serve.py` are one contract and letting them diverge on a field is how they came
+to differ in ten places before. Re-checked against nine documents after the change, word for word.
 
 **MARKS ARE MATCHED ON WIDTH, NOT HEIGHT**, which falls out of the circle rather than being a
 preference: the cap is set high and the chord limits both to the same width, so two wordmarks of

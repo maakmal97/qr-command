@@ -545,7 +545,7 @@ section("2. The bundle carries the codes and nothing else");
 
 {
   const SHIP = ["acct", "bank", "bankMark", "brand", "holder", "holderMark", "key",
-                "maintenance", "name", "payload", "tag"];
+                "maintenance", "name", "payload", "ring", "tag"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
   ok("every shipped record has exactly key, name, brand, payload, acct, maintenance, bank, " +
      "holder, bankMark, holderMark",
@@ -1243,6 +1243,32 @@ section("2. The bundle carries the codes and nothing else");
   const corners = [[2, 2], [cv.width - 3, 2], [2, cv.height - 3], [cv.width - 3, cv.height - 3]];
   const opaque = corners.filter(([x, y]) => g.getImageData(x, y, 1, 1).data[3] > 8);
   ok("the code-less face draws, at the size the app asks for", meta.size === 700 && cv.width === 700);
+
+  /* TWO COLOURS, AND THE RIGHT ONE IN EACH PLACE. `brand` strikes the face, `ring` strikes the
+   * band around it. Asserted from the PIXELS rather than from the source, because the failure
+   * mode is a palette handed to the wrong call, which reads perfectly well as code. */
+  {
+    const two = createCanvas(8, 8);
+    QRArt.drawPlate(two, { size: 700, pixelRatio: 1, brand: "#117ACA", ring: "#9FE870",
+      label: c.name, seed: c.key, bank: c.bank, holder: c.holder });
+    const tg = two.getContext("2d");
+    const at = (x, y) => [...tg.getImageData(x, y, 1, 1).data].slice(0, 3);
+    const bluer = (p) => p[2] > p[1] && p[2] > p[0];
+    const greener = (p) => p[1] > p[2] && p[1] > p[0];
+    const face = at(two.width >> 1, two.height >> 1);
+    const band = at(two.width >> 1, Math.round(two.height * 0.135));
+    ok("the face takes the brand colour and the ring takes its own",
+      bluer(face) && greener(band), "face " + face.join(",") + ", ring " + band.join(","));
+
+    // And with no ring the coin is one colour, which is every other account.
+    const one = createCanvas(8, 8);
+    QRArt.drawPlate(one, { size: 700, pixelRatio: 1, brand: "#117ACA",
+      label: c.name, seed: c.key, bank: c.bank, holder: c.holder });
+    const og = one.getContext("2d");
+    const oneBand = [...og.getImageData(one.width >> 1, Math.round(one.height * 0.135), 1, 1).data].slice(0, 3);
+    ok("without a ring the coin is a single colour, as every other account is",
+      bluer(oneBand), oneBand.join(","));
+  }
   ok("the code-less face leaves the canvas transparent outside the artwork", opaque.length === 0);
 
   // Deterministic, for the same reason every other face is: the thumbnail and the full-size
