@@ -755,49 +755,21 @@ self.QRArt = (function () {
     };
   }
 
-  /* ------------------------------------------------------------- the reverse */
+  /* ------------------------------------------------- the struck face, and the plate */
 
-  /* The other face of the coin: solid struck metal, with the DuitNow name and the account
-   * number embossed into it.
+  /* THE COIN HAS ONE SIDE. It used to have a reverse: struck metal carrying PayNet's brand
+   * graphic and the account number, reached by turning the coin over. Copying the number
+   * therefore meant putting it on screen first.
    *
-   * There is no QR here, so nothing needs a light field or a quiet zone, and the face can be
-   * the brand metal itself rather than paper. That is what makes it read as the back of the
-   * same object: identical silhouette, identical rim, and a surface you could only get by
-   * turning it over.
+   * `Copy account number` puts it straight on the clipboard instead, so it never has to be
+   * displayed at all, and that left the reverse with nothing to carry. drawBack, drawMark and
+   * the vendored DuitNow artwork went with it, on the owner's decision of 25 Aug 2026. The
+   * mark in particular is not something to keep lying around unused: it is PayNet's, its use
+   * is governed, and a copy of it in the bundle that nothing draws is a compliance surface
+   * with no benefit. tools/mark.mjs, which generated it, is gone for the same reason.
    *
-   * "DuitNow" is set as a WORDMARK, not as the official logo. The master carries no DuitNow
-   * artwork, and drawing a trademark from memory would get it subtly wrong; a clean wordmark
-   * says the same thing honestly. Drop the official asset into the master and this is the one
-   * function that needs to change. */
-  /* The official mark, filled from its own path data at its own aspect ratio. No outline, no
-   * shadow, no rotation, no stretch: the scale is uniform and the colour is one of the two the
-   * pack ships. Everything here is deliberately dull, because the guidelines leave no room for
-   * anything else. */
-  function mark_clearRatio(mark) {
-    // 1.5X, where X is the height of the letter D in the logotype. Measured from the official
-    // artwork when the mark was vendored, not estimated here.
-    return (mark && mark.clearRatio) || 0.249;
-  }
-
-  function drawMark(g, mark, x, y, w, h) {
-    var P = (typeof Path2D !== "undefined") ? Path2D
-          : (typeof self !== "undefined" && self.Path2D) ? self.Path2D : null;
-    if (!P) return false;
-    var sx = w / (mark.viewBox[2] - mark.viewBox[0]);
-    var sy = h / (mark.viewBox[3] - mark.viewBox[1]);
-    g.save();
-    g.translate(x, y);
-    g.scale(sx, sy);
-    g.translate(-mark.viewBox[0], -mark.viewBox[1]);
-    // Each path in the colour the official file gives it, in the order it gives them: white
-    // container first, then the ruby logomark, then the black logotype over the top.
-    for (var i = 0; i < mark.paths.length; i++) {
-      g.fillStyle = mark.paths[i].fill;
-      g.fill(new P(mark.paths[i].d));
-    }
-    g.restore();
-    return true;
-  }
+   * What survives is struckFace, because an account with NO DuitNow code still draws one:
+   * see drawPlate. */
 
   function emboss(g, text, cx, cy, px, weight, ink, depth, track) {
     g.font = weight + " " + px.toFixed(1) + "px " + FONT;
@@ -894,175 +866,6 @@ self.QRArt = (function () {
     var w = g.measureText(text).width;
     if ("letterSpacing" in g) g.letterSpacing = "0px";
     return w > room ? px * (room / w) : px;
-  }
-
-  function drawBack(canvas, opts) {
-    opts = Object.assign({}, DEFAULTS, opts || {});
-    var cssSize = Math.max(64, Math.round(opts.size || 512));
-    var dpr = opts.pixelRatio || 1;
-    var size = Math.max(opts.minDevice || 0, Math.round(cssSize * dpr));
-
-    canvas.width = size;
-    canvas.height = size;
-    var g = canvas.getContext("2d");
-    g.clearRect(0, 0, size, size);
-
-    var pal = palette(opts.brand || "#5a5a5a", opts.minContrast);
-
-    var b = struckFace(g, size, opts, pal);
-    var f = b.f, R = b.R, coinPx = b.coinPx, lensOn = b.lensOn, D = b.D;
-
-    var acct = String(opts.acct || "").trim();
-
-    /* THE OFFICIAL MARK, and everything about how it is drawn is a rule rather than a choice.
-     *
-     * It is filled flat, in one of its own two monochrome colours, at its own aspect ratio,
-     * with 1.5X of clear space kept empty beneath it. It is NOT embossed and carries no shadow,
-     * outline or holding shape, all of which the brand guidelines forbid in as many words. The
-     * account number below IS embossed, because that is our own typography and ours to treat.
-     *
-     * Black or white is chosen by measuring against the face, which is what "use for high
-     * contrast application" asks for: the face is a different brand colour for every account,
-     * gold for one and navy for the next, and a fixed choice would be illegible on half of them.
-     * Choosing between two official variants is not "changing the colour of the logo".
-     *
-     * Below the minimum size the mark is omitted rather than shrunk, because 40 pixels is a
-     * floor in the guidelines and a mark too small to read is worse than none. */
-    /* There is no colour decision to make here, and that is exactly why the container is the
-     * right asset. Inside it the logo sits on its own white, which is a sanctioned combination
-     * whatever the coin's metal happens to be, and the only thing touching the account's colour
-     * is PayNet's own shape. Below the minimum width the graphic is omitted rather than shrunk,
-     * because the minimum is a rule and a mark too small to read is worse than none. */
-    var mark = (typeof self !== "undefined" && self.DuitNowMark) || null;
-    var markH = 0, markW = 0;
-    if (mark) {
-      /* 0.32 of the face, not 0.25, and the number comes from the floor rather than the eye.
-       * The lens holds the coin to 0.78 of the canvas, which shrank the container to 58 CSS px
-       * at phone size and tripped the 64px minimum, so the mark vanished from every reverse.
-       * At 0.32 it lands back at the 74 CSS px that was measured and checked before the lens,
-       * with the logo inside it clear of its own 40px floor. */
-      markH = D * 0.32;
-      markW = markH * mark.aspect;
-      // The floor is on the mark as the EYE sees it, so the ratio is device to CSS across the
-      // whole canvas, which already carries the lens scale through coinPx.
-      if (markW * (cssSize / size) < mark.minWidthPx) { markH = 0; markW = 0; }
-    }
-
-    /* The number, laid out to be read.
-     *
-     * One line if it nearly fits, because a number in one piece is easier to check against a
-     * banking app than one in two. If it must break, it breaks at the MOST BALANCED point
-     * rather than in the middle of the group list: splitting by group count left a single
-     * orphan digit on the second line for five of the thirteen, which looks like a mistake.
-     * Balance is measured in rendered width, not in characters, and a tie keeps more on the
-     * first line. */
-    var groups = acct.split(/\s+/).filter(Boolean);
-    /* An inscription rather than a slab. 0.17 of the face at 700 filled the metal edge to edge
-     * and read as a block of mass; struck lettering is smaller than the space it sits in,
-     * lighter than a headline, and tracked open so the eye can go digit by digit, which is what
-     * anyone checking a number against a banking app is actually doing. The grouping already
-     * gives the rhythm, so the tracking only has to separate, not divide. */
-    var TRACK = 0.055;                 // as a fraction of the type size
-    var base = D * 0.125;
-    g.font = "600 " + base + "px " + FONT;
-    if ("letterSpacing" in g) g.letterSpacing = (TRACK * base).toFixed(2) + "px";
-    var room = D * 0.70;
-    var oneLine = g.measureText(acct).width;
-
-    var lines, px;
-    if (groups.length < 2 || oneLine <= room) {
-      lines = [acct];
-      px = base * Math.min(1, room / oneLine);
-    } else {
-      var bestK = 1, bestGap = Infinity, bestWide = Infinity;
-      // measured in the same face it will be drawn in, tracking included
-      for (var k = 1; k < groups.length; k++) {
-        var w1 = g.measureText(groups.slice(0, k).join(" ")).width;
-        var w2 = g.measureText(groups.slice(k).join(" ")).width;
-        var gap = Math.abs(w1 - w2), wide = Math.max(w1, w2);
-        if (gap < bestGap - 0.5 || (Math.abs(gap - bestGap) <= 0.5 && w1 > w2)) {
-          bestGap = gap; bestK = k; bestWide = wide;
-        }
-      }
-      lines = [groups.slice(0, bestK).join(" "), groups.slice(bestK).join(" ")];
-      px = base * Math.min(1, room / bestWide);
-    }
-    var widest = 0;
-    g.font = "600 " + px + "px " + FONT;
-    if ("letterSpacing" in g) g.letterSpacing = (TRACK * px).toFixed(2) + "px";
-    for (var i = 0; i < lines.length; i++) widest = Math.max(widest, g.measureText(lines[i]).width);
-    if (widest > room) px *= room / widest;
-
-    /* THE WHOLE STACK IS LAID OUT AT ONCE and centred in the face, rather than each piece being
-     * placed from the middle and hoping. Positioned piecemeal, the caption drifted down into
-     * the rim legend on every account whose number ran to two lines. Measure the block, centre
-     * it, then draw: the only way the pieces cannot collide is if their heights are added up
-     * before anything is committed. */
-    var clear = markH * mark_clearRatio(mark);        // 1.5X, and nothing may enter it
-    var capPx = D * 0.055;
-    var linesH = px + (lines.length - 1) * px * 1.34;
-    var gap = px * 0.62;
-    var blockH = (markH ? markH + clear : 0) + linesH + gap + capPx;
-
-    /* MEASURING THE BLOCK IS NOT ENOUGH; IT HAS TO BE CHECKED AGAINST THE ROOM.
-     *
-     * Centring a block taller than the face pushes half the overflow out of each end, and what
-     * it runs into at the bottom is the rim legend. That is exactly what happened when the mark
-     * grew to clear its minimum under the lens: the caption landed on the lettering on half the
-     * accounts. Adding the heights up stops the pieces colliding with EACH OTHER; only this
-     * stops them colliding with the coin.
-     *
-     * What shrinks is OUR typography, never PayNet's mark. The mark has a stated minimum size
-     * and no permission to go under it, so if the block still will not fit once the number is
-     * as small as it should ever be, the mark is dropped rather than squeezed. */
-    var room = D * 0.84;
-    if (blockH > room) {
-      var slack = blockH - (markH ? markH + clear : 0);
-      var want = room - (markH ? markH + clear : 0);
-      var k = want / slack;
-      if (k < 0.72) {
-        markH = 0; markW = 0; clear = 0;                 // no room for both: the mark goes
-        k = room / (linesH + gap + capPx);
-      }
-      k = Math.min(1, k);
-      px *= k; capPx *= k; gap *= k;
-      linesH = px + (lines.length - 1) * px * 1.34;
-      g.font = "700 " + px + "px " + FONT;
-      blockH = (markH ? markH + clear : 0) + linesH + gap + capPx;
-    }
-
-    var top = R - blockH / 2;
-    if (markH) {
-      drawMark(g, mark, R - markW / 2, top, markW, markH);
-      top += markH + clear;
-    }
-    for (var k = 0; k < lines.length; k++) {
-      emboss(g, lines[k], R, top + px * 0.5 + k * px * 1.34, px, "600", pal.faceInk, 0.042, TRACK);
-    }
-    top += linesH + gap;
-
-    /* THE FACE IS A CIRCLE, AND THE CAPTION SITS NEAR THE BOTTOM OF IT.
-     *
-     * Everything above measures the block's HEIGHT against the face, which is the right check
-     * for the stack colliding with itself but the wrong one for the caption colliding with the
-     * coin. A circle's width falls away fast towards the rim: at four fifths of the radius down
-     * there is only three fifths of the diameter to write on. Fitted to the flat width instead,
-     * a tracked caption ran straight over the rim legend on most of the book, which is what
-     * happened the moment the number was opened up and the caption widened with it.
-     *
-     * So the caption is fitted to the CHORD at its own height, not to the face's widest point.
-     * Half-chord = sqrt(Rd^2 - y^2), and what gives is the caption's size, which is ours, never
-     * the tracking, which is what makes it legible as an inscription in the first place. */
-    var capY = top + capPx * 0.5;
-    var capTrack = 0.16;
-    capPx = fitChord(g, "ACCOUNT NUMBER", capY, R, f.Rd, capPx, capTrack);
-
-    emboss(g, "ACCOUNT NUMBER", R, capY, capPx, "600", pal.faceDim, 0.03, capTrack);
-
-    g.restore();
-    if (lensOn) lensRim(g, size, coinPx, f, pal);
-
-    return { size: cssSize, deviceSize: size, coinPx: coinPx, palette: pal, acct: acct };
   }
 
   /* ---------------------------------------------------------------- the plate */
@@ -1230,7 +1033,6 @@ self.QRArt = (function () {
   return {
     DEFAULTS: DEFAULTS,
     draw: draw,
-    drawBack: drawBack,
     drawPlate: drawPlate,
     drawCard: drawCard,
     plan: plan,

@@ -75,9 +75,7 @@ function classicScript(file, extra) {
   return scope;
 }
 const qrcode = new Function("return (function(){" + read(path.join(PUB, "qrcode.js")) + "; return qrcode;})();")();
-const markScope = classicScript(path.join(PUB, "duitnow-mark.js"));
-const QRArt = classicScript(path.join(PUB, "qr-art.js"),
-  { qrcode, DuitNowMark: markScope.DuitNowMark }).QRArt;
+const QRArt = classicScript(path.join(PUB, "qr-art.js"), { qrcode }).QRArt;
 const jsQR = classicScript(path.join(HERE, "vendor", "jsqr.js")).jsQR;
 
 function walk(dir) {
@@ -480,44 +478,6 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     ok("the same account draws pixel for pixel the same coin twice", px(c1).equals(px(c2)));
     ok("two accounts get different skies", !px(c1).equals(px(c3)) || shipped[0].brand !== shipped[1].brand);
   }
-
-  /* BOTH FACES ARE ONE OBJECT. If the reverse were left full-bleed it would grow as the coin
-   * turned over, which reads as two pictures swapped rather than one thing rotating. */
-  {
-    const f = createCanvas(8, 8), b = createCanvas(8, 8);
-    const a = shipped[0];
-    const mf = QRArt.draw(f, a.payload, { size: 343, pixelRatio: 3, brand: a.brand, label: a.name, seed: a.key });
-    const mb = QRArt.drawBack(b, { size: 343, pixelRatio: 3, brand: a.brand, label: a.name, seed: a.key, acct: a.acct });
-    ok("the two faces are drawn at the same diameter, so the flip is one object turning",
-      Math.abs(mf.grid.size - mb.coinPx) <= 1, mf.grid.size + " against " + mb.coinPx);
-  }
-
-  /* PayNet's mark has a stated minimum and no permission to go under it. The lens shrank the
-   * coin and took the container below that floor, which silently removed it from every reverse;
-   * the fix raised the mark, which then pushed the caption onto the rim legend. Both directions
-   * are checked here, because each was a real bug. */
-  {
-    const bad = [];
-    for (const a of shipped) {
-      const b = createCanvas(8, 8);
-      QRArt.drawBack(b, { size: 343, pixelRatio: 3, brand: a.brand, label: a.name, seed: a.key, acct: a.acct });
-      const d = b.getContext("2d").getImageData(0, 0, b.width, b.height).data;
-      // PayNet's white container is the only pure white on the reverse. Find it, and check its
-      // width in CSS pixels against the floor the guidelines set for the logo inside it.
-      let minX = b.width, maxX = -1, seen = 0;
-      for (let y = 0; y < b.height; y += 2) for (let x = 0; x < b.width; x += 2) {
-        const i = (y * b.width + x) * 4;
-        if (d[i] > 246 && d[i + 1] > 246 && d[i + 2] > 246 && d[i + 3] > 250) {
-          seen++; if (x < minX) minX = x; if (x > maxX) maxX = x;
-        }
-      }
-      const cssW = (maxX - minX) / 3;
-      if (!seen) bad.push(a.key + ": the mark is missing from the reverse");
-      else if (cssW < markScope.DuitNowMark.minWidthPx) bad.push(a.key + ": container only " + cssW.toFixed(0) + " CSS px");
-    }
-    ok("PayNet's container is on every reverse and clears its minimum width at phone size",
-      bad.length === 0, bad.slice(0, 4).join("; "));
-  }
 }
 
 {
@@ -553,8 +513,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   ok("the build normalises the flag rather than shipping whatever the master had",
     /rec\.maintenance = a\.maintenance === true;/.test(read(path.join(REPO, "tools", "build.mjs"))));
   ok("a suspended account is cleared off the canvas, not merely covered",
-    /if \(down\(a\)\) \{[\s\S]{0,400}?elCoin\.width = 8; elCoin\.height = 8;/.test(appJsSrc) &&
-    /elBackFace\.width = 8; elBackFace\.height = 8;/.test(appJsSrc));
+    /if \(down\(a\)\) \{[\s\S]{0,400}?elCoin\.width = 8; elCoin\.height = 8;/.test(appJsSrc));
   ok("nothing is pre-rendered for a suspended account either",
     /function prerender\(i\) \{[\s\S]{0,40}?if \(down\(CODES\[i\]\)\) return null;/.test(appJsSrc));
   ok("no miniature is drawn for a suspended account", /if \(down\(a\)\) continue;/.test(appJsSrc));
@@ -782,16 +741,16 @@ section("2. The bundle carries the codes and nothing else");
    * save is the only explanation the action ever gets. */
   ok("press and hold saves, which is the gesture phones already teach for keeping a picture",
     /pointerdown/.test(appJs) &&
-    /held = true;[\s\S]{0,200}?if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
-  ok("a tap does the same as the hold on whichever face is up",
-    /if \(swiped\) \{ swiped = false; return; }[\s\S]{0,80}?if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
+    /held = true;[\s\S]{0,200}?save\(\);/.test(appJs));
+  ok("a tap does the same as the hold",
+    /if \(swiped\) \{ swiped = false; return; }[\s\S]{0,80}?save\(\);/.test(appJs));
 
   /* BOTH FACES NAME THEIR OWN TAP. The reverse always said "Tap to copy" and the code side
    * said nothing, so the same gesture read as a feature on one face and a secret on the
    * other. The label is held open rather than timed out, because it describes what is on
    * screen rather than reporting something that just happened. */
-  ok("both faces say what a tap does, and the label does not time out",
-    /say\(plate\(a\) \|\| flipped \? "Tap to copy" : "Tap to save", false\);/.test(appJs) &&
+  ok("the coin says what a tap does, and the label does not time out",
+    /say\(plate\(CODES\[idx\]\) \? "Tap to copy" : "Tap to save", false\);/.test(appJs) &&
     /if \(msg && hold !== false\)/.test(appJs));
   ok("a hold does not then also fire the tap, so one press never saves twice",
     /if \(held\)/.test(appJs));
@@ -818,102 +777,67 @@ section("2. The bundle carries the codes and nothing else");
     !paintsAShadow("\.coinbtn") && !paintsAShadow("\.tiledot"));
   ok("the coin still presses in under a finger", /\.coinbtn:active\{/.test(cssCode));
 
-  /* THE REVERSE. A coin has two faces, so it turns over rather than cross-fading, and the
-   * account number is embossed into struck metal rather than printed on paper. */
-  ok("the coin has two faces and turns over",
-    /id="coin"[^>]*class="coin face"/.test(indexHtml) &&
-    /id="coinback"[^>]*class="coin face back"/.test(indexHtml) &&
-    /transform-style:preserve-3d/.test(cssCode) &&
-    /\.coinbtn\.flipped \.faces\{transform:rotateY\(180deg\)\}/.test(cssCode.replace(/;\}/g, "}")));
-  ok("the reverse is drawn by the same renderer, from the same frame as the front",
-    /function drawBack\(canvas, opts\)/.test(read(path.join(PUB, "qr-art.js"))) &&
-    /function coinFrame\(size, opts\)/.test(read(path.join(PUB, "qr-art.js"))));
-  /* THE OFFICIAL MARK, and the brand guidelines are strict enough that every one of these is a
-   * quoted rule rather than a preference. DuitNow Brand Guidelines v2.0, section 1.1.2, pages
-   * 6, 7 and 19. Getting any of them wrong is a trademark problem, not a taste problem. */
-  {
-    const art = read(path.join(PUB, "qr-art.js"));
-    const markSrc = read(path.join(PUB, "duitnow-mark.js"));
-    const markScope = {};
-    new Function("self", markSrc).call(markScope, markScope);
-    const M = markScope.DuitNowMark;
+  /* ONE FACE, AND THE NUMBER IS NEVER ON SCREEN.
+   *
+   * The coin used to turn over to a reverse carrying PayNet's brand graphic and the account
+   * number, so copying the number meant displaying it first. "Copy account number" puts it
+   * straight on the clipboard, which removed the only reason to turn the coin over, and the
+   * reverse went with it: the second canvas, the preserve-3d wrapper, drawBack, drawMark and
+   * the vendored artwork. Owner's decision, 25 Aug 2026.
+   *
+   * These assert the removal is complete rather than half-done, because a half-removed flip is
+   * a coin that can be rotated to a blank face. */
+  ok("the coin has one face and no flip",
+    /id="coin" class="coin"/.test(indexHtml) &&
+    !/coinback/.test(indexHtml) &&
+    !/transform-style:preserve-3d/.test(cssCode) &&
+    !/backface-visibility/.test(cssCode) &&
+    !/\.flipped/.test(cssCode));
+  ok("nothing in the app still reaches for a reverse or a flip",
+    !/drawBack|paintBack|setFlipped|flipped/.test(appJs));
 
-    ok("the mark is the official artwork, generated from PayNet's own files, never traced",
-      /GENERATED by tools\/mark\.mjs/.test(markSrc) && Array.isArray(M.paths) && M.paths.length === 12 &&
-      /03_DuitNowQR Logo Brand Graphic_CLR\.svg/.test(markSrc) &&
-      fs.existsSync(path.join(REPO, "tools", "mark.mjs")));
+  /* PAYNET'S ARTWORK IS GONE FROM THE BUNDLE, not merely unused. It is their trademark, its use
+   * is governed by their guidelines, and a copy of it shipped to every phone that nothing draws
+   * is a compliance surface with no benefit whatever. The generator went too. */
+  ok("PayNet's mark is not shipped, and nothing left behind can draw one",
+    !fs.existsSync(path.join(PUB, "duitnow-mark.js")) &&
+    !fs.existsSync(path.join(REPO, "src", "vendor", "duitnow-mark.js")) &&
+    !fs.existsSync(path.join(REPO, "tools", "mark.mjs")) &&
+    // Comments stripped: the note explaining WHY the mark went names it, and a guard that
+    // trips on its own explanation is a guard nobody can document.
+    !/DuitNowMark|drawMark|duitnow-mark/.test(
+      read(path.join(PUB, "qr-art.js")).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")) &&
+    !/duitnow-mark/.test(indexHtml));
 
-    /* THE CONTAINER, not the bare mark. The coin's face is a different brand colour for every
-     * account, and dropping a bare logo onto it would break two rules at once: "DO NOT create
-     * unbranded holding shapes for the logo", and the palette rule that the only sanctioned
-     * combinations are white on ruby, white or ruby on black, and black or ruby on white. None
-     * of those is a white logo on Maybank gold. Section 1.4.2 (a) supplies the answer: the
-     * brand graphic is to be used "as a container for the DuitNow/sub-brand logos". */
-    const fillsUsed = [...new Set(M.paths.map((x) => x.fill))].sort();
-    ok("the artwork is the sanctioned container: white ground, ruby logomark, black logotype",
-      fillsUsed.join() === "#000000,#e5005b,#ffffff" &&
-      M.paths[0].fill === "#ffffff");
-    ok("nothing but PayNet's own white touches the account's colour",
-      /paths\[i\]\.fill/.test(art) && !/markInk/.test(art));
-    ok("the page loads the mark before the renderer that draws it",
-      indexHtml.indexOf("duitnow-mark.js") > 0 &&
-      indexHtml.indexOf("duitnow-mark.js") < indexHtml.indexOf("qr-art.js"));
-
-    // "DO NOT use shadows or other effects" and "DO NOT outline the logo".
-    const drawMarkBody = (art.match(/function drawMark\([\s\S]*?\n  \}/) || [""])[0];
-    ok("the mark is filled flat: no shadow, no outline, no effect",
-      /g\.fill\(new P\(/.test(drawMarkBody) &&
-      !/shadow/i.test(drawMarkBody) && !/stroke/i.test(drawMarkBody) &&
-      !/globalAlpha/.test(drawMarkBody));
-    ok("the mark is never passed through emboss(), which the number uses",
-      !/emboss\([^)]*mark/i.test(art));
-
-    // "DO NOT change the colour of the logo": every path keeps the fill the official file gave
-    // it, and the renderer never substitutes one.
-    ok("every path is filled with the colour the official file gives it",
-      /g\.fillStyle = mark\.paths\[i\]\.fill;/.test(art) &&
-      M.paths.every((x) => /^#[0-9a-f]{6}$/.test(x.fill)) &&
-      M.ruby === "#e5005b");
-
-    // "DO NOT stretch the logo": one aspect ratio, taken from the artwork's own viewBox.
-    ok("the mark keeps its own aspect ratio",
-      /markW = markH \* mark\.aspect;/.test(art) &&
-      Math.abs(M.aspect - M.viewBox[2] / M.viewBox[3]) < 1e-4);
-
-    // "Minimum size, digital: 40px width", and clear space of 1.5X all round.
-    /* 40px is the LOGO's minimum, and the logo occupies 164.65 of the container's 256.63 units,
-     * so the container must be at least 62.3px for the logo inside it to clear that floor. */
-    ok("the container's floor is derived from the logo's 40px minimum",
-      M.minWidthPx === 64 && M.minWidthPx >= Math.ceil(40 * 256.63 / 164.65));
-    ok("below that floor the graphic is omitted rather than shrunk",
-      /< mark\.minWidthPx\) \{ markH = 0/.test(art));
-    ok("clear space is kept around the container, and never re-inset inside it",
-      /var clear = markH \* mark_clearRatio\(mark\);/.test(art) &&
-      /top \+= markH \+ clear;/.test(art) && M.clearRatio >= 0.24);
-
-    // The whole face is laid out as one measured stack, after the caption drifted into the rim.
-    ok("the reverse lays its stack out as one measured block, then centres it",
-      /var blockH = \(markH \? markH \+ clear : 0\) \+ linesH \+ gap \+ capPx;/.test(art) &&
-      /var top = R - blockH \/ 2;/.test(art));
-  }
+  /* COPY WITHOUT SHOWING is the whole point of the change, so it is asserted directly: the
+   * button reads the number out of the record and writes it to the clipboard, and no code path
+   * draws it onto a canvas or into the DOM. */
+  ok("the control copies rather than flips, and says so",
+    /id="copybtn" class="pill">Copy account number</.test(indexHtml) &&
+    /elCopy\.addEventListener\("click"/.test(appJs) &&
+    /copyAcct\(\);/.test(appJs));
+  ok("the account number is never drawn or written to the page, only to the clipboard",
+    !/textContent = a\.acct|innerHTML = a\.acct/.test(appJs));
+  ok("a suspended account refuses to hand out its number either",
+    /elCopy\.disabled = true;/.test(appJs) && /if \(down\(a\)\) \{ say\("Under maintenance"\); return; }/.test(appJs));
 
   ok("the number is embossed rather than printed: a shadow, a highlight and a face",
     /function emboss\(/.test(read(path.join(PUB, "qr-art.js"))) &&
     /rgba\(255,255,255,0\.42\)/.test(read(path.join(PUB, "qr-art.js"))));
-  ok("tapping the reverse copies the number, and the front still saves",
-    /if \(flipped\) copyAcct\(\); else save\(\);/.test(appJs));
+  /* The press must not fall through to the coin behind it, or one tap would copy AND save. */
+  ok("the button copies, and the coin saves, and neither does the other's job",
+    /elCopy\.addEventListener\("click"/.test(appJs) &&
+    /e\.stopPropagation\(\);[\s\S]{0,40}?copyAcct\(\);/.test(appJs));
   ok("the digits are copied without the spacing that is only there to be read",
     /a\.acct\.replace\(\/\\s\+\/g, ""\)/.test(appJs));
   ok("copying falls back to execCommand where the clipboard API is refused",
     /navigator\.clipboard\.writeText/.test(appJs) && /execCommand\("copy"\)/.test(appJs));
-  ok("the number is real text for a screen reader, not only pixels on a canvas",
-    /aria-label", a\.name \+ " account number " \+ a\.acct/.test(appJs));
-  /* Unconditionally, not only when there is something to turn back: setFlipped writes the
-   * hint as well as turning the coin, so guarding it left the very first account you open
-   * with no label at all, and "Tap to save" appeared only after a flip and a flip back. */
-  ok("changing account always returns the coin to its front, and always sets the hint",
-    /\n    setFlipped\(false\);/.test(appJs) &&
-    !/if \(flipped\) setFlipped\(false\);/.test(appJs));
+  ok("the copy never depends on the drawing: it reads the record, not a canvas",
+    /var digits = a\.acct\.replace/.test(appJs) && !/getImageData[\s\S]{0,80}acct/.test(appJs));
+  /* Unconditionally, not only on a change of account. When this was conditional the very first
+   * account you opened had no label at all, because nothing had changed yet. */
+  ok("every account arrival writes the hint, not only a change of account",
+    /\n    sayTap\(\);/.test(appJs));
 
   /* The zoom sets its own first frame before the browser can paint the element. Without it the
    * flier is painted once at full size and then snaps small to grow, which is the skipped beat
@@ -1182,8 +1106,8 @@ section("2. The bundle carries the codes and nothing else");
   const body = plateFn.slice(0, plateFn.indexOf("\n  function ", 10));
   ok("the code-less face draws no DuitNow mark",
     !/DuitNowMark|drawMark\(/.test(body), "drawPlate reaches for the mark");
-  ok("the code-less face is still the same struck coin, not a second drawing of one",
-    /struckFace\(/.test(body) && /struckFace\(/.test(art.slice(art.indexOf("function drawBack("))));
+  ok("the code-less face is drawn by the shared struck face, not a second drawing of one",
+    /struckFace\(/.test(body) && /function struckFace\(/.test(art));
 }
 
 /* The plate renders, and obeys the same rule as every other face: nothing opaque outside the
@@ -1219,8 +1143,8 @@ section("2. The bundle carries the codes and nothing else");
   const appJs = read(path.join(PUB, "app.js"));
   ok("a code-less account is detected by its empty payload, in one place",
     /function plate\(a\) \{ return !!a && !a\.payload; }/.test(appJs));
-  ok("the flip control is hidden for an account with only one face",
-    /elFlip\.hidden = plate\(a\);/.test(appJs));
+  ok("every account has the same single control, because every coin has one face",
+    !/elFlip|hidden = plate/.test(appJs));
   ok("a hold or tap on a code-less account copies the number instead of saving nothing",
     /if \(plate\(a\)\) \{ copyAcct\(\); return; }/.test(appJs));
   ok("no card is built for an account with no code",
@@ -1403,7 +1327,7 @@ section("6. One build id, everywhere");
   const buildSrc = read(path.join(REPO, "tools", "build.mjs"));
   const decl = (buildSrc.match(/const sources = \[([\s\S]*?)\n\];/) || [])[1] || "";
   const names = [...decl.matchAll(/\["([^"]+)",/g)].map((m) => m[1]);
-  ok("the hashed bundle is the one build.mjs declares", names.length >= 6 && names.includes("duitnow-mark.js"),
+  ok("the hashed bundle is the one build.mjs declares", names.length >= 5 && names.includes("qr-art.js"),
     names.join(", "));
   /* LF, exactly as the build hashes it. write() normalises CRLF on the way into public/, so
    * hashing a source file raw keys the build id to the line endings of the working tree

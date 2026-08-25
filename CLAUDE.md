@@ -3,10 +3,9 @@
 The payment-QR consolidator, read-only, on the phone. A Cloudflare Worker serving a static
 bundle built from the master at `Code\pay-afif-site`. Two screens: the accounts, which is where
 it opens, and one code drawn on the device as a struck coin held in a gravitational lens: light
-from behind it smeared into arcs, and the one closed Einstein ring. The coin turns over: its reverse is
-struck metal carrying PayNet's own DuitNow QR brand graphic and the account number, struck into
-it, and tapping it copies the number. Each face says what a tap does. Nothing else is shown and
-nothing else is shipped.
+from behind it smeared into arcs, and the one closed Einstein ring. The coin has ONE side: a tap
+saves it, and `Copy account number` puts the number on the clipboard without ever showing it.
+Nothing else is shown and nothing else is shipped.
 
 ## Hard rules
 
@@ -34,7 +33,7 @@ nothing else is shipped.
    account number IS there, so a feature cannot vanish silently either. Adding a field means
    adding it to `SHIP` in `tools/build.mjs` deliberately, in one place, where it is visible.
 
-   `acct` was added on 11 Aug 2026 at the owner's request, for the back of the coin. **It is a
+   `acct` was added on 11 Aug 2026 at the owner's request. **It is a
    real widening of what a stranger with the address can read** and it was made deliberately:
    before it, an account number was recoverable only by decoding a code, and only for six of the
    thirteen; now all thirteen are in the page as text. The build prints that on every run.
@@ -198,62 +197,39 @@ through the middle so the ratio still measures 3. 1.5 satisfied both by a twenti
 which is under a pixel once snapped, and flipped those corners on ten of the thirteen codes;
 1.68 fixed the corners and stretched the middle run to 3.8.
 
-## The reverse, and PayNet's rules
+## The number, and why the coin has one side
 
-The back of the coin carries the account number, struck into the metal, under the DuitNow QR
-mark, and a tap copies it. It copies the DIGITS, `1571 5788 9482` going to the clipboard as
-`157157889482`, because that is what a banking app wants pasted into it; the status line echoes
-the grouped form so the eye can check it.
+**The coin no longer turns over.** It used to: the reverse was struck metal carrying PayNet's
+DuitNow QR brand graphic and the account number embossed into it, and you got at the number by
+flipping the coin, which meant **copying it required putting it on screen first**.
 
-**BOTH FACES NAME THEIR OWN TAP.** The reverse always said "Tap to copy". The code side said
-nothing at all, so the same gesture read as a feature on one face and a secret on the other; it
-now says "Tap to save". The label is held open rather than timed out, because it describes what
-is on screen rather than reporting something that just happened, and it is written by
-`setFlipped()`, which is therefore called unconditionally on arrival rather than only when there
-is a coin to turn back. Guarded, the very first account you opened had no caption at all.
+`Copy account number` puts it straight on the clipboard instead. It copies the DIGITS,
+`1571 5788 9482` going across as `157157889482`, because that is what a banking app wants pasted
+into it. The number never has to be displayed, so it cannot be read over a shoulder or caught in
+a screenshot of the code, and that removed the only reason the coin had a second face. Owner's
+decision, 25 Aug 2026.
 
-**The number is an inscription, not a slab.** At 0.17 of the face in 700 weight it filled the
-metal edge to edge and read as a block of mass. Struck lettering is smaller than the space it
-sits in, lighter than a headline, and tracked open so the eye can go digit by digit, which is
-what anyone checking a number against a banking app is doing: 0.125 of the face, weight 600,
-tracked 0.055 of the type size.
+**WHAT WENT WITH IT, and none of it is coming back by halves.** `drawBack`, `drawMark`, the
+preserve-3d wrapper, the second canvas, `setFlipped`, `paintBack`, and the vendored artwork in
+`src/vendor/duitnow-mark.js` along with `tools/mark.mjs` that generated it. The suite asserts the
+removal is COMPLETE rather than partial, because a half-removed flip is a coin that can be
+rotated to a blank face.
 
-**The caption is fitted to the CHORD it sits on, not to the face's widest point.** Everything
-else measures the block's height, which is the right check for the stack colliding with itself
-and the wrong one for the caption colliding with the coin. A circle's width falls away fast
-towards the rim: at four fifths of the radius down there is only three fifths of the diameter to
-write on. Fitted to the flat width, the tracked caption ran straight over the rim legend on most
-of the book the moment the number was opened up. What gives is the caption's size, which is
-ours, never the tracking, which is what makes it legible as an inscription at all.
+**PayNet's artwork is deleted, not merely unused, and that is the point.** It is their
+trademark, its use is governed by their guidelines, and 8.6 KB of it shipped to every phone that
+nothing draws is a compliance surface with no benefit whatever. Everything the old section here
+recorded about containers, the 40px floor, clear space and the three sanctioned fills was
+correct and is now moot; read it in git if PayNet's mark is ever wanted again, and re-derive it
+rather than half-remembering it.
 
-**The mark is PayNet's artwork, never ours.** `tools/mark.mjs` reads the official SVG out of the
-logo pack in the Vault and writes `src/vendor/duitnow-mark.js`: path data byte for byte, each
-path keeping the fill the official file gives it. Nothing is traced, redrawn or approximated,
-which is the only way to satisfy "use only official logo files provided by PayNet" and still draw
-to a canvas. Rerun it when PayNet issues a new pack; it refuses rather than guessing if the
-artwork has gained a gradient, a mask or a clip path it cannot reproduce faithfully.
+**THE NUMBER IS OUT OF SIGHT, NOT OUT OF THE BUNDLE.** `acct` still ships in `data.js`, because
+a copy has to have something to copy and the phone works with the radio off. Anyone who views
+source still reads every account number, exactly as before. This change is about the screen, and
+saying otherwise would be the wrong kind of comfort.
 
-**It is the brand graphic, the container, not the bare logo, and that is a rule not a taste.**
-The coin's face is a different brand colour for every account, so dropping a bare mark onto it
-breaks two stated rules at once. "DO NOT create unbranded holding shapes for the logo": a plain
-coloured disc with a logo centred on it is exactly that. And the palette page allows only three
-combinations, "White on ruby", "White or/and ruby on black", "Black or/and ruby on white", none
-of which is a white mark on Maybank gold. Section 1.4.2 (a) answers it directly: use the brand
-graphic "as a container for the DuitNow/sub-brand logos". Inside the container the logo sits on
-white, which is sanctioned, and the only thing touching the account's own colour is PayNet's own
-container. This was got wrong first, with the bare 01 logo recoloured to whatever contrasted, so
-the assertions now name the three fills and check nothing else can reach the metal.
-
-**The 40px floor is on the LOGO, so the container's floor is larger.** The logo occupies 164.65
-of the graphic's 256.63 units, so the container must be at least 62.3px for the logo inside it to
-clear the minimum; `minWidthPx` is 64. Below that the mark is omitted rather than shrunk. At a
-343px coin the container lands at 74 CSS px and the logo inside it at 47.5, both clear. The 1.5X
-clear space is already built into the file and must never be re-inset; what is ours to keep is
-the band of undisturbed metal outside it.
-
-The mark is drawn flat. The account number beneath it is embossed, because that is our own
-typography and ours to treat; the mark is not, and "DO NOT use shadows or other effects" is
-explicit.
+**A suspended account refuses to copy too**, and the button is disabled rather than hidden. The
+number may be the one being changed on the laptop, and handing out a stale account number is the
+same failure as showing a stale code.
 
 ## Accounts with no code at all
 
@@ -281,8 +257,7 @@ and fails if it so much as mentions the mark.
 
 **The tap copies rather than saves.** A saved image exists to be scanned out of somebody's photo
 library, and a picture of a number is not that. So `save()` diverts to `copyAcct()`, no card is
-built, and the caption on that face reads "Tap to copy", which is what the reverse of a coin
-already says.
+built, and the caption reads "Tap to copy" rather than "Tap to save".
 
 **`struckFace()` is shared, and that is why.** The reverse of a coin and the single face of a
 code-less account are the same object down to the pixel; only the inscription differs. Drawn
@@ -498,9 +473,7 @@ coin is now rendered to an offscreen canvas before the exit animation starts, so
 | `src/app/qr-art.js` | The coin, and `drawCard` for the gallery. Read the note at the top before touching it. |
 | `src/app/sw.js` | Service worker template. `__BUILD__` and `__SHELL__` are stamped by the build. |
 | `src/vendor/qrcode.js` | The encoder, copied from the master unchanged. |
-| `src/vendor/duitnow-mark.js` | **Generated. Do not edit.** PayNet's brand graphic as path data. |
 | `tools/build.mjs` | Master store in, `public/` out, with the leak check and the disclosure. |
-| `tools/mark.mjs` | Official logo pack in, `duitnow-mark.js` out. Rerun only when PayNet reissues. |
 | `test/verify.mjs` | The whole suite. No network, no browser. |
 | `test/vendor/jsqr.js` | The decoder. **Test only, never shipped.** |
 | `public/` | Build output, committed so the deployed bytes are the reviewed bytes. |

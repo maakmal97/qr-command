@@ -345,7 +345,6 @@ const sources = [
   ["app.js", path.join(APP, "app.js")],
   ["qr-art.js", path.join(APP, "qr-art.js")],
   ["qrcode.js", path.join(REPO, "src", "vendor", "qrcode.js")],
-  ["duitnow-mark.js", path.join(REPO, "src", "vendor", "duitnow-mark.js")],
   ["sw.js", path.join(APP, "sw.js")],
 ];
 
@@ -373,7 +372,7 @@ for (const [, src] of sources) h.update(lf(read(src)));
 h.update(lf(dataBody));
 const BUILD = h.digest("hex").slice(0, 12);
 
-const stamped = ["app.css", "app.js", "qr-art.js", "qrcode.js", "duitnow-mark.js", "data.js"];
+const stamped = ["app.css", "app.js", "qr-art.js", "qrcode.js", "data.js"];
 const SHELL = ["./"].concat(stamped.map((f) => "./" + f + "?v=" + BUILD));
 
 fs.mkdirSync(PUB, { recursive: true });

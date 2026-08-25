@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=0040756be8e7">
+<link rel="stylesheet" href="./app.css?v=fc41a887bca3">
 </head>
 <body class="view-list">
 
@@ -44,11 +44,12 @@
          coin, and repeating it in 28px above was saying the same thing twice. The coin's own
          aria-label still carries it, so nothing is lost to a screen reader. -->
     <div class="coinwrap">
+      <!-- ONE FACE. There was a reverse carrying the account number, reached by turning the coin
+           over, which meant copying the number required showing it first. "Copy account number"
+           puts it on the clipboard without it ever being on screen, which left the reverse with
+           nothing to do. -->
       <button type="button" id="coinbtn" class="coinbtn">
-        <span class="faces" id="faces">
-          <canvas id="coin" class="coin face" role="img" aria-label="Payment code"></canvas>
-          <canvas id="coinback" class="coin face back" role="img" aria-label="Account number"></canvas>
-        </span>
+        <canvas id="coin" class="coin" role="img" aria-label="Payment code"></canvas>
       </button>
       <!-- Shown OVER the coin rather than in place of it. The coin box stays laid out, because
            the zoom measures it and an element inside a display:none view reports a zero rect,
@@ -61,7 +62,7 @@
     <div class="tools">
       <p id="say" class="say" role="status" aria-live="polite"></p>
       <div class="pills">
-        <button type="button" id="flipbtn" class="pill" aria-pressed="false">DuitNow number</button>
+        <button type="button" id="copybtn" class="pill">Copy account number</button>
       </div>
     </div>
   </main>
@@ -71,10 +72,9 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=0040756be8e7"></script>
-<script src="./duitnow-mark.js?v=0040756be8e7"></script>
-<script src="./qr-art.js?v=0040756be8e7"></script>
-<script src="./data.js?v=0040756be8e7"></script>
-<script src="./app.js?v=0040756be8e7"></script>
+<script src="./qrcode.js?v=fc41a887bca3"></script>
+<script src="./qr-art.js?v=fc41a887bca3"></script>
+<script src="./data.js?v=fc41a887bca3"></script>
+<script src="./app.js?v=fc41a887bca3"></script>
 </body>
 </html>

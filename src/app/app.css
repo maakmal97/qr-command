@@ -372,23 +372,10 @@ body.maintenance .pills{opacity:0;pointer-events:none;}
 /* The plain code IS a white square, so it wants its corners rounded. */
 .coinbtn.plainmode .coin{border-radius:14px;}
 
-/* THE TWO FACES. A coin has a front and a back, so it turns over rather than cross-fading.
- *
- * The 3D lives on .faces, and the drop-shadow lives OUTSIDE it, on the button. A filter forces
- * transform-style back to flat on the element that carries it, so a filter on either face would
- * collapse the rotation and show both sides at once. On the button it is applied to whichever
- * face is presently in front, and it is still cast from the alpha, so it follows the scallops. */
-.faces{
-  position:relative;
-  display:block;
-  width:100%;
-  height:100%;
-  transform-style:preserve-3d;
-  transition:transform var(--dur) var(--ease);
-  will-change:transform;
-}
-.coinbtn.flipped .faces{transform:rotateY(180deg);}
-
+/* ONE FACE. The coin used to turn over to a reverse carrying the account number, which needed
+ * a preserve-3d wrapper, two absolutely positioned canvases and backface-visibility on both.
+ * "Copy account number" puts the number on the clipboard without showing it, so there is
+ * nothing on the other side any more and all of that went with it. */
 .coinbtn{
   filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)) drop-shadow(0 0 18px var(--glow,rgba(0,0,0,.4)));
 }
@@ -402,14 +389,6 @@ body.maintenance .pills{opacity:0;pointer-events:none;}
   pointer-events:none;
   image-rendering:auto;
 }
-.face{
-  position:absolute;
-  inset:0;
-  backface-visibility:hidden;
-  -webkit-backface-visibility:hidden;
-}
-.face.back{transform:rotateY(180deg);}
-
 /* Taken off the page and put away. */
 @keyframes tuck{
   0%   {transform:translateY(0) scale(1);}

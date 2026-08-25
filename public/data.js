@@ -146,4 +146,4 @@ self.QR_CODES = [
     "holder": ""
   }
 ];
-self.QR_BUILD = "0040756be8e7";
+self.QR_BUILD = "fc41a887bca3";

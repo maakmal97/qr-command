@@ -31,8 +31,7 @@
   var elSay = document.getElementById("say");
   var elGrid = document.getElementById("grid");
   var elBack = document.getElementById("back");
-  var elBackFace = document.getElementById("coinback");
-  var elFlip = document.getElementById("flipbtn");
+  var elCopy = document.getElementById("copybtn");
   var elList = document.getElementById("accounts");
   var skies = [document.getElementById("sky1"), document.getElementById("sky2")];
   var skyOn = 0;
@@ -86,7 +85,6 @@
   var sayTimer = null;
   var depth = 0;         // how many entries WE pushed, so back is never a guess
   var flier = null;      // the coin in transit, if any
-  var flipped = false;   // showing the reverse, with the account number
 
   /* ------------------------------------------------------------------- storage */
 
@@ -203,22 +201,18 @@
     return { canvas: off, meta: meta };
   }
 
-  /* The reverse is drawn only when it is first needed and then kept, because most openings
-   * never turn the coin over. */
-  var backs = {};
-  function paintBack() {
-    var a = CODES[idx];
-    if (!a || !elBackFace) return;
-    var size = fit();
-    var dpr = self.devicePixelRatio || 1;
-    var key = a.key + "|" + size + "|" + dpr;
-    if (backs.key === key) return;
-    self.QRArt.drawBack(elBackFace, {
-      size: size, pixelRatio: dpr, brand: a.brand, label: a.name, seed: a.key, acct: a.acct
-    });
-    elBackFace.setAttribute("aria-label", a.name + " account number " + a.acct);
-    backs.key = key;
-  }
+  /* THE COIN HAS ONE SIDE. There was a reverse: struck metal carrying the account number, which
+   * you reached by turning the coin over, and copying meant showing the number first.
+   *
+   * The number does not have to be on screen to be useful. "Copy account number" puts it
+   * straight on the clipboard, so it goes from the phone into a banking app without ever being
+   * displayed, read over a shoulder, or caught in a screenshot of the code. That removed the
+   * only reason the coin turned over, so the whole reverse went with it: the second canvas, the
+   * 3D flip, and PayNet's brand graphic, which was there to label a face that no longer exists.
+   *
+   * Owner's decision, 25 Aug 2026. Note what it does NOT do: `acct` still ships in data.js,
+   * because a copy has to have something to copy and the phone works offline. The number is out
+   * of sight, not out of the bundle. */
 
   /* UNDER MAINTENANCE. One reading of one normalised boolean, in one place, and everything that
    * could put a code or a number in front of somebody asks it first.
@@ -300,26 +294,18 @@
        * the panel is a stylesheet away from not being there. */
       elCoin.width = 8; elCoin.height = 8;
       elCoin.getContext("2d").clearRect(0, 0, 8, 8);
-      elBackFace.width = 8; elBackFace.height = 8;
-      elBackFace.getContext("2d").clearRect(0, 0, 8, 8);
-      backs.key = "";
       document.body.classList.add("maintenance");
       elCoin.setAttribute("aria-label", a.name + " is under maintenance and its code is not shown");
       elBtn.setAttribute("aria-label", a.name + " is under maintenance");
-      // The pill is hidden rather than relabelled. The panel already says it, and saying it
-      // twice in two different words is worse than saying it once.
-      elFlip.disabled = true;
+      /* Copying is refused too, and disabled rather than hidden. The number may be the one
+       * being changed on the laptop, and handing out a stale account number is the same failure
+       * as showing a stale code. The panel already explains why, so the button does not. */
+      elCopy.disabled = true;
       say("");
       return { plain: false, fellBack: false, maintenance: true };
     }
     document.body.classList.remove("maintenance");
-    /* A PLATE HAS ONE FACE, so there is nothing to turn it over to. The button is hidden rather
-     * than disabled: a greyed control invites a second tap and then explains nothing, where an
-     * absent one says the choice does not exist here. `.pill` sets no display of its own, so
-     * the UA rule for [hidden] applies and no stylesheet change is needed. */
-    elFlip.hidden = plate(a);
-    elFlip.disabled = false;
-    elFlip.textContent = flipped ? "Show the code" : "DuitNow number";
+    elCopy.disabled = false;
     if (pre && pre.canvas) {
       elCoin.width = pre.canvas.width;
       elCoin.height = pre.canvas.height;
@@ -344,31 +330,14 @@
       elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");
     }
     elBtn.classList.toggle("plainmode", meta.plain);
-    if (flipped) paintBack();
     return meta;
   }
 
-  /* Turning the coin over. The number is real text on the button, not only pixels on a canvas,
-   * so a screen reader can read it and the copy never depends on the drawing. */
-  function setFlipped(on) {
-    var a = CODES[idx];
-    // A plate cannot be turned over; asking for it is a no-op rather than a half-flipped coin.
-    flipped = !!on && !plate(a);
-    if (flipped) paintBack();
-    elBtn.classList.toggle("flipped", flipped);
-    elFlip.setAttribute("aria-pressed", flipped ? "true" : "false");
-    elFlip.textContent = flipped ? "Show the code" : "DuitNow number";
-    if (a && !plate(a)) {
-      elBtn.setAttribute("aria-label", flipped
-        ? a.name + " account number " + a.acct + ". Tap to copy."
-        : a.name + " payment code. Tap to save it to your photos.");
-    }
-    /* EVERY FACE NAMES ITS OWN TAP. The reverse has always said "Tap to copy"; the code side
-     * said nothing at all, so the same gesture read as a feature on one face and a secret on
-     * the other. Held open rather than timed out, because it is a label for what is on screen,
-     * not a report of something that just happened. A plate has a number and no code, so its
-     * tap is the reverse's tap. */
-    say(plate(a) || flipped ? "Tap to copy" : "Tap to save", false);
+  /* THE COIN NAMES ITS OWN TAP, and the label is held open rather than timed out, because it
+   * describes what is on screen rather than reporting something that just happened. A plate has
+   * no code to save, so its tap copies instead; see save(). */
+  function sayTap() {
+    say(plate(CODES[idx]) ? "Tap to copy" : "Tap to save", false);
   }
 
   /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
@@ -560,13 +529,9 @@
     for (var k = 0; k < tiles.length; k++) {
       tiles[k].setAttribute("aria-current", k === idx ? "true" : "false");
     }
-    /* A different account always arrives face up. Its number is not the one just on screen.
-     *
-     * setFlipped writes the hint as well as turning the coin, so it is called unconditionally
-     * rather than only when there is something to turn back: called only on a change, the very
-     * first account you open has no hint at all, and the label appeared only after a flip and a
-     * flip back. It is idempotent, so calling it when nothing moves costs a class toggle. */
-    setFlipped(false);
+    /* Written unconditionally on arrival, never only on a change. When this was conditional the
+     * very first account you opened had no caption at all, because nothing had changed yet. */
+    sayTap();
     paint(pre);
     remember("last", a.key);
     // A plate has no code, so there is no card to build and nothing to keep warm for a save.
@@ -801,7 +766,7 @@
       holdTimer = setTimeout(function () {
         if (moved) return;
         held = true;
-        if (flipped) copyAcct(); else save();
+        save();
       }, HOLD_MS);
     }
     function endHold() { clearTimeout(holdTimer); }
@@ -817,12 +782,16 @@
     elBtn.addEventListener("click", function (e) {
       if (held) { held = false; e.preventDefault(); return; }   // the hold already acted
       if (swiped) { swiped = false; return; }                   // a swipe is not a tap
-      if (flipped) copyAcct(); else save();
+      save();
     });
 
-    elFlip.addEventListener("click", function (e) {
+    /* COPY WITHOUT SHOWING. The number never reaches the screen: it goes from the record
+     * straight to the clipboard, so it cannot be read over a shoulder or caught in a
+     * screenshot of the code. stopPropagation keeps the press off the coin behind it, which
+     * would otherwise also fire a save. */
+    elCopy.addEventListener("click", function (e) {
       e.stopPropagation();
-      setFlipped(!flipped);
+      copyAcct();
     });
 
     document.addEventListener("keydown", function (e) {
@@ -832,8 +801,8 @@
       if (!onCode) return;
       if (e.key === "ArrowRight") { step(idx + 1, 1); e.preventDefault(); }
       else if (e.key === "ArrowLeft") { step(idx - 1, -1); e.preventDefault(); }
-      else if (e.key === "s" || e.key === "Enter") { if (flipped) copyAcct(); else save(); e.preventDefault(); }
-      else if (e.key === "d" || e.key === "c") { setFlipped(!flipped); e.preventDefault(); }
+      else if (e.key === "s" || e.key === "Enter") { save(); e.preventDefault(); }
+      else if (e.key === "d" || e.key === "c") { copyAcct(); e.preventDefault(); }
     });
 
     /* Swipe across the code to step. A swipe must never also register as a tap, or every swipe

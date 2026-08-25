@@ -27,10 +27,10 @@ back gesture; whichever account you came from is scrolled back into view for you
 |---|---|
 | **Save the code to your photos** | **Tap it**, or press and hold, the same way you would keep any picture on a phone. The caption under the coin says **Tap to save** so you never have to guess. The coin dips as it goes. On iPhone the share sheet offers Save Image; elsewhere it downloads. |
 | Next or previous | Swipe left and right across the code. A swipe never counts as a tap, so changing code cannot save one by accident. |
-| **The account number** | Press **DuitNow number** and the coin turns over. Its back is struck metal with the number struck into it, and the caption changes to **Tap to copy**. Digits only, ready to paste into a banking app. Changing account always turns it back to the code. |
-| **An account with no code** | Some accounts have no DuitNow code and are paid by typing the details in. Those show one face instead of two, with the bank and the number struck into the metal, ready to read out or copy. There is nothing to turn over to and nothing to save, so a tap copies the number. |
+| **The account number** | Press **Copy account number**. It goes straight to your clipboard, digits only, ready to paste into a banking app. **It is never put on screen**, so it cannot be read over your shoulder or end up in a screenshot of the code. An account under maintenance will not hand it out either. |
+| **An account with no code** | Some accounts have no DuitNow code and are paid by typing the details in. Those show the bank and the number struck into the metal, ready to read out. There is no code to save, so a tap copies the number instead, and the caption says so. |
 | Under maintenance | An account being changed on the laptop shows **Under maintenance** and no code at all. Flip it from the local page; the phone follows within seconds. |
-| Keyboard | Left and right arrows step through, `Enter` or `S` does whatever a tap would, `D` or `C` turns the coin over, `Esc` goes back. |
+| Keyboard | Left and right arrows step through, `Enter` or `S` does whatever a tap would, `C` copies the account number, `Esc` goes back. |
 | One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
 
 There is no plain-code button any more. The renderer drops to an ordinary black-and-white
@@ -75,10 +75,11 @@ your codes. That is a considered decision, not an oversight: a DuitNow code can 
 
 Two things follow, and the second is the one worth knowing:
 
-- The page prints the provider name, the code, and **your account number on the back of the
-  coin**, which you asked for so a number can be copied and sent to somebody. That last one is a
-  real widening: before it, an account number could only be got at by decoding a code, and only
-  for six of the thirteen. Now all thirteen are readable as text by anyone who opens the site.
+- The page prints the provider name and the code. Your account numbers are **no longer shown on
+  screen** anywhere, but they are still IN the page: they have to be, or Copy account number
+  would have nothing to copy and the app would stop working with the radio off. So anyone who
+  views the page source still reads every one of them, exactly as before. Taking the number off
+  the coin is about who can see it over your shoulder, not about who can find it.
 - **Your legal name is still not printed anywhere.** The account with no code shows the bank and
   the number only, which was your call on 25 August 2026. There is a field for a name and it is
   deliberately empty; it is never filled in from your owner record, so a name can only ever get
@@ -121,13 +122,12 @@ has already taught you for keeping any picture. Press and hold. The coin dips as
 is the only explanation the action ever needs, and a tap does the same for anyone whose instinct
 runs that way.
 
-**The back is the same coin, turned over.** It carries the DuitNow QR mark and your account
-number struck into the metal, and a tap copies it. The mark is PayNet's own artwork,
-taken path for path out of the official logo pack rather than traced, and it is the version of
-it PayNet supplies as a container, on white, because the coin behind it is a different colour
-for every provider and their guidelines allow the logo on only three backgrounds. Nothing but
-their own white touches the provider's colour. The number underneath it is embossed; the mark
-is left flat, which is what they ask for.
+**The coin has one side.** It used to turn over to a back carrying PayNet's DuitNow mark and
+your account number struck into the metal, which meant that copying the number began by putting
+it on screen. **Copy account number** does it without that, so the number goes from the page to
+your clipboard having never been visible, and the reverse had nothing left to do. PayNet's
+artwork went with it rather than being left in the bundle unused: it is their trademark, its use
+is governed, and shipping a copy of it that nothing draws is a liability with no upside.
 
 It is decoration over an exact code, never a redrawing of one. Every module sits at its precise
 grid position; only the shape, the colour and the frame change, and a decoder samples none of
