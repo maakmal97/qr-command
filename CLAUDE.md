@@ -291,14 +291,23 @@ without a logo is not a blank space.
 **TWO COLOURS, AND THE RING IS THE SECOND.** `brand` strikes the face and everything inscribed
 on it; `ring` strikes the band around it and the legend struck into that band. It exists because
 this account is two brands at once, held at one bank and received by another, and the coin can
-say so without a word: JPMorgan blue face, Wise green ring (owner, 26 Aug 2026). Absent, the ring
-is the brand and the coin is one colour, which is every other account.
+say so without a word: JPMorgan brown face, Wise green ring (owner, 26 Aug 2026). Absent, the
+ring is the brand and the coin is one colour, which is every other account.
+
+**THE BROWN IS MEASURED, NOT CHOSEN, and the first attempt was neither.** It was set to Chase
+blue `#117ACA` on the reasoning that JPMorgan Chase is a blue brand. The owner corrected it: the
+current JPMorgan mark is brown, which the supplied artwork had said all along, since the logo
+came white-on-brown. `#5B2F12` is the ground `tools/vectorise.mjs` measured out of that very
+file while tracing the mark. It is the median of the image's BORDER, and the image was
+vignetted, so it is the darker end of that brown rather than its middle; the source file is
+gone, so re-measuring means re-supplying it. The lesson is the cheap one: the artwork carried
+its own colour and it was there for the reading.
 
 **The two palettes are not decoration, they are what keeps the lettering readable.** The rim's
 legend is measured against the RIM and the face's inscriptions against the FACE, which is why
-`struckFace` takes two palettes rather than one colour. It paid for itself immediately: the blue
+`struckFace` takes two palettes rather than one colour. It paid for itself immediately: the
 face is dark, so `palette()` flipped its inscriptions to light on its own, while the green ring
-kept dark lettering. Pick either from the wrong palette and half the coin goes unreadable.
+kept dark lettering, and it did the same again when the face changed from blue to brown. Pick either from the wrong palette and half the coin goes unreadable.
 Asserted from the PIXELS, because a palette handed to the wrong call reads perfectly well as code.
 
 **`ring` is validated in BOTH master validators**, like `brand`. A colour is presentational, but

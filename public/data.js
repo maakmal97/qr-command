@@ -8,7 +8,7 @@ self.QR_CODES = [
   {
     "key": "wise",
     "name": "JPMorgan Chase",
-    "brand": "#117ACA",
+    "brand": "#5B2F12",
     "payload": "",
     "acct": "3121 0000 1330 933",
     "maintenance": false,
@@ -202,4 +202,4 @@ self.QR_CODES = [
     "ring": ""
   }
 ];
-self.QR_BUILD = "4ed280aeb76a";
+self.QR_BUILD = "98a4e65a8015";
