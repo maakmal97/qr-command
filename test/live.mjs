@@ -223,8 +223,8 @@ ok("index.html served byte for byte as built",
 
   /* And the code-less ones carry what makes them payable. A plate with no bank or no holder is
    * three quarters of a transfer instruction, which is worse than not being there at all. */
-  const thin = codes.filter((c) => !c.payload).filter((c) => !c.bank || !c.holder || !c.acct);
-  ok("every account served without a code names its bank, its number and its holder",
+  const thin = codes.filter((c) => !c.payload).filter((c) => !c.bank || !c.acct);
+  ok("every account served without a code names its bank and its number",
     thin.length === 0, thin.map((c) => c.key).join(", "));
 }
 

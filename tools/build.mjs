@@ -35,10 +35,18 @@ const MASTER = process.env.QR_MASTER ||
  * Everything else still stays behind: the payee's legal name, the owner, the group and the
  * DuitNow member number. */
 /* `bank` and `holder` were added on 25 Aug 2026, for accounts that have NO DuitNow code at all
- * and are paid by naming the bank, the number and the person. `holder` is the second deliberate
- * widening after `acct`, and the larger of the two: it puts a person's legal name on the page as
- * text. It is not a new exposure for a code account, because a DuitNow payload already carries
- * the name in tag 59 and anyone who scans one sees it; it IS new for an account with no code,
+ * and are paid by naming the bank, the number and the person.
+ *
+ * `holder` IS OFF BY DEFAULT AND EMPTY TODAY. It is the one field that would put a person's
+ * legal name on a public page as text, so it ships only where the master explicitly types one,
+ * never derived from the owner. Nothing sets it as of 25 Aug 2026, by the owner's decision, so
+ * the leak check below refuses the payee's name outright exactly as it always has. If one is
+ * ever set, the check does not switch off: it pins the name to that one record and dies if it
+ * appears anywhere else. The distinction matters because a derived default would make
+ * publishing a name a side effect of adding an account rather than a decision about it.
+ *
+ * It is not a new exposure for a code account, because a DuitNow payload already carries
+ * the name in tag 59 and anyone who scans one sees it; it WOULD BE new for an account with no code,
  * where nothing else would have carried it. It ships ONLY for accounts that have no payload, and
  * the leak check below asserts exactly that rather than being switched off. */
 const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder"];
@@ -114,13 +122,16 @@ function sanitise(doc, V) {
     } else {
       rec.bank = String(a.bank || "").trim();
       if (!rec.bank) die(where + " has no payload and no bank, so there is nothing to show");
-      /* The holder's name is RESOLVED FROM THE OWNER, not retyped onto the account. One copy
-       * of a person's legal name in the master means one place to change it and one place for
-       * the leak check to reason about. An explicit `holder` overrides, for the day an account
-       * is held in a name that is not the owner's. */
-      const owner = (doc.owners || []).find((o) => o && o.id === a.owner);
-      rec.holder = String(a.holder || (owner && owner.legal) || "").trim();
-      if (!rec.holder) die(where + " has no payload, so it needs a holder name to be payable");
+
+      /* THE NAME IS NEVER DERIVED. It ships only where the master TYPES a `holder`, and this
+       * line is the whole of that policy.
+       *
+       * The first version resolved it from the owner's legal name, so every code-less account
+       * printed it automatically. That is the wrong default for the one field that puts a
+       * person on a public page: it makes publication a side effect of adding an account
+       * rather than a decision about it. Silence is the default now, and opting in means
+       * typing the name into the master where it can be seen and removed. */
+      rec.holder = String(a.holder || "").trim();
     }
     // The master calls it `sub`; the bundle calls it `acct`, because on the phone it is not a
     // sub-label, it is the number somebody is about to type into their banking app.
@@ -414,7 +425,8 @@ function disclosure() {
     return s.length >= 6 && String(a.payload || "").includes(s);
   }).length;
   const named = codes.filter((c) => c.holder);
-  return { inName, inAcct, named };
+  const plates = codes.filter((c) => !c.payload);
+  return { inName, inAcct, named, plates };
 }
 const d = disclosure();
 
@@ -426,6 +438,8 @@ console.log("  dropped: " + [...new Set(doc.accounts.flatMap(Object.keys))].filt
 console.log("  the page displays: the provider name, the code, and the account number embossed");
 console.log("    on the back of the coin. THE ACCOUNT NUMBERS ARE PUBLIC AS TEXT, by decision,");
 console.log("    so that they can be copied and sent to somebody who needs one.");
+/* Printed either way, because "no name is published" is exactly the kind of fact that stops
+ * being true quietly. Silence here would read the same as the field not existing. */
 if (d.named.length) {
   console.log("  THE PAGE ALSO PRINTS A PERSON'S LEGAL NAME AS TEXT, for " + d.named.length +
               " account(s) with no");
@@ -433,6 +447,11 @@ if (d.named.length) {
               "needs the bank, the");
   console.log("    number and the name together. Nothing else carries it: the leak check pins it to");
   console.log("    exactly those records in data.js and dies if it appears anywhere else.");
+} else {
+  console.log("  no legal name is published: `holder` is set on no account, so the leak check");
+  console.log("    refuses the payee's name outright. " + d.plates.length + " account(s) have no code and " +
+              "ship bank");
+  console.log("    plus number only.");
 }
 console.log("  inside the codes themselves, which no page design can change:");
 console.log("    the account-holder name is readable in " + d.inName + " of " + codes.length + " payloads (EMVCo tag 59)");

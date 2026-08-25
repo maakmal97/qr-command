@@ -1112,19 +1112,27 @@ self.QRArt = (function () {
     var bankPx = D * 0.058;
     var holdPx = D * 0.052;
 
+    /* ONLY THE LINES THAT EXIST TAKE UP ROOM. The holder is usually absent, and counting its
+     * height anyway made the block taller than its contents, so the two remaining lines sat
+     * visibly above the middle of the face while the space they were centred in ran off the
+     * bottom. Height is summed from what is actually drawn. */
+    if (!bank) bankPx = 0;
+    if (!holder) holdPx = 0;
     var gap = numPx * 0.52;
-    var blockH = bankPx + gap + numPx + gap + holdPx;
+    var gaps = (bankPx ? gap : 0) + (holdPx ? gap : 0);
+    var blockH = bankPx + numPx + holdPx + gaps;
     var room = D * 0.84;
     if (blockH > room) {
       var k = room / blockH;
       bankPx *= k; numPx *= k; holdPx *= k; gap *= k;
-      blockH = bankPx + gap + numPx + gap + holdPx;
+      gaps = (bankPx ? gap : 0) + (holdPx ? gap : 0);
+      blockH = bankPx + numPx + holdPx + gaps;
     }
 
     var top = R - blockH / 2;
     var bankY = top + bankPx * 0.5;
-    var numY = top + bankPx + gap + numPx * 0.5;
-    var holdY = top + bankPx + gap + numPx + gap + holdPx * 0.5;
+    var numY = top + bankPx + (bankPx ? gap : 0) + numPx * 0.5;
+    var holdY = numY + numPx * 0.5 + gap + holdPx * 0.5;
 
     if (bank) {
       emboss(g, bank, R, bankY, fitChord(g, bank, bankY, R, f.Rd, bankPx, capTrack),

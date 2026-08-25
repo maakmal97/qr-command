@@ -39,20 +39,26 @@ nothing else is shipped.
    before it, an account number was recoverable only by decoding a code, and only for six of the
    thirteen; now all thirteen are in the page as text. The build prints that on every run.
 
-   **`holder` is the second widening, and the larger one.** Added 25 Aug 2026 for accounts with
-   no DuitNow code, which are paid by naming the bank, the number and the person. For a code
-   account this would change nothing, because the payload already carries the name in tag 59 and
-   anyone who scans sees it; for a code-less one **nothing else would have carried it**, so this
-   puts a legal name on a public page as text for the first time. It ships only for accounts
-   with no payload, and the build prints it on every run.
+   **`holder` EXISTS, IS EMPTY, AND STAYS EMPTY UNLESS SOMEBODY TYPES A NAME.** Added 25 Aug
+   2026 for accounts with no DuitNow code, which are paid by naming the bank, the number and the
+   person. **The owner's decision, the same day, was bank and number only**, so no account sets
+   it and no legal name is published. The build prints that on every run, because "no name is
+   published" is exactly the kind of fact that stops being true quietly.
 
-   **THE GUARD WAS TIGHTENED TO ALLOW IT, NOT SWITCHED OFF, and the difference is the whole
-   design.** The lazy way is to drop the payee from the forbidden set, which would disable the
-   stem check described below. Instead the expected occurrences are stripped exactly as payloads
-   are, and then asserted: **exactly once per entitled record, in `data.js`, and nowhere else at
-   all.** A name that reaches `app.js`, the manifest or the service worker's shell list still
-   kills the build. Both the build and the suite carry this, and both were mutation-tested by
-   leaking the name and watching them die.
+   **IT IS NEVER DERIVED, and that is the load-bearing part.** The first version resolved it
+   from the owner's `legal`, so every code-less account would have printed a name automatically.
+   That is the wrong default for the one field that puts a person on a public page: it makes
+   publication a side effect of adding an account rather than a decision about it. Opting in
+   means typing the name into the master, where it can be seen and removed.
+
+   **THE GUARD IS TIGHTENED TO ALLOW IT, NOT SWITCHED OFF, if one is ever set.** The lazy way is
+   to drop the payee from the forbidden set, which would disable the stem check described below.
+   Instead the expected occurrences are stripped exactly as payloads are, and then asserted:
+   **exactly once per entitled record, in `data.js`, and nowhere else at all.** A name reaching
+   `app.js`, the manifest or the service worker's shell list still kills the build. Mutation
+   tested twice: by leaking the name into `app.js` (build and suite both die), and by setting a
+   `holder` in the master, where the build shouts the disclosure and the suite fails
+   `no legal name is published at all`, so opting in cannot happen without revisiting this file.
 
    **A name also travels as a SLUG, and exact matching cannot see one.** On 13 Aug 2026 the
    master keyed a new account `muhammad-afif-akmal-bin`, a truncated lowercase slug of the
@@ -257,11 +263,16 @@ contract, so it had to be made in `store.js` and `serve.py` together.** They are
 implementations of one rule with nothing asserting they agree, and they have drifted before;
 the two were checked against seven documents, message for message, after the change.
 
-**One face, not two.** `drawPlate()` draws the same struck coin with three inscriptions in the
-order somebody filling in a transfer needs them: the bank, the number, the name. The provider is
-already around the rim so it is not repeated. There is nothing to turn over to, so the flip
-control is hidden rather than disabled: a greyed control invites a second tap and then explains
-nothing.
+**One face, not two.** `drawPlate()` draws the same struck coin with up to three inscriptions in
+the order somebody filling in a transfer needs them: the bank, the number, and the name if one
+is set, which today it is not. The provider is already around the rim so it is not repeated.
+There is nothing to turn over to, so the flip control is hidden rather than disabled: a greyed
+control invites a second tap and then explains nothing.
+
+**Only the lines that exist take up room.** Counting the holder's height when there is no holder
+made the block taller than its contents, so the two remaining lines sat visibly above the middle
+of the face while the space they were centred in ran off the bottom. The height is summed from
+what is actually drawn, gaps included.
 
 **NO DUITNOW MARK, and that is a rule rather than an oversight.** The mark is PayNet's and it
 says a DuitNow code is present. These accounts have none, so putting their artwork on one would

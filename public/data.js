@@ -143,7 +143,7 @@ self.QR_CODES = [
     "acct": "3121 0000 1330 933",
     "maintenance": false,
     "bank": "JPMorgan Chase Bank Berhad",
-    "holder": "MUHAMMAD AFIF AKMAL BIN AFFIAN"
+    "holder": ""
   }
 ];
-self.QR_BUILD = "5fc11fa2ced2";
+self.QR_BUILD = "0040756be8e7";

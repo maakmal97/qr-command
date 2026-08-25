@@ -1104,8 +1104,8 @@ section("2. The bundle carries the codes and nothing else");
  * would notice from looking at it: three quarters of a transfer instruction still draws a
  * perfectly handsome coin. */
 {
-  const thin = plates.filter((c) => !c.bank || !c.holder || !c.acct);
-  ok("every code-less account names its bank, its number and its holder (" + plates.length + ")",
+  const thin = plates.filter((c) => !c.bank || !c.acct);
+  ok("every code-less account names its bank and its number (" + plates.length + ")",
     thin.length === 0, thin.map((c) => c.key).join(", "));
 
   // And the other way, so the two shapes cannot blur into one another.
@@ -1125,6 +1125,22 @@ section("2. The bundle carries the codes and nothing else");
  * whichever of the two runs. Exactly once per plate, in data.js, and nowhere else at all. */
 {
   const names = [...new Set(plates.map((c) => c.holder).filter(Boolean))];
+
+  /* THE NAME IS NEVER DERIVED, and this is the assertion that says so. The build must not be
+   * able to invent a holder out of the owner's legal name: it ships exactly what the master
+   * types into `holder`, and nothing sets one today, so nothing is published. Without this the
+   * pin below is vacuous whenever the count happens to be zero, which is the state we are in.
+   *
+   * The forbidden-set sweep earlier in this section is what does the work meanwhile: with no
+   * holder shipped, the payee's name is refused outright wherever it appears. */
+  const authorised = new Map(JSON.parse(read(path.join(MASTER, "accounts.json")))
+    .accounts.map((a) => [a.key, String(a.holder || "").trim()]));
+  const invented = shipped.filter((c) => c.holder !== (authorised.get(c.key) || ""));
+  ok("a holder name ships only where the master explicitly sets one, never derived (" +
+     names.length + " in use)", invented.length === 0,
+    invented.map((c) => c.key + ": shipped " + JSON.stringify(c.holder) +
+                        ", master has " + JSON.stringify(authorised.get(c.key) || "")).join("; "));
+
   const stray = [];
   for (const f of files) {
     if (!/\.(html|js|mjs|css|json|webmanifest|txt|svg|map)$/i.test(f)) continue;
@@ -1136,8 +1152,25 @@ section("2. The bundle carries the codes and nothing else");
       if (seen !== allowed) stray.push(rel(f) + ": " + seen + ", expected " + allowed);
     }
   }
-  ok("a holder's name is served once per code-less account, in data.js, and nowhere else",
-    names.length > 0 && stray.length === 0, stray.join("; "));
+  /* Correct at zero as well as at one. With no holder shipped this passes because there is
+   * nothing to find, and the assertion that carries the weight in that state is the one above
+   * plus the forbidden-set sweep. The moment a name IS set, this pins it. */
+  ok("a holder's name, where one is set, is served once in data.js and nowhere else" +
+     (names.length ? "" : " (none set)"),
+    stray.length === 0, stray.join("; "));
+
+  /* And the state we are actually in, asserted rather than assumed. The owner chose bank and
+   * number only on 25 Aug 2026; if that ever changes, this fails and forces the docs and the
+   * disclosure to be revisited rather than the change sliding through unremarked. */
+  const payee = String(JSON.parse(read(path.join(MASTER, "accounts.json"))).payee || "").trim();
+  const anywhere = files.filter((f) => /\.(html|js|mjs|css|json|webmanifest|txt|svg|map)$/i.test(f))
+    .filter((f) => {
+      let body = read(f);
+      for (const p of shipped.map((c) => c.payload).filter(Boolean)) body = body.split(p).join(" P ");
+      return payee && body.includes(payee);
+    });
+  ok("no legal name is published at all, which is the owner's standing choice",
+    names.length === 0 && anywhere.length === 0, anywhere.map(rel).join(", "));
 }
 
 /* PayNet's mark says a DuitNow code is present. These accounts have none, so putting their

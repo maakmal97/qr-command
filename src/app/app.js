@@ -333,8 +333,10 @@
     // meta.plain, not the local flag: the renderer drops to the plain code by itself when the
     // screen is too small to draw a coin anyone could scan, and the page must follow it.
     if (plate(a)) {
-      elCoin.setAttribute("aria-label",
-        a.name + ", account " + a.acct + " at " + a.bank + ", in the name of " + a.holder);
+      // The holder is usually absent, and a screen reader must not announce a trailing
+      // "in the name of" with nothing after it.
+      elCoin.setAttribute("aria-label", a.name + ", account " + a.acct + " at " + a.bank +
+        (a.holder ? ", in the name of " + a.holder : ""));
       elBtn.setAttribute("aria-label",
         a.name + ", account " + a.acct + " at " + a.bank + ". Tap to copy the number.");
     } else {
