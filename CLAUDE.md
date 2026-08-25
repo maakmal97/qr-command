@@ -245,6 +245,18 @@ contract, so it had to be made in `store.js` and `serve.py` together.** They are
 implementations of one rule with nothing asserting they agree, and they have drifted before;
 the two were checked against seven documents, message for message, after the change.
 
+**THE FACE IS PAPER, NOT METAL, and that is what keeps this coin in the same book as the rest.**
+Metal was right while this was the REVERSE of a coin: struck lettering, embossed, where the edges
+carry half the legibility and `faceInk`'s 4.5:1 fill is enough. It became wrong the moment it was
+the only face and its content was flat-filled logos, because then the fill carries everything.
+Rendered side by side with the whole book, the one coin without a code was also the only one that
+was dark, and measurement backed the eye up: 4.6:1 against 8.3 to 10.6:1 for every code coin's
+ink on its field. It now takes the code coin's own field and ink, so it reads as a sibling and
+clears the same bar. Asserted by luminance, and mutation tested by putting the metal back.
+
+The field is FLAT, for the same reason the code's field is: `palette()` measures the ink against
+one field colour, and a wash makes part of the face darker than the number that was checked.
+
 **THE FACE IS AN INSTRUCTION, not a label.** `drawPlate()` draws the same struck coin inscribed
 with two headed rows, in the order a payer needs them: **BANK**, the bank to pick from the list,
 and **RECEIVER**, the name their app will show them before they confirm. The provider is already

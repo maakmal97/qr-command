@@ -845,11 +845,26 @@ self.QRArt = (function () {
     g.lineWidth = Math.max(1, f.ring * 0.055);
     g.beginPath(); g.arc(R, R, f.Rbase - f.ring * 0.10, 0, Math.PI * 2); g.stroke();
 
-    // The inner face: the same metal, dished, so the embossing has something to sit in.
-    var rg = g.createRadialGradient(R, R * 0.82, f.Rd * 0.1, R, R, f.Rd);
-    rg.addColorStop(0, pal.brandLift);
-    rg.addColorStop(1, pal.brandSink);
-    g.fillStyle = rg;
+    /* THE INNER FACE IS PAPER OR METAL, and paper is what makes a code-less coin a sibling of
+     * the rest of the book rather than a different species.
+     *
+     * Metal was right when this was the REVERSE of a coin: struck lettering, embossed, where the
+     * edges carry half the legibility and a 4.5:1 fill is enough. It is wrong now that it is the
+     * only face and carries flat-filled logos, where the fill carries everything. Measured, the
+     * metal face gave 4.6:1 against 8.3 to 10.6:1 for every code coin's ink on its field, so the
+     * one coin without a code was also the one at half the contrast.
+     *
+     * Flat, not graduated, for the reason the code's field is flat: `palette()` measures the ink
+     * against ONE field colour, and a wash makes part of the face darker than the number that
+     * was checked. */
+    if (opts.paper) {
+      g.fillStyle = pal.field;
+    } else {
+      var rg = g.createRadialGradient(R, R * 0.82, f.Rd * 0.1, R, R, f.Rd);
+      rg.addColorStop(0, pal.brandLift);
+      rg.addColorStop(1, pal.brandSink);
+      g.fillStyle = rg;
+    }
     g.beginPath(); g.arc(R, R, f.Rd, 0, Math.PI * 2); g.fill();
     g.strokeStyle = "rgba(0,0,0,0.16)";
     g.lineWidth = Math.max(1, f.Rd * 0.008);
@@ -976,7 +991,12 @@ self.QRArt = (function () {
      * coin can say so without a word. Absent, the ring is the brand and the coin is one colour,
      * which is every other account. */
     var rimPal = opts.ring ? palette(opts.ring, opts.minContrast) : pal;
-    var b = struckFace(g, size, opts, pal, rimPal);
+    /* PAPER, so this coin belongs to the same book as the others: a coloured rim, a light field
+     * and dark ink, which is what every code coin is. The inscriptions therefore take the CODE's
+     * ink, measured at minContrast against that field, rather than the metal ink measured at
+     * 4.5 for embossed lettering. */
+    var b = struckFace(g, size, Object.assign({ paper: true }, opts), pal, rimPal);
+    var INK = pal.ink, DIM = pal.inkSoft;
     var f = b.f, R = b.R, D = b.D;
 
     var bank = String(opts.bank || "").trim().toUpperCase();
@@ -1083,11 +1103,11 @@ self.QRArt = (function () {
       var row = rows[i5];
       var ly = y + labelPx * 0.5;
       emboss(g, row.label, R, ly, fitChord(g, row.label, ly, R, f.Rd, labelPx, LTRACK),
-             "700", pal.faceDim, 0.03, LTRACK);
+             "700", DIM, 0, LTRACK);
       y += labelPx + labelGap;
 
       if (row.mark) {
-        drawMark(g, row.mark, R, y + row.markPx * 0.5, row.markPx, R, f.Rd, pal.faceInk);
+        drawMark(g, row.mark, R, y + row.markPx * 0.5, row.markPx, R, f.Rd, INK);
         y += row.markPx + rowGap;
         continue;
       }
@@ -1104,7 +1124,7 @@ self.QRArt = (function () {
       }
       for (var j = 0; j < row.fit.lines.length; j++) {
         var vy = y + row.fit.px * 0.5 + j * row.fit.px * lineStep;
-        emboss(g, row.fit.lines[j], R, vy, vPx, "600", pal.faceInk, 0.042, VTRACK);
+        emboss(g, row.fit.lines[j], R, vy, vPx, "600", INK, 0, VTRACK);
       }
       y += row.fit.px * (1 + (row.fit.lines.length - 1) * lineStep) + rowGap;
     }

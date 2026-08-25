@@ -1244,28 +1244,48 @@ section("2. The bundle carries the codes and nothing else");
   const opaque = corners.filter(([x, y]) => g.getImageData(x, y, 1, 1).data[3] > 8);
   ok("the code-less face draws, at the size the app asks for", meta.size === 700 && cv.width === 700);
 
-  /* TWO COLOURS, AND THE RIGHT ONE IN EACH PLACE. `brand` strikes the face, `ring` strikes the
+  /* TWO COLOURS, AND THE RIGHT ONE IN EACH PLACE. `brand` tints the face, `ring` strikes the
    * band around it. Asserted from the PIXELS rather than from the source, because the failure
    * mode is a palette handed to the wrong call, which reads perfectly well as code. */
   {
-    const two = createCanvas(8, 8);
-    QRArt.drawPlate(two, { size: 700, pixelRatio: 1, brand: "#117ACA", ring: "#9FE870",
-      label: c.name, seed: c.key, bank: c.bank, holder: c.holder });
-    const tg = two.getContext("2d");
-    const at = (x, y) => [...tg.getImageData(x, y, 1, 1).data].slice(0, 3);
-    const bluer = (p) => p[2] > p[1] && p[2] > p[0];
+    const draw = (opts) => {
+      const cv2 = createCanvas(8, 8);
+      QRArt.drawPlate(cv2, Object.assign({ size: 700, pixelRatio: 1, label: c.name, seed: c.key,
+        bank: c.bank, holder: c.holder }, opts));
+      const g2 = cv2.getContext("2d");
+      return { cv: cv2, at: (x, y) => [...g2.getImageData(x, y, 1, 1).data].slice(0, 3) };
+    };
+    const lum = (p) => 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
     const greener = (p) => p[1] > p[2] && p[1] > p[0];
-    const face = at(two.width >> 1, two.height >> 1);
-    const band = at(two.width >> 1, Math.round(two.height * 0.135));
-    ok("the face takes the brand colour and the ring takes its own",
-      bluer(face) && greener(band), "face " + face.join(",") + ", ring " + band.join(","));
+    const bluer = (p) => p[2] > p[1] && p[2] > p[0];
 
-    // And with no ring the coin is one colour, which is every other account.
-    const one = createCanvas(8, 8);
-    QRArt.drawPlate(one, { size: 700, pixelRatio: 1, brand: "#117ACA",
-      label: c.name, seed: c.key, bank: c.bank, holder: c.holder });
-    const og = one.getContext("2d");
-    const oneBand = [...og.getImageData(one.width >> 1, Math.round(one.height * 0.135), 1, 1).data].slice(0, 3);
+    const two = draw({ brand: "#117ACA", ring: "#9FE870" });
+    const face = two.at(two.cv.width >> 1, two.cv.height >> 1);
+    const band = two.at(two.cv.width >> 1, Math.round(two.cv.height * 0.135));
+    ok("the ring takes its own colour while the face takes the brand's tint",
+      greener(band) && bluer(face), "face " + face.join(",") + ", ring " + band.join(","));
+
+    /* THE FACE IS PAPER, NOT METAL, and this is the assertion that says so. It was metal while
+     * this was the reverse of a coin carrying embossed lettering, where the edges do half the
+     * work and 4.5:1 is enough. As the only face, carrying flat-filled logos, it was the one
+     * coin in the book at half the contrast of every other. A brand-tinted paper is light; the
+     * metal it replaced was not, so luminance alone separates them. */
+    ok("the code-less face is light paper like every code coin's field, not dark metal",
+      lum(face) > 200, "face luminance " + lum(face).toFixed(0));
+
+    /* And the contrast that change bought, at the same bar a code's ink is held to rather than
+     * the 4.5 the embossed reverse used. */
+    const inkOn = (brand) => {
+      const p = QRArt.palette(brand, QRArt.DEFAULTS.minContrast);
+      return QRArt.contrast(QRArt.hex2rgb(p.ink), QRArt.hex2rgb(p.field));
+    };
+    const thin = ["#5B2F12", "#F5B400", "#C8102E", "#1A2B6B"].filter((b) => inkOn(b) < 8);
+    ok("the plate's ink clears the same contrast bar a code's ink does", thin.length === 0,
+      thin.map((b) => b + " at " + inkOn(b).toFixed(1) + ":1").join(", "));
+
+    // And with no ring the coin is a single colour, which is every other account.
+    const one = draw({ brand: "#117ACA" });
+    const oneBand = one.at(one.cv.width >> 1, Math.round(one.cv.height * 0.135));
     ok("without a ring the coin is a single colour, as every other account is",
       bluer(oneBand), oneBand.join(","));
   }
