@@ -17,7 +17,8 @@ fetched when you open it.
 
 ## Using it
 
-**The app opens on your accounts.** Two columns, each one named, with its own coin beside it
+**The app opens on your accounts.** The featured one sits across the top on a row of its own,
+labelled with what it is for. The rest are two columns, each one named, with its own coin beside it
 big enough to tell apart at a glance. The list scrolls if your phone is not tall enough to hold
 all of them, and the row cut off at the bottom edge is how you know there is more. Tap one and
 its code fills the screen. **Accounts** at the top left goes back, and so does your phone's own

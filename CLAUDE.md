@@ -26,9 +26,9 @@ Nothing else is shown and nothing else is shipped.
    drifted. A third copy here would be the same mistake again, and a first attempt at one
    rejected all thirteen live payloads over a prefix it had guessed wrong. If the master moves,
    the build fails loudly rather than falling back to a guess.
-4. **The bundle carries ten fields per account and no more:** `key`, `name`, `brand`,
-   `payload`, `acct`, `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`. The owner, the
-   group and the DuitNow member number stay on the laptop. The build reads `public/` back and searches it for every
+4. **The bundle carries eleven fields per account and no more:** `key`, `name`, `brand`,
+   `payload`, `acct`, `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`, `tag`. The
+   owner, the group and the DuitNow member number stay on the laptop. The build reads `public/` back and searches it for every
    dropped value; the suite repeats the search, and also asserts the other way, that every
    account number IS there, so a feature cannot vanish silently either. Adding a field means
    adding it to `SHIP` in `tools/build.mjs` deliberately, in one place, where it is visible.
@@ -616,6 +616,20 @@ Six things that will bite:
   thirteen sit on one line, "Touch 'n Go Business" included. Anything that puts the coin back
   beside the text has to re-check the longest name and the maintenance label, not just the
   average one.
+- **A TAGGED ACCOUNT IS THE EXCEPTION, and it is allowed to be because it is full width.** `tag`
+  is a short purpose label; an account carrying one takes a row of its own (`grid-column:1 / -1`,
+  which spans whatever auto-fill resolved to rather than assuming two) and lays the coin BESIDE
+  the name. The 72px constraint that forced the stack is simply not present at 343px, which
+  leaves about 250px of text column. One field with two visible effects is deliberate here: a
+  tagged account is a featured account, and a featured account is not sharing its row.
+- **THE ORDER IS THE MASTER'S ORDER, and it no longer follows the size rule.** The book was
+  traditional banks by market share, then digital banks, then e-wallets. JPMorgan Chase now sits
+  first regardless, because it is the featured account (owner, 26 Aug 2026). Nothing sorts the
+  list at build or at run time, so the master's array order is the only thing deciding it.
+- **`shipped[0]` IS NOT NECESSARILY A CODE.** The suite used it in fourteen places to mean "any
+  account, for a rendering test", which was true only while every account had a payload. Moving a
+  code-less account to the front made all fourteen throw. They read `codes[0]` now, which is what
+  they always meant.
 - **`--thumb` and `THUMB` in `app.js` are one number in two files and must be changed together.**
   56px now, from 36px.
 - **`.accounts` overrides all four paddings, so the safe-area insets have to be added back with

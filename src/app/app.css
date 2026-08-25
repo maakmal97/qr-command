@@ -230,6 +230,31 @@ body.view-code .codeview{
  * fix; this keeps a freakishly long single word from spilling out of the tile instead. */
 .tiletext{font-size:14.5px;font-weight:600;line-height:1.28;overflow-wrap:break-word;min-width:0;}
 
+/* A TAGGED ACCOUNT TAKES THE WHOLE ROW, and can therefore go back to coin-beside-name.
+ *
+ * Stacking exists because a two-column tile is 168px wide and leaves about 72px of text column,
+ * which is narrower than the words this app contains. Full width leaves roughly 250px, so the
+ * constraint that forced the stack is simply not present here. `1 / -1` spans every column
+ * whatever the viewport resolves auto-fill to, so this does not assume two. */
+.tile.wide{
+  grid-column:1 / -1;
+  flex-direction:row;
+  align-items:center;
+  justify-content:flex-start;
+  text-align:left;
+  gap:14px;
+  padding:12px 16px;
+}
+.tiletag{
+  display:block;
+  margin-top:4px;
+  font-size:10.5px;
+  font-weight:700;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--ink-3);
+}
+
 /* ==================================================================== the code */
 
 

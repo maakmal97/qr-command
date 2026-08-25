@@ -705,7 +705,12 @@
     CODES.forEach(function (a, i) {
       var b = document.createElement("button");
       b.type = "button";
-      b.className = down(a) ? "tile down" : "tile";
+      /* A TAGGED ACCOUNT TAKES A ROW OF ITS OWN. The tag is a purpose label, so the account
+       * carrying one is the featured account, and a featured account is not sharing its row
+       * with another. Full width also means the tile can lay the coin BESIDE the name rather
+       * than above it: the reason tiles stack is that a two-column tile leaves only 72px of
+       * text column, and a full-width one leaves about 250px. */
+      b.className = "tile" + (down(a) ? " down" : "") + (a.tag ? " wide" : "");
       b.style.setProperty("--dot", a.brand);
       b.style.setProperty("--soft", softOf(a.brand));
       b.style.setProperty("--i", String(i));
@@ -717,6 +722,12 @@
       var tx = document.createElement("span");
       tx.className = "tiletext";
       tx.textContent = a.name;
+      if (a.tag) {
+        var tg = document.createElement("span");
+        tg.className = "tiletag";
+        tg.textContent = a.tag;
+        tx.appendChild(tg);
+      }
       b.appendChild(sw);
       b.appendChild(tx);
       b.addEventListener("click", function () { open(i); });

@@ -49,8 +49,12 @@ const MASTER = process.env.QR_MASTER ||
  * the name in tag 59 and anyone who scans one sees it; it WOULD BE new for an account with no code,
  * where nothing else would have carried it. It ships ONLY for accounts that have no payload, and
  * the leak check below asserts exactly that rather than being switched off. */
+/* `tag` was added on 26 Aug 2026: a short purpose label shown on the tile. It also makes the
+ * tile take a row of its own, which is the only place in the bundle where one field has two
+ * visible effects. That is deliberate and there is exactly one such account: a tagged account is
+ * a featured one, and a featured one is not sharing its row. */
 const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder",
-              "bankMark", "holderMark"];
+              "bankMark", "holderMark", "tag"];
 
 const die = (m) => { console.error("\nbuild failed: " + m + "\n"); process.exit(1); };
 const read = (p) => fs.readFileSync(p, "utf8");
@@ -161,6 +165,9 @@ function sanitise(doc, V) {
     }
     // The master calls it `sub`; the bundle calls it `acct`, because on the phone it is not a
     // sub-label, it is the number somebody is about to type into their banking app.
+    // Normalised to a real string for the same reason maintenance is a real boolean: a field
+    // present on some records and missing from others is one the phone has to guess about.
+    rec.tag = String(a.tag || "").trim();
     rec.acct = typeof a.sub === "string" ? a.sub.trim() : "";
     if (!rec.acct) die(where + " has no account number, and the back of the coin needs one");
 

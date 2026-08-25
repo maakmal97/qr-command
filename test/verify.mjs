@@ -254,7 +254,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
 
 {
   // The decoded string must be the payload byte for byte, not a normalised version of it.
-  const c = shipped[0];
+  const c = codes[0];
   const canvas = createCanvas(8, 8);
   QRArt.draw(canvas, c.payload, { size: 400, pixelRatio: 2, brand: c.brand, label: c.name, seed: c.key });
   const g = canvas.getContext("2d");
@@ -456,8 +456,8 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
    * space is the page's job. Measured at the corners, which must be untouched. */
   {
     const c = createCanvas(8, 8);
-    QRArt.draw(c, shipped[0].payload, { size: 700, pixelRatio: 1, brand: shipped[0].brand,
-      label: shipped[0].name, seed: shipped[0].key });
+    QRArt.draw(c, codes[0].payload, { size: 700, pixelRatio: 1, brand: codes[0].brand,
+      label: codes[0].name, seed: codes[0].key });
     const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
     const alphaAt = (x, y) => d[(y * c.width + x) * 4 + 3];
     ok("the canvas is transparent at its corners, so the shadow follows the coin and not a box",
@@ -475,12 +475,12 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   {
     const c1 = createCanvas(8, 8), c2 = createCanvas(8, 8), c3 = createCanvas(8, 8);
     const o = (a) => ({ size: 700, pixelRatio: 1, brand: a.brand, label: a.name, seed: a.key });
-    QRArt.draw(c1, shipped[0].payload, o(shipped[0]));
-    QRArt.draw(c2, shipped[0].payload, o(shipped[0]));
-    QRArt.draw(c3, shipped[1].payload, o(shipped[1]));
+    QRArt.draw(c1, codes[0].payload, o(codes[0]));
+    QRArt.draw(c2, codes[0].payload, o(codes[0]));
+    QRArt.draw(c3, codes[1].payload, o(codes[1]));
     const px = (c) => Buffer.from(c.getContext("2d").getImageData(0, 0, c.width, c.height).data);
     ok("the same account draws pixel for pixel the same coin twice", px(c1).equals(px(c2)));
-    ok("two accounts get different skies", !px(c1).equals(px(c3)) || shipped[0].brand !== shipped[1].brand);
+    ok("two accounts get different skies", !px(c1).equals(px(c3)) || codes[0].brand !== codes[1].brand);
   }
 }
 
@@ -545,7 +545,7 @@ section("2. The bundle carries the codes and nothing else");
 
 {
   const SHIP = ["acct", "bank", "bankMark", "brand", "holder", "holderMark", "key",
-                "maintenance", "name", "payload"];
+                "maintenance", "name", "payload", "tag"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
   ok("every shipped record has exactly key, name, brand, payload, acct, maintenance, bank, " +
      "holder, bankMark, holderMark",
@@ -675,7 +675,7 @@ section("2. The bundle carries the codes and nothing else");
 {
   // Proof that the validator above is live rather than a function that returns null. Flip one
   // character of a copy and it must be refused.
-  const p = shipped[0].payload;
+  const p = codes[0].payload;
   const tampered = p.slice(0, 30) + (p[30] === "1" ? "2" : "1") + p.slice(31);
   ok("the master's validator rejects a payload with one character changed",
     V.payloadError(tampered) !== null);
@@ -716,8 +716,16 @@ section("2. The bundle carries the codes and nothing else");
     /transition:opacity var\(--dur\) var\(--ease\), visibility/.test(cssCode));
 
   ok("every account is a named tile on that first screen",
-    /id="grid"/.test(indexHtml) && /className = down\(a\) \? "tile down" : "tile"/.test(appJs) &&
+    /id="grid"/.test(indexHtml) &&
+    /b\.className = "tile" \+ \(down\(a\) \? " down" : ""\)/.test(appJs) &&
     /tiletext/.test(appJs));
+
+  /* A TAGGED ACCOUNT IS THE FEATURED ONE and takes a row to itself. `1 / -1` spans whatever
+   * auto-fill resolved to rather than assuming two columns, so this survives a wider screen. */
+  ok("a tagged account takes a row of its own and shows its tag",
+    /\(a\.tag \? " wide" : ""\)/.test(appJs) &&
+    /tg\.className = "tiletag"/.test(appJs) &&
+    /\.tile\.wide\{[^}]*grid-column:1 \/ -1/.test(cssCode));
   ok("a code has an explicit way back to the accounts",
     /id="back"/.test(indexHtml) && /elBack\.addEventListener\("click", close\)/.test(appJs));
 
