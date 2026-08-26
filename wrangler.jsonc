@@ -1,5 +1,20 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
+
+	// WHOSE ACCOUNT THIS DEPLOYS INTO: AFIF AKMAL'S OWN, signed in as maakmal97@icloud.com.
+	// No organisation, no shared team account, no second deployer.
+	//
+	// Two values in this file are scoped to that account and neither travels: the namespace id
+	// below exists only inside it, and the Worker name below is unique within it rather than
+	// globally. The third pointer is not in this file at all, it is the address, whose second
+	// label qyts8mh72kyg is that account's own workers.dev subdomain.
+	//
+	// Deployed from any other Cloudflare login this is not an update to the site. It is a
+	// different site at a different address, and the namespace id names nothing that login
+	// holds. If a deploy reports a KV namespace it cannot find, run npx wrangler whoami before
+	// changing anything here. The numeric account id is deliberately not kept in the repo:
+	// whoami prints it, and wrangler resolves it from the login on its own.
+
 	// DELIBERATELY MEANINGLESS, and line comments only: the suite strips `//` and nothing else,
 	// so a block comment here fails "wrangler.jsonc parses once its comments are stripped".
 	//
@@ -44,9 +59,13 @@
 	// IT DOES NOT REOPEN THE WRITE PATH. src/worker.js calls QR_STATE.get and nothing else;
 	// there is no route that writes, no secret, no EDIT_KEY and nothing to authenticate,
 	// which is the property the site was built around. The value is written from the laptop
-	// through the Cloudflare API by wrangler, under the owner's own login. A stranger with
-	// the address gains a JSON file listing account keys and booleans, and the keys are
-	// already public in data.js.
+	// through the Cloudflare API by wrangler, under the owner's own login, the one named at
+	// the top of this file. A stranger with the address gains a JSON file listing account
+	// keys and booleans, and the keys are already public in data.js.
+	//
+	// The id below is account-scoped, so maintenance.py's push runs with this directory as its
+	// working directory and resolves QR_STATE from here. Signed in elsewhere that push fails
+	// and says so rather than writing somewhere the phone never reads.
 	//
 	// The baked flag remains the fail-safe. A phone with no signal cannot read this, so the
 	// bundle still has to carry the truth, and the local toggle deploys as well as writing

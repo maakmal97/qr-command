@@ -714,9 +714,47 @@ coin's `aria-label` still carries it, so a screen reader loses nothing.
 
 ## Deploying
 
-`npm run deploy`. There is no first-time setup beyond a Cloudflare login: no KV namespace, no
-secret, no binding to attach. After a deploy that changes anything user-facing, check the
-headers survived:
+`npm run deploy`. There is no first-time setup beyond a Cloudflare login: no secret and no
+binding to attach, and the one KV namespace already exists in the account. The whole of the
+setup is that the login is the RIGHT one, which is the next paragraph.
+
+**THE SITE BELONGS TO AFIF AKMAL AND IS DEPLOYED INTO HIS OWN CLOUDFLARE ACCOUNT, signed in as
+`maakmal97@icloud.com`.** No organisation, no shared team account, no second deployer. The
+master repository records the same account, because `maintenance.py` there writes this Worker's
+KV from the laptop under that same login.
+
+**The account is not an incidental detail: it is baked into three things, and none of the three
+travels.**
+
+| Where | What is scoped to the account |
+|---|---|
+| `wrangler.jsonc`, `kv_namespaces[0].id` | `5b09e99f07e147f09a88fc1325203ead` names a namespace that exists only inside this account |
+| `wrangler.jsonc`, `name` | `jb3zkzyqguu5` is unique within the account, not globally |
+| The live address | `qyts8mh72kyg` is that account's own `workers.dev` subdomain, shared with every other Worker in it, so the address identifies the account |
+
+So a deploy from any other Cloudflare login is not this site being updated. The namespace id
+names nothing that login holds, and whatever did come up would come up at a different address
+on that account's own subdomain while the phone carried on serving the old bundle. If a deploy
+ever reports a KV namespace it cannot find, run `npx wrangler whoami` before touching
+`wrangler.jsonc`: the answer is almost always the wrong account, and editing the id to make the
+error go away points the Worker at somebody else's store.
+
+**The numeric account id is deliberately not written down, in either repository.**
+`npx wrangler whoami` prints it beside the account name, and wrangler resolves it from the login
+on its own, so a copy here would be one more thing to go stale for no benefit at all.
+
+For orientation, on 26 Aug 2026 that account held three Workers: `jb3zkzyqguu5`, which is this
+site, plus `salt-command` and `wallet`. It held two KV namespaces, `QR_STATE` for this site and
+`salt_queue` for salt-command. **Nothing in this repo may touch the other two**, and the one
+namespace this Worker binds it only ever reads.
+
+**The account is the only key to the site, and that follows from having no write path.** There
+is no edit page, no `EDIT_KEY` and no secret anywhere in this repo, so there is nothing to leak
+and correspondingly nothing else guarding what is deployed. Keeping the site ours is exactly
+keeping that Cloudflare login ours, which puts two-factor on it above anything this repo could
+add.
+
+After a deploy that changes anything user-facing, check the headers survived:
 
 ```
 curl -sI https://<host>/ | grep -iE "x-robots-tag|content-security-policy"

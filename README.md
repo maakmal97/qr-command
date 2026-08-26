@@ -104,6 +104,30 @@ private and must stay private**, which is a stricter bar than the site itself: a
 unadvertised address is not the same exposure as a file that GitHub scrapes, indexes and
 archives permanently.
 
+## Whose site this is
+
+**Yours.** It is deployed into your own personal Cloudflare account, signed in as
+**maakmal97@icloud.com**. There is no organisation behind it and nobody else can deploy to it.
+The address says as much on its own: the middle part of
+`jb3zkzyqguu5.qyts8mh72kyg.workers.dev` is your account's `workers.dev` subdomain, shared with
+every other Worker you run, and the first part is this Worker's name inside that account.
+
+Two things follow that are worth knowing before you ever need them:
+
+- **`npm run deploy` only reaches the real site while that account is the one logged in.** From
+  a different Cloudflare login it would put up a second, separate site at a different address,
+  and the one on your phone would carry on serving the old bundle. `npx wrangler whoami` tells
+  you which account you are on.
+- **That login is the only key to the site.** There is no edit page, no password and no secret
+  anywhere in this project, which is what makes the deployed site so hard to attack, and it also
+  means nothing else is guarding what gets deployed. Keeping the site yours is exactly keeping
+  that Cloudflare account yours, so two-factor on it is worth more than anything the code could
+  add.
+
+The same is true of the suspend switch on the laptop. It writes to that account's KV store under
+the same login, so it fails and tells you if you are signed in somewhere else, rather than
+writing to a store the phone never reads.
+
 ## The coin, and why there is no Save button
 
 The code is drawn as a struck coin in the provider's own colour, held in a gravitational lens:
