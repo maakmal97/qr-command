@@ -202,4 +202,4 @@ self.QR_CODES = [
     "ring": ""
   }
 ];
-self.QR_BUILD = "a360538c00a9";
+self.QR_BUILD = "37ab928c3f7a";

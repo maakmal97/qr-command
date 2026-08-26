@@ -716,9 +716,26 @@ section("2. The bundle carries the codes and nothing else");
     /transition:opacity var\(--dur\) var\(--ease\), visibility/.test(cssCode));
 
   ok("every account is a named tile on that first screen",
-    /id="grid"/.test(indexHtml) &&
-    /b\.className = "tile" \+ \(down\(a\) \? " down" : ""\)/.test(appJs) &&
+    /id="grid"/.test(indexHtml) && /b\.className = classOf\(a\);/.test(appJs) &&
     /tiletext/.test(appJs));
+
+  /* ONE PLACE DECIDES A TILE'S CLASSES. There were two, and they disagreed: the KV watcher
+   * rebuilt the string from scratch and dropped `wide`, so a suspension arriving from the laptop
+   * collapsed the featured account's full-width row. Both callers go through classOf now. */
+  ok("a tile's classes are built in one place, so a state change cannot drop one",
+    /function classOf\(a\) \{[\s\S]{0,160}?a\.tag \? " wide" : ""/.test(appJs) &&
+    !/tiles\[i\]\.className = down\(/.test(appJs));
+
+  /* SUSPENDED ACCOUNTS SINK, AT RUNTIME. It cannot be the master's order: /state.json suspends
+   * an account in seconds with no deploy, so a baked order would leave it among the live ones
+   * until the next release. The tiles are MOVED rather than rebuilt, so tiles[i] stays aligned
+   * with CODES[i] and every index the app holds keeps its meaning. */
+  ok("suspended accounts are sorted to the end, and re-sorted when the state changes",
+    /function orderTiles\(\)/.test(appJs) &&
+    /\(down\(CODES\[i\]\) \? held : live\)\.push\(i\)/.test(appJs) &&
+    /orderTiles\(\);[\s\S]{0,120}?if \(idx >= 0\) paint\(\);/.test(appJs));
+  ok("the deal-in stagger follows the visible order, not the build order",
+    /tiles\[order\[k\]\]\.style\.setProperty\("--i", String\(k\)\)/.test(appJs));
 
   /* A TAGGED ACCOUNT IS THE FEATURED ONE and takes a row to itself. `1 / -1` spans whatever
    * auto-fill resolved to rather than assuming two columns, so this survives a wider screen. */

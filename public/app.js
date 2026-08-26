@@ -278,9 +278,9 @@
   function watchState() {
     var apply = function (changed) {
       if (!changed) return;
-      for (var i = 0; i < tiles.length; i++) {
-        tiles[i].className = down(CODES[i]) ? "tile down" : "tile";
-      }
+      for (var i = 0; i < tiles.length; i++) tiles[i].className = classOf(CODES[i]);
+      // Suspension can arrive from KV without a deploy, so the order is recomputed here too.
+      orderTiles();
       if (idx >= 0) paint();
     };
     readState().then(apply);
@@ -700,6 +700,35 @@
 
   var fresh = true;   // the list deals itself in once, on opening the app, and not again
 
+  /* ONE PLACE DECIDES A TILE'S CLASSES. It used to be two, and they disagreed: the KV watcher
+   * rebuilt the string as `"tile down"` or `"tile"`, which quietly dropped `wide` off the
+   * featured account, so a suspension arriving from the laptop collapsed its full-width row. */
+  function classOf(a) {
+    return "tile" + (down(a) ? " down" : "") + (a.tag ? " wide" : "");
+  }
+
+  /* SUSPENDED ACCOUNTS SINK TO THE BOTTOM, and this is a RUNTIME sort rather than the master's
+   * order, which it has to be: `/state.json` can suspend an account from the laptop in seconds
+   * with no deploy, so an order baked at build time would leave it sitting among the live ones
+   * until the next release.
+   *
+   * The tiles are MOVED, never rebuilt. `tiles[i]` stays aligned with `CODES[i]`, so every index
+   * the app holds keeps its meaning: the hash, `open(i)`, the thumbnails and the zoom's rects
+   * are all untouched. Re-appending an element that is already in the DOM moves it, so appending
+   * in display order is the whole operation.
+   *
+   * The stagger is renumbered to follow the VISIBLE order; left on the build index the list
+   * would deal itself in out of sequence, which reads as a stutter rather than a deal. */
+  function orderTiles() {
+    var live = [], held = [];
+    for (var i = 0; i < tiles.length; i++) (down(CODES[i]) ? held : live).push(i);
+    var order = live.concat(held);
+    for (var k = 0; k < order.length; k++) {
+      tiles[order[k]].style.setProperty("--i", String(k));
+      elGrid.appendChild(tiles[order[k]]);
+    }
+  }
+
   function buildGrid() {
     var frag = document.createDocumentFragment();
     CODES.forEach(function (a, i) {
@@ -710,7 +739,7 @@
        * with another. Full width also means the tile can lay the coin BESIDE the name rather
        * than above it: the reason tiles stack is that a two-column tile leaves only 72px of
        * text column, and a full-width one leaves about 250px. */
-      b.className = "tile" + (down(a) ? " down" : "") + (a.tag ? " wide" : "");
+      b.className = classOf(a);
       b.style.setProperty("--dot", a.brand);
       b.style.setProperty("--soft", softOf(a.brand));
       b.style.setProperty("--i", String(i));
@@ -735,6 +764,7 @@
       tiles.push(b);
     });
     elGrid.appendChild(frag);
+    orderTiles();
     drawThumbs();
   }
 

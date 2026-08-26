@@ -660,10 +660,23 @@ Six things that will bite:
   the name. The 72px constraint that forced the stack is simply not present at 343px, which
   leaves about 250px of text column. One field with two visible effects is deliberate here: a
   tagged account is a featured account, and a featured account is not sharing its row.
-- **THE ORDER IS THE MASTER'S ORDER, and it no longer follows the size rule.** The book was
-  traditional banks by market share, then digital banks, then e-wallets. JPMorgan Chase now sits
-  first regardless, because it is the featured account (owner, 26 Aug 2026). Nothing sorts the
-  list at build or at run time, so the master's array order is the only thing deciding it.
+- **THE ORDER IS THE MASTER'S ORDER, WITH ONE RUNTIME EXCEPTION.** The book was traditional
+  banks by market share, then digital banks, then e-wallets. JPMorgan Chase now sits first
+  regardless, because it is the featured account (owner, 26 Aug 2026). Nothing sorts at BUILD
+  time, so `accounts.json`'s array order decides everything else.
+- **SUSPENDED ACCOUNTS SINK TO THE BOTTOM, and that sort has to happen at RUN time.** Baking it
+  would be wrong, not merely inconvenient: `/state.json` suspends an account from the laptop in
+  seconds with no deploy, so a baked order would leave it sitting among the live ones until the
+  next release. `orderTiles()` runs after the grid is built and again whenever the KV state
+  changes. It MOVES tiles rather than rebuilding them, so `tiles[i]` stays aligned with
+  `CODES[i]` and every index the app holds keeps its meaning: the hash, `open(i)`, the thumbnails
+  and the zoom's rects. Re-appending an element already in the DOM moves it, so appending in
+  display order is the whole operation. The `--i` stagger is renumbered to the visible order, or
+  the list deals itself in out of sequence.
+- **ONE PLACE DECIDES A TILE'S CLASSES, and for a while there were two.** The KV watcher rebuilt
+  the string as `"tile down"` or `"tile"`, which quietly dropped `wide`, so a suspension arriving
+  from the laptop collapsed the featured account's full-width row into a normal one. Both callers
+  go through `classOf()` now, and the suite asserts the watcher does not build the string itself.
 - **`shipped[0]` IS NOT NECESSARILY A CODE.** The suite used it in fourteen places to mean "any
   account, for a rendering test", which was true only while every account had a payload. Moving a
   code-less account to the front made all fourteen throw. They read `codes[0]` now, which is what
