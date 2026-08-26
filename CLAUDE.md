@@ -748,6 +748,20 @@ site, plus `salt-command` and `wallet`. It held two KV namespaces, `QR_STATE` fo
 `salt_queue` for salt-command. **Nothing in this repo may touch the other two**, and the one
 namespace this Worker binds it only ever reads.
 
+**THE WORKER HAS A GIT INTEGRATION ATTACHED, AND IT IS POINTED AT THE MASTER REPOSITORY RATHER
+THAN AT THIS ONE.** Found 26 Aug 2026. A push to `pay-afif-site` raises a check there called
+`Workers Builds: jb3zkzyqguu5` and attempts a build and deploy of that folder into this Worker.
+It fails, because that repository carries no Wrangler configuration for the build to match its
+name against, and the live Worker is still this repo's `src/worker.js`, read off the account and
+compared. Nothing has been overwritten.
+
+It is still the one route that goes round `public/`. Everything this repo does to keep the
+master's private fields unshippable happens in `tools/build.mjs` and lands in `public/`, so a
+deploy that never runs that build ships whatever the master's root happens to hold. **This
+repo's deploy path is `npm run deploy` from the laptop and nothing else.** The integration wants
+removing in the Cloudflare dashboard, under this Worker, Settings, Builds, Disconnect. That is
+the owner's action; no change in either repository can make it.
+
 **The account is the only key to the site, and that follows from having no write path.** There
 is no edit page, no `EDIT_KEY` and no secret anywhere in this repo, so there is nothing to leak
 and correspondingly nothing else guarding what is deployed. Keeping the site ours is exactly
