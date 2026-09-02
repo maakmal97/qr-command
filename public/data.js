@@ -95,7 +95,7 @@ self.QR_CODES = [
     "brand": "#1F1FE0",
     "payload": "00020201021126420014A00000061500010106629287021086220942325204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY63043F42",
     "acct": "86 2209 4232",
-    "maintenance": true,
+    "maintenance": false,
     "bank": "",
     "holder": "",
     "bankMark": "",
@@ -137,7 +137,7 @@ self.QR_CODES = [
     "brand": "#1A2B6B",
     "payload": "00020201021126520014A000000615000101068900530220MDN177104459556739375204739953034585802MY5925MUHAMMADAFIFAKMALBINAFFIA6011KUALALUMPUR6304FF56",
     "acct": "9988 00112763 9",
-    "maintenance": true,
+    "maintenance": false,
     "bank": "",
     "holder": "",
     "bankMark": "",
@@ -202,4 +202,4 @@ self.QR_CODES = [
     "ring": ""
   }
 ];
-self.QR_BUILD = "37ab928c3f7a";
+self.QR_BUILD = "93c843cd5eb7";

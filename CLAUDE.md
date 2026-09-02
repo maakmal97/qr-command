@@ -740,3 +740,66 @@ it is asserted offline by the suite and by that curl afterwards.
 - **jsQR is not shipped.** It is 130 KB and the decode proof happens at build and test time. The
   runtime safety net is the plain-code fallback, which is a tap away and automatic below the
   safe size.
+
+## The iPhone standard, from salt-command v392 (28 Aug 2026)
+
+His instruction of 28 Aug: optimise everything as a web app on iPhone, and design around the
+Dynamic Island. Salt Command had five faults; this repo already avoids four of them and the
+audit is recorded so it is not repeated.
+
+**Where this app already stands, checked rather than assumed.** `src/app/app.css` uses
+`safe-area-inset-top` (two rules), the tap token is `--tap:44px`, no rule measures itself
+against `100vh` (the three `vh` uses are `2vh` and `4vh` spacing), and the app has no typed
+fields, so the iOS zoom fault cannot arise. Nothing here needs doing.
+
+**The one thing that DID need doing was not here, it was in the master, and it is done
+(2 Sep 2026).** `Code\pay-afif-site\edit.html` set `input,select,textarea{font-size:14px}` and
+`textarea{font-size:12px}` across TWELVE fields. **iOS zooms into any field under 16px on focus
+and does not zoom back out**, so tapping any of them left the whole editor magnified. It also
+set `input[type=color]{width:38px;height:38px}`, six points under the 44px minimum, and the
+per-item `↑ ↓ ✕` tools at 30x34, one of which is REMOVE. All are on 16px and `--tap` now.
+
+**The rule, so a later screen does not reintroduce it:**
+
+- `env(safe-area-inset-*)` is read into `--safetop`/`--safebot` ONCE and used through the
+  variables, never written out at each site. That is not tidiness: `env()` returns zero in every
+  desktop browser, so a fix written as bare `env()` cannot be measured. With variables a probe
+  forces the iPhone 15 Pro figures, 59px and 34px, and the layout is testable.
+- `viewport-fit=cover` with `status-bar-style:black-translucent` is an instruction to draw UNDER
+  the status bar and the island. If both are set, the top inset is mandatory, not optional.
+- The Dynamic Island is CENTRED, so a control on the right is never inside its rectangle and is
+  still unreachable. The whole strip above the inset is dead. Pad the strip; do not move sideways.
+- 44px minimum on anything a finger hits, from one token.
+- No field under 16px.
+- `dvh`, never `vh`: iOS Safari's toolbar changes the viewport under the page.
+
+## This app is the reference design (2 Sep 2026)
+
+His instruction: the local page and the phone app are one product and should look like it.
+There were **three** designs across the two repos, and this one was the only finished one, so
+the other two moved to it rather than the other way round. The work is in
+`Code\pay-afif-site`; what matters here is what it means for this repo.
+
+**Three files flow OUT of here and are generated at the destination**, by
+`pay-afif-site\tools\sync-design.mjs`: `src/app/qr-art.js`, the `:root` block of
+`src/app/app.css`, and now `src/vendor/*-mark.js` concatenated as `marks.js`. Accounts flow the
+other way. **Change the look here, then run the sync there.** A hand-edit at the destination is
+lost, and worse, silently makes the two disagree. The renderer had gone 293 lines stale.
+
+**Tokens alone do not make one design, and that is the lesson.** The local page had the token
+block all along and then painted a second palette over it. Sharing `:root` buys a shared
+palette; it does not stop a page from having a teal masthead, cyan gradient headlines and its
+own type stack sitting on top of it.
+
+**Drift reaches through CALL SITES too.** Both pages ran this exact renderer and still drew the
+same account differently, because the local `coin()` passed a different option set: no `ring`,
+no marks, and `acct`. `paintFace` here is the shape to copy: one place assembling the options,
+with the `acct`-is-deliberately-absent note attached to it.
+
+**What changed in THIS repo, and it is two lines.** `.tiledot` is `border-radius:50%` while it
+is a plain brand disc, and `drawThumbs` adds `.drawn` to drop the radius once a coin is painted
+into it. The radius has to go then, because at 50 per cent it clips the tips off the scalloped
+rim, which is why the big coin's canvas carries none. But the disc is not only a passing state:
+a SUSPENDED account never gets its coin drawn at all, so it is what that tile shows for the
+whole suspension, and a grey square there reads as a failed image where a grey circle reads as
+a coin deliberately withheld. Visible today on GX Bank.

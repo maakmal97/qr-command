@@ -223,8 +223,18 @@ body.view-code .codeview{
   flex:0 0 auto;
   width:var(--thumb);height:var(--thumb);
   display:block;
+  /* ROUND WHILE IT IS A PLAIN BRAND DISC, square the moment a coin is painted into it.
+   *
+   * The radius has to go at that point, and that is the renderer's rule rather than taste: at
+   * 50 per cent it clips the tips off the scalloped rim, which is the same reason the big coin's
+   * canvas carries none. But the disc is not a passing state. A SUSPENDED account never gets
+   * its coin drawn at all, so the disc is what that tile shows for as long as the suspension
+   * lasts, and a grey square there reads as an image that failed to load where a grey circle
+   * reads as a coin deliberately withheld. */
+  border-radius:50%;
   filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));
 }
+.tiledot.drawn{border-radius:0;}
 /* `overflow-wrap:break-word` is the last resort and it is what produced "ShopeePa / y": with
  * too little room it will split inside a word rather than overflow. The width above is the real
  * fix; this keeps a freakishly long single word from spilling out of the tile instead. */

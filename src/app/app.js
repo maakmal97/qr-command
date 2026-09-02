@@ -792,7 +792,8 @@
           plain: false, decorative: true
         });
         el.style.background = "none";
-      } catch (e) { /* the brand disc stays; nothing is lost */ }
+        el.classList.add("drawn");   // drops the disc's radius, which would clip the scallops
+      } catch (e) { /* the brand disc stays, round; nothing is lost */ }
     }
   }
 
