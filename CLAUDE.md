@@ -438,6 +438,31 @@ The switch is on the local page, and it is the only place either value can be ch
 `maintenance.py` writes `accounts.json`, then pushes the whole suspended set to KV, and reports
 which of the two landed.
 
+**A STATE CHANGE MUST UNDRAW THE MINIATURE, and for a long time it only ever drew one
+(found live, 3 Sep 2026).** `drawThumbs` skipped a suspended account and moved on, which is
+right on the first pass, when nothing has been painted yet. But it also runs when `/state.json`
+changes what is suspended, and there skipping is silently wrong in both directions:
+
+- An account baked **LIVE** and then suspended from the laptop went grey and sank to the bottom
+  **with its code still drawn on the tile**. That is exactly what this whole mechanism exists to
+  prevent, and the rule above says it in as many words: a coin that is drawn and then merely
+  dimmed is one screenshot away from being scanned. Seen on the live phone as GX Bank, class
+  `tile down`, `.tiledot.drawn`, a readable 56px code on a tile the app was calling suspended.
+- The reverse was quieter: an account baked **suspended** and then restored kept a blank brand
+  disc until the next deploy, because nothing came back to paint it.
+
+The clear is a real clear, `el.width = 8`, which discards the backing store rather than covering
+it with a CSS rule, for the same reason the code view resizes its canvas instead of hiding it.
+`watchState` now calls `drawThumbs()` alongside `orderTiles()`. The old assertion, "no miniature
+is drawn for a suspended account", was pinning `if (down(a)) continue;` and so passed all along
+while describing the fault; it now asserts the CLEAR and is mutation tested against that exact
+line.
+
+**THIS ORDERING ONLY APPEARS WHEN THE TWO SOURCES DISAGREE**, which is why it went unseen: it
+needs the bundle to say live and KV to say suspended at the same moment. It happened because a
+restore on the laptop wrote `accounts.json` and lost the KV half to a transient
+"The request to Cloudflare's API timed out". `push_kv` retries three times now.
+
 ## Motion
 
 **MOTION IS TIERED, and one curve for everything was the bug rather than the discipline.**

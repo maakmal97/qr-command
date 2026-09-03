@@ -520,7 +520,24 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     /if \(down\(a\)\) \{[\s\S]{0,400}?elCoin\.width = 8; elCoin\.height = 8;/.test(appJsSrc));
   ok("nothing is pre-rendered for a suspended account either",
     /function prerender\(i\) \{[\s\S]{0,40}?if \(down\(CODES\[i\]\)\) return null;/.test(appJsSrc));
-  ok("no miniature is drawn for a suspended account", /if \(down\(a\)\) continue;/.test(appJsSrc));
+  /* THE MINIATURE IS CLEARED, NOT MERELY SKIPPED, and the difference is a live bug.
+   *
+   * This used to assert `if (down(a)) continue;`, which is correct only on the first pass, when
+   * nothing has been painted yet. drawThumbs also runs when /state.json changes what is
+   * suspended, and there `continue` leaves whatever is already on the canvas: an account baked
+   * LIVE and then suspended from the laptop went grey and sank to the bottom with its code
+   * still drawn on the tile. Seen on the live phone on 3 Sep 2026, GX Bank, class "tile down"
+   * with .tiledot.drawn. The old assertion passed throughout, because it was pinning the shape
+   * of the fault. */
+  ok("a suspended account's miniature is CLEARED, not merely skipped",
+    /function drawThumbs\(\)[\s\S]{0,1200}?if \(down\(a\)\) \{[\s\S]{0,240}?el\.width = 8; el\.height = 8;[\s\S]{0,240}?el\.classList\.remove\("drawn"\);/
+      .test(appJsSrc));
+  ok("and the clear happens before the renderer is ever asked for that account",
+    (() => {
+      const body = (appJsSrc.match(/function drawThumbs\(\)[\s\S]*?\n  \}/) || [""])[0];
+      return body.indexOf("el.width = 8") > 0 &&
+             body.indexOf("el.width = 8") < body.indexOf("paintFace(");
+    })());
   ok("saving and copying are both refused while suspended",
     (appJsSrc.match(/if \(down\(a\)\) \{ say\("Under maintenance"\); return; \}/g) || []).length === 2);
 
@@ -733,7 +750,12 @@ section("2. The bundle carries the codes and nothing else");
   ok("suspended accounts are sorted to the end, and re-sorted when the state changes",
     /function orderTiles\(\)/.test(appJs) &&
     /\(down\(CODES\[i\]\) \? held : live\)\.push\(i\)/.test(appJs) &&
-    /orderTiles\(\);[\s\S]{0,120}?if \(idx >= 0\) paint\(\);/.test(appJs));
+    /orderTiles\(\);[\s\S]{0,900}?if \(idx >= 0\) paint\(\);/.test(appJs));
+  /* A STATE CHANGE MUST REDRAW THE MINIATURES TOO. Re-classing a tile greys it and moving it
+   * sinks it; neither takes the code off it. This is the other half of the 3 Sep bug: the
+   * watcher did everything except the one thing that removes the picture. */
+  ok("a state change redraws the miniatures, not just the classes and the order",
+    /orderTiles\(\);[\s\S]{0,900}?drawThumbs\(\);[\s\S]{0,200}?if \(idx >= 0\) paint\(\);/.test(appJs));
   ok("the deal-in stagger follows the visible order, not the build order",
     /tiles\[order\[k\]\]\.style\.setProperty\("--i", String\(k\)\)/.test(appJs));
 

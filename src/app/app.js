@@ -281,6 +281,12 @@
       for (var i = 0; i < tiles.length; i++) tiles[i].className = classOf(CODES[i]);
       // Suspension can arrive from KV without a deploy, so the order is recomputed here too.
       orderTiles();
+      /* AND THE MINIATURES, which this did not do. Re-classing a tile greys it and moves it;
+       * it does not take the code off it. An account baked live and then suspended from the
+       * laptop kept its painted coin under a dimmed tile, which is a code on screen for an
+       * account whose payload may already be the wrong one. drawThumbs now clears as well as
+       * paints, so this one call settles both directions. */
+      drawThumbs();
       if (idx >= 0) paint();
     };
     readState().then(apply);
@@ -779,13 +785,34 @@
    * Decorative is also what skips the safe-size fallback: at 36 pixels a code is a texture, not
    * something anyone can point a camera at, and without it every tile would carry a tiny plain
    * black square instead of a coin. */
+  /* IT MUST ALSO UNDRAW, and for a while it only drew.
+   *
+   * This skipped a suspended account and moved on, which is right the first time through: the
+   * tile still carries its plain brand disc and nothing has been painted. But it is run again
+   * whenever /state.json changes what is suspended, and then skipping is silently wrong in both
+   * directions. An account the bundle bakes as LIVE has its miniature painted at startup; if KV
+   * then suspends it, the tile went grey and moved to the bottom while THE CODE STAYED ON IT.
+   * That is precisely the failure the whole suspension mechanism exists to prevent, and the
+   * rule is stated in as many words: a suspended account is not drawn anywhere, because a coin
+   * that is drawn and then merely dimmed is one screenshot away from being scanned.
+   *
+   * The reverse was wrong too, and quieter: an account baked suspended and then RESTORED from
+   * the laptop became live, clickable and orderable, but kept a blank brand disc until the next
+   * deploy, because nothing ever came back to paint it.
+   *
+   * The clear is a real clear. Setting width discards the backing store rather than leaving the
+   * pixels under a CSS rule, which is the same reason the code view resizes its canvas to 8x8
+   * instead of hiding it. */
   function drawThumbs() {
     for (var i = 0; i < CODES.length; i++) {
       var a = CODES[i], el = thumbOf(i);
       if (!el || !el.getContext) continue;
-      // A suspended account keeps its plain brand disc. Even a 36px miniature is a picture of a
-      // code, and the rule is that a code under maintenance is not drawn anywhere.
-      if (down(a)) continue;
+      if (down(a)) {
+        el.width = 8; el.height = 8;          // the pixels are gone, not covered
+        el.style.background = a.brand;        // back to the plain disc, round again
+        el.classList.remove("drawn");
+        continue;
+      }
       try {
         paintFace(el, a, {
           size: THUMB, pixelRatio: self.devicePixelRatio || 1,

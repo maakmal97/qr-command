@@ -53,7 +53,7 @@ self.QR_CODES = [
     "brand": "#7A2FF5",
     "payload": "00020201021126480014A000000615000101066292790216aAe3JBl7P7ncQunH5204000053034585802MY5925Muhammad Afif Akmal Bin A6002MY62110507fjuJk3n64350002EN0125Muhammad Afif Akmal Bin A6304C989",
     "acct": "8888 00299586 8",
-    "maintenance": true,
+    "maintenance": false,
     "bank": "",
     "holder": "",
     "bankMark": "",
@@ -202,4 +202,4 @@ self.QR_CODES = [
     "ring": ""
   }
 ];
-self.QR_BUILD = "93c843cd5eb7";
+self.QR_BUILD = "f12d631e96ee";
