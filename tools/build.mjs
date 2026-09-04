@@ -53,8 +53,21 @@ const MASTER = process.env.QR_MASTER ||
  * tile take a row of its own, which is the only place in the bundle where one field has two
  * visible effects. That is deliberate and there is exactly one such account: a tagged account is
  * a featured one, and a featured one is not sharing its row. */
+/* `biller` and `ref1` added 4 Sep 2026, for JomPAY.
+ *
+ * A BILLER CODE IS PUBLIC BY DESIGN: PayNet issues it to a registered biller and it is printed
+ * on every bill that biller sends. 11445 is INSTAPAY, not the owner, so publishing it discloses
+ * nothing about him.
+ *
+ * REF-1 IS NOT, AND IT IS THE ONE FIELD HERE THAT IS A REACHABLE IDENTIFIER. It is his mobile
+ * number, which unlike an account number can be called, messaged, and matched against a
+ * messaging app or an account-recovery flow. It ships because a copy has to have something to
+ * copy and the phone works with the radio off, exactly as `acct` does, and like `acct` it is
+ * NEVER DRAWN: it reaches a banking app through the clipboard without appearing on screen or in
+ * a screenshot of the coin. Anyone who views source still reads it. That is the same trade the
+ * owner already made for account numbers on 11 Aug 2026, made again knowingly. */
 const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder",
-              "bankMark", "holderMark", "tag", "ring"];
+              "bankMark", "holderMark", "tag", "ring", "biller", "ref1"];
 
 const die = (m) => { console.error("\nbuild failed: " + m + "\n"); process.exit(1); };
 const read = (p) => fs.readFileSync(p, "utf8");
@@ -133,15 +146,43 @@ function sanitise(doc, V) {
      * a field present on some records and missing from others is a field every reader has to
      * guess about, and this one decides whether a scannable code is drawn at all. */
     rec.payload = typeof a.payload === "string" ? a.payload : "";
+
+    /* THE BANK SHIPS FOR EVERY ACCOUNT, AND IT USED TO BE BLANKED ON THE CODE ONES.
+     *
+     * The old line read `if (rec.payload) rec.bank = ""`, with the reasoning that "a code
+     * account says nothing about a bank". That was true while a code account could only be
+     * paid by scanning. It stopped being true on 4 Sep 2026: every account here also has an
+     * account number at a real institution, so all fourteen are payable by DuitNow Transfer,
+     * and a transfer begins by picking that institution out of a list. Blanking it meant the
+     * master could hold the answer and the phone could not see it - which is what happened:
+     * thirteen bank strings were written to accounts.json and the build id did not move.
+     *
+     * The institution is not a guess. It is tag 26.01 of each payload, the six-digit PayNet
+     * member code the master carries as `mid`, and two accounts share one (Touch 'n Go, both
+     * on 890053). What the master types is the DISPLAY string a payer sees in that list. */
+    rec.bank = String(a.bank || "").trim();
+    if (!rec.payload && !rec.bank) die(where + " has no payload and no bank, so there is nothing to show");
+
     if (rec.payload) {
-      // A code account says nothing about a bank or a holder. The name is inside the payload,
-      // which is not ours to change, but the page does not repeat it.
-      rec.bank = "";
+      /* A HOLDER ON A CODE ACCOUNT KILLS THE BUILD, and it used to be discarded in silence.
+       *
+       * The asymmetry with `bank` is the point rather than an oversight. On a code account the
+       * receiver is the OWNER, so a `holder` there would be his own legal name on a public
+       * page. `holder` exists for the opposite case: a receiver that is an institution rather
+       * than a person, which a payer must be warned about before they confirm.
+       *
+       * Blanking it was safe but silent, and silence is the wrong answer to a master that has
+       * typed a name where one cannot go: mutation tested by putting the owner's full name on
+       * Maybank, and the build sailed through and shipped a clean bundle. Whoever typed it
+       * would have no idea whether it had been published or dropped. It stops the build now,
+       * which is what the owner-name guard further down does for the code-less accounts. */
+      if (String(a.holder || "").trim()) {
+        die(where + " has a payload AND a holder. A holder names a receiver that is not the " +
+            "owner, which only makes sense for an account with no code; here the receiver IS " +
+            "the owner, so this would be his own name. Remove it in the master.");
+      }
       rec.holder = "";
     } else {
-      rec.bank = String(a.bank || "").trim();
-      if (!rec.bank) die(where + " has no payload and no bank, so there is nothing to show");
-
       /* THE NAME IS NEVER DERIVED. It ships only where the master TYPES a `holder`, and this
        * line is the whole of that policy.
        *
@@ -177,6 +218,23 @@ function sanitise(doc, V) {
     }
     rec.acct = typeof a.sub === "string" ? a.sub.trim() : "";
     if (!rec.acct) die(where + " has no account number, and the back of the coin needs one");
+
+    /* JOMPAY, and the pair is validated here as well as in the master for the same reason the
+     * ring is: a half-address reaches the phone as a rail the app offers and nobody can pay to.
+     * Both or neither, digits only, and never reformatted; what the biller issued is what has
+     * to be typed. */
+    rec.biller = String(a.biller || "").trim();
+    rec.ref1 = String(a.ref1 || "").trim();
+    if (!!rec.biller !== !!rec.ref1) {
+      die(where + " has " + (rec.biller ? "a biller code but no ref1" : "a ref1 but no biller " +
+          "code") + ". JomPAY needs both, or the account offers a rail nobody can pay to.");
+    }
+    if (rec.biller && !/^[0-9]{4,6}$/.test(rec.biller)) {
+      die(where + " has biller " + JSON.stringify(rec.biller) + ", not a 4 to 6 digit code");
+    }
+    if (rec.ref1 && !/^[0-9]{1,32}$/.test(rec.ref1)) {
+      die(where + " has ref1 " + JSON.stringify(rec.ref1) + ", which is not a run of digits");
+    }
 
     /* MAINTENANCE IS NORMALISED TO A REAL BOOLEAN, always present, never absent.
      *
@@ -501,6 +559,27 @@ console.log("    the number goes to the clipboard without being drawn. It still 
 console.log("    because a copy needs something to copy, so every account number remains readable");
 console.log("    to anyone who views source. That is unchanged, and it is not what taking it off");
 console.log("    the screen was for.");
+/* PRINTED EVERY RUN, because Ref-1 is not another account number and the difference matters.
+ * An account number can only receive money. A mobile number can be called, messaged, and
+ * matched against a messaging app or an account-recovery flow, so shipping one is a wider
+ * disclosure than the 11 Aug decision that put account numbers in the bundle. It is drawn
+ * nowhere, exactly like `acct`, but it is readable to anyone who views source. */
+{
+  /* `codes`, not `shipped`. auditPublic returns FILE PATHS, so `shipped.filter(c => c.biller)`
+   * was an array of strings filtered on a property none of them has: always empty, no error,
+   * and a disclosure that silently printed nothing. The same name means records in the suite
+   * and paths here, which is how it got past a careful read. */
+  const jp = codes.filter((c) => c.biller);
+  if (jp.length) {
+    console.log("  JomPAY on " + jp.length + " account(s): " +
+                jp.map((c) => c.key + " biller " + c.biller).join(", ") + ".");
+    console.log("    The BILLER CODE is public by design; PayNet issues it and it is printed on");
+    console.log("    every bill. REF-1 IS NOT: it ships so the clipboard has something to copy,");
+    console.log("    it is drawn nowhere, and it is readable to anyone who views source. Where it");
+    console.log("    is a mobile number that is a reachable identifier, not just an address that");
+    console.log("    can receive money.");
+  }
+}
 /* Printed either way, because "no name is published" is exactly the kind of fact that stops
  * being true quietly. Silence here would read the same as the field not existing. */
 if (d.named.length) {

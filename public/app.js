@@ -32,6 +32,8 @@
   var elGrid = document.getElementById("grid");
   var elBack = document.getElementById("back");
   var elCopy = document.getElementById("copybtn");
+  var elJom = document.getElementById("jompaybtn");
+  var elRails = document.getElementById("rails");
   var elList = document.getElementById("accounts");
   var skies = [document.getElementById("sky1"), document.getElementById("sky2")];
   var skyOn = 0;
@@ -179,6 +181,34 @@
    * is what the reverse of a coin already does. */
   function plate(a) { return !!a && !a.payload; }
 
+  /* ------------------------------------------------------------------- the rails
+   *
+   * A RAIL IS A PROPERTY OF AN ACCOUNT, NOT A CATEGORY OF ACCOUNT, and that single fact
+   * decides the whole shape of the list. Thirteen of fourteen accounts are payable BOTH by
+   * scanning the code and by transferring to the account number; Instapay is payable all three
+   * ways. Three separate books would therefore list nearly everything twice, and duplication is
+   * what this codebase keeps getting bitten by. So there is one wallet and the rails filter it.
+   *
+   * DERIVED, NEVER STORED. A stored `rail` field would be a second opinion about data the
+   * record already carries, free to disagree with it; asking the fields directly cannot.
+   *
+   *   qr        a payload, so there is something to scan
+   *   transfer  a bank and a number, so a payer can pick the institution and paste
+   *   jompay    a biller code and a reference, both or neither
+   */
+  var RAILS = [
+    { id: "all", label: "All", has: function () { return true; } },
+    { id: "qr", label: "QR", has: function (a) { return !!a.payload; } },
+    { id: "transfer", label: "Transfer", has: function (a) { return !!(a.bank && a.acct); } },
+    { id: "jompay", label: "JomPAY", has: function (a) { return !!(a.biller && a.ref1); } }
+  ];
+  var rail = "all";
+  function railOf(id) {
+    for (var i = 0; i < RAILS.length; i++) if (RAILS[i].id === id) return RAILS[i];
+    return RAILS[0];
+  }
+  function onRail(a, id) { return railOf(id).has(a); }
+
   // A traced mark by id, or nothing. An unknown id draws no mark rather than throwing; the
   // build already refuses an id with no file behind it, so this is the belt to that brace.
   function markOf(id) { return (self.MARKS || {})[id] || null; }
@@ -313,11 +343,16 @@
        * being changed on the laptop, and handing out a stale account number is the same failure
        * as showing a stale code. The panel already explains why, so the button does not. */
       elCopy.disabled = true;
+      elJom.disabled = true;
       say("");
       return { plain: false, fellBack: false, maintenance: true };
     }
     document.body.classList.remove("maintenance");
     elCopy.disabled = false;
+    /* Hidden, not disabled, on the thirteen accounts with no biller code. Disabled would say
+     * "payable this way, but not now", which is untrue: they are not on that rail at all. */
+    elJom.hidden = !(a.biller && a.ref1);
+    elJom.disabled = false;
     if (pre && pre.canvas) {
       elCoin.width = pre.canvas.width;
       elCoin.height = pre.canvas.height;
@@ -358,14 +393,20 @@
   }
 
   /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
-   * banking app is the number itself. */
-  function copyAcct() {
+   * banking app is the number itself.
+   *
+   * ONE COPY PATH FOR BOTH RAILS. The account number and the JomPAY reference differ only in
+   * which field they read and what the confirmation says; the clipboard call, the fallback for
+   * browsers without it, the maintenance refusal and the tuck are identical. Written twice they
+   * would drift, and the half that drifts is the one nobody tests, because it belongs to the
+   * single account that has a biller code. */
+  function copyValue(value, label) {
     var a = CODES[idx];
-    if (!a || !a.acct) return;
-    // The number may be the one being changed, so it is not handed out either.
+    if (!a || !value) return;
+    // The value may be the one being changed, so it is not handed out either.
     if (down(a)) { say("Under maintenance"); return; }
-    var digits = a.acct.replace(/\s+/g, "");
-    var done = function () { say("Copied " + a.acct); tuck(); };
+    var digits = String(value).replace(/\s+/g, "");
+    var done = function () { say("Copied " + label); tuck(); };
     var fallback = function () {
       try {
         var ta = document.createElement("textarea");
@@ -383,6 +424,21 @@
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(digits).then(done, fallback);
     } else fallback();
+  }
+
+  function copyAcct() {
+    var a = CODES[idx];
+    if (a) copyValue(a.acct, a.acct);
+  }
+
+  /* THE REFERENCE IS COPIED, NEVER SAID. The confirmation names the rail rather than the value,
+   * which is not tidiness: on Instapay Ref-1 is a mobile number, and "Copied 6011111809738"
+   * would put it on screen and into any screenshot, which is the one thing copying instead of
+   * drawing exists to avoid. The account number is echoed because that decision was already
+   * taken for it, deliberately, on 11 Aug 2026. */
+  function copyRef1() {
+    var a = CODES[idx];
+    if (a) copyValue(a.ref1, "JomPAY Ref-1");
   }
 
   /* -------------------------------------------------------------------- motion */
@@ -729,10 +785,57 @@
     var live = [], held = [];
     for (var i = 0; i < tiles.length; i++) (down(CODES[i]) ? held : live).push(i);
     var order = live.concat(held);
+    /* THE FILTER HIDES, IT DOES NOT REBUILD, for exactly the reason the sort moves rather than
+     * rebuilds: `tiles[i]` must stay aligned with `CODES[i]` or every index the app holds
+     * silently changes meaning, the hash and open(i) and the zoom's rects included.
+     *
+     * The stagger is renumbered over the VISIBLE tiles only. Numbered over all of them, a
+     * filter showing one account in fourteen would deal it in on the fourteenth beat, which
+     * reads as the app having hung. */
+    var shown = 0;
     for (var k = 0; k < order.length; k++) {
-      tiles[order[k]].style.setProperty("--i", String(k));
-      elGrid.appendChild(tiles[order[k]]);
+      var el = tiles[order[k]], on = onRail(CODES[order[k]], rail);
+      el.hidden = !on;
+      if (on) el.style.setProperty("--i", String(shown++));
+      elGrid.appendChild(el);
     }
+  }
+
+  /* The chips, built from the data so a count cannot go stale against it. "All" is always
+   * offered; a rail nobody is on is not, because a filter that can only ever return nothing is
+   * a dead control. */
+  function buildRails() {
+    if (!elRails) return;
+    elRails.textContent = "";
+    RAILS.forEach(function (r) {
+      var n = CODES.filter(r.has).length;
+      if (!n && r.id !== "all") return;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "railbtn";
+      b.setAttribute("aria-pressed", String(r.id === rail));
+      b.textContent = r.label;
+      var c = document.createElement("span");
+      c.className = "railn";
+      c.textContent = String(n);
+      b.appendChild(c);
+      b.addEventListener("click", function () { setRail(r.id); });
+      elRails.appendChild(b);
+    });
+  }
+
+  function setRail(id) {
+    if (id === rail) return;
+    rail = id;
+    var btns = elRails ? elRails.querySelectorAll(".railbtn") : [];
+    var i = 0;
+    RAILS.forEach(function (r) {
+      var n = CODES.filter(r.has).length;
+      if (!n && r.id !== "all") return;
+      if (btns[i]) btns[i].setAttribute("aria-pressed", String(r.id === rail));
+      i++;
+    });
+    orderTiles();
   }
 
   function buildGrid() {
@@ -770,6 +873,7 @@
       tiles.push(b);
     });
     elGrid.appendChild(frag);
+    buildRails();
     orderTiles();
     drawThumbs();
   }
@@ -872,6 +976,10 @@
     elCopy.addEventListener("click", function (e) {
       e.stopPropagation();
       copyAcct();
+    });
+    elJom.addEventListener("click", function (e) {
+      e.stopPropagation();
+      copyRef1();
     });
 
     document.addEventListener("keydown", function (e) {

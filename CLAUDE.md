@@ -237,6 +237,63 @@ saying otherwise would be the wrong kind of comfort.
 number may be the one being changed on the laptop, and handing out a stale account number is the
 same failure as showing a stale code.
 
+## The three rails (4 Sep 2026)
+
+Malaysia has three ways to be paid and this book now carries all of them: **DuitNow QR** (scan
+the coin), **DuitNow Transfer** (pick the institution, paste the number, confirm the receiver)
+and **JomPAY** (type a biller code and Ref-1).
+
+**A RAIL IS A PROPERTY OF AN ACCOUNT, NOT A CATEGORY OF ACCOUNT, and that one fact decides the
+whole shape of the list.** Thirteen of fourteen are payable BOTH by scanning and by transfer;
+Instapay is payable all three ways. Three separate books, or a landing page with three doors,
+would list nearly everything twice and add a tap to the common case for the sake of two doors
+opening onto one item each. So there is one wallet and the rails FILTER it, as chips above the
+grid built from the data so a count cannot go stale.
+
+**The rails are DERIVED, never stored.** A stored `rail` field would be a second opinion about
+data the record already carries and free to disagree with it. `qr` is a payload, `transfer` is
+a bank and a number, `jompay` is a biller code and a reference.
+
+**The filter HIDES, it does not rebuild**, for the same reason the suspended sort moves rather
+than rebuilds: `tiles[i]` must stay aligned with `CODES[i]` or the hash, `open(i)`, the
+thumbnails and the zoom's rects all silently change meaning. The `--i` stagger counts VISIBLE
+tiles, or a filter showing one account in fourteen deals it in on the fourteenth beat and reads
+as a hang.
+
+**The chip row WRAPS and must never scroll sideways.** This app's navigation used to be a
+sideways rail nobody could find the end of, and the suite asserts `overflow-x:auto` appears
+nowhere in `app.css`. Measured at 375px the four chips come to about 321px inside 343px, so
+they sit on one line on the narrowest phone anyway.
+
+**`bank` now ships for EVERY account, and the build used to blank it on the code ones.** The
+old line read `if (rec.payload) rec.bank = ""`, reasoning that a code account says nothing
+about a bank. True while scanning was the only way to pay one, false the moment all fourteen
+became transferable. The symptom was silent: thirteen bank strings were written to the master
+and the build id did not move. The institution itself is not a guess, it is tag `26.01` of each
+payload, the six-digit PayNet member code the master keeps as `mid`, and **two accounts share
+one** (Touch 'n Go and Touch 'n Go Business, both 890053). What the master types is the DISPLAY
+string a payer sees in their app's list.
+
+**`holder` on a code account KILLS THE BUILD**, and it used to be discarded in silence. The
+asymmetry with `bank` is the point: on a code account the receiver is the owner, so a `holder`
+would be his own legal name on a public page. Blanking it was safe but silent, and mutation
+tested by putting his full name on Maybank the build sailed through and shipped a clean bundle,
+leaving whoever typed it with no idea whether it had published or been dropped.
+
+**REF-1 IS NOT ANOTHER ACCOUNT NUMBER, and the difference is why it is never drawn.** A biller
+code is public by design: PayNet issues it to a registered biller and it is printed on every
+bill, and 11445 is INSTAPAY rather than the owner. Ref-1 here is his mobile number, which
+unlike an account number can be called, messaged, and matched against a messaging app or an
+account-recovery flow. It ships, because a copy needs something to copy and the phone works
+with the radio off, and it is drawn nowhere. **The confirmation names the rail, not the value**:
+"Copied JomPAY Ref-1", never the digits, because putting them in the toast would put them on
+screen and into any screenshot, which is the whole thing copying instead of drawing avoids. The
+account number IS echoed, and that difference is deliberate.
+
+**One copy path serves both**, `copyValue(value, label)`. Written twice the half that drifts is
+the JomPAY half, because it belongs to the single account with a biller code and so is the one
+nobody exercises by accident.
+
 ## Accounts with no code at all
 
 Some accounts have no DuitNow code and are paid by picking a bank, pasting an account number and

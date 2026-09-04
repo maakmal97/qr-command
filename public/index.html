@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=f12d631e96ee">
+<link rel="stylesheet" href="./app.css?v=fb59b002c029">
 </head>
 <body class="view-list">
 
@@ -24,6 +24,13 @@
 <!-- The home screen. Every account, named, one tap away, nothing hidden. -->
 <section id="accounts" class="accounts" aria-label="Accounts">
   <h1 class="atitle">Accounts</h1>
+  <!-- THE RAILS FILTER ONE LIST, they do not split it into three.
+       A rail is a property of an account, not a category of account: thirteen of fourteen are
+       payable by both QR and transfer, and Instapay by all three. Three separate books would
+       list nearly everything twice, and a landing page would add a tap to the common case for
+       the sake of two doors that open onto one item each. The buttons are built by app.js so
+       the counts cannot go stale against the data. -->
+  <div class="rails" id="rails" role="group" aria-label="Payment method"></div>
   <div class="grid" id="grid"></div>
 </section>
 
@@ -61,8 +68,12 @@
 
     <div class="tools">
       <p id="say" class="say" role="status" aria-live="polite"></p>
+      <!-- One action per rail this account actually has, and nothing for a rail it lacks. The
+           JomPAY button is hidden rather than disabled on the thirteen without a biller code:
+           disabled would say "you could pay this way but not now", which is untrue. -->
       <div class="pills">
         <button type="button" id="copybtn" class="pill">Copy account number</button>
+        <button type="button" id="jompaybtn" class="pill" hidden>Copy JomPAY Ref-1</button>
       </div>
     </div>
   </main>
@@ -72,12 +83,12 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=f12d631e96ee"></script>
+<script src="./qrcode.js?v=fb59b002c029"></script>
 <!-- The traced marks, registering themselves on self.MARKS. Path data, so no image is fetched
      and the Content-Security-Policy stays `default-src 'none'` with no img-src at all. -->
-<script src="./marks.js?v=f12d631e96ee"></script>
-<script src="./qr-art.js?v=f12d631e96ee"></script>
-<script src="./data.js?v=f12d631e96ee"></script>
-<script src="./app.js?v=f12d631e96ee"></script>
+<script src="./marks.js?v=fb59b002c029"></script>
+<script src="./qr-art.js?v=fb59b002c029"></script>
+<script src="./data.js?v=fb59b002c029"></script>
+<script src="./app.js?v=fb59b002c029"></script>
 </body>
 </html>

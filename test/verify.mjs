@@ -561,11 +561,12 @@ section("2. The bundle carries the codes and nothing else");
 }
 
 {
-  const SHIP = ["acct", "bank", "bankMark", "brand", "holder", "holderMark", "key",
-                "maintenance", "name", "payload", "ring", "tag"];
+  // `biller` and `ref1` added 4 Sep 2026 for JomPAY. Widening this list is the deliberate act
+  // rule 4 describes: it happens here and in build.mjs's SHIP, in the open, or not at all.
+  const SHIP = ["acct", "bank", "bankMark", "biller", "brand", "holder", "holderMark", "key",
+                "maintenance", "name", "payload", "ref1", "ring", "tag"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
-  ok("every shipped record has exactly key, name, brand, payload, acct, maintenance, bank, " +
-     "holder, bankMark, holderMark",
+  ok("every shipped record has exactly " + SHIP.join(", ") + " and nothing else",
     wrong.length === 0,
     wrong.map((w) => w.key + ": " + Object.keys(w).join(",")).join("; "));
 }
@@ -756,8 +757,14 @@ section("2. The bundle carries the codes and nothing else");
    * watcher did everything except the one thing that removes the picture. */
   ok("a state change redraws the miniatures, not just the classes and the order",
     /orderTiles\(\);[\s\S]{0,900}?drawThumbs\(\);[\s\S]{0,200}?if \(idx >= 0\) paint\(\);/.test(appJs));
+  /* The stagger counts VISIBLE tiles, which is stricter than "display order" and had to become
+   * so once a rail filter could hide some. Numbered over all fourteen, a filter showing one
+   * account would deal it in on the fourteenth beat and read as the app having hung. */
   ok("the deal-in stagger follows the visible order, not the build order",
-    /tiles\[order\[k\]\]\.style\.setProperty\("--i", String\(k\)\)/.test(appJs));
+    /setProperty\("--i", String\(shown\+\+\)\)/.test(appJs));
+  ok("and a filtered-out tile is hidden rather than the grid being rebuilt, so tiles[i] still " +
+     "means CODES[i]",
+    /el\.hidden = !on;/.test(appJs) && !/elGrid\.textContent = ""/.test(appJs));
 
   /* A TAGGED ACCOUNT IS THE FEATURED ONE and takes a row to itself. `1 / -1` spans whatever
    * auto-fill resolved to rather than assuming two columns, so this survives a wider screen. */
@@ -882,11 +889,26 @@ section("2. The bundle carries the codes and nothing else");
     /elCopy\.addEventListener\("click"/.test(appJs) &&
     /e\.stopPropagation\(\);[\s\S]{0,40}?copyAcct\(\);/.test(appJs));
   ok("the digits are copied without the spacing that is only there to be read",
-    /a\.acct\.replace\(\/\\s\+\/g, ""\)/.test(appJs));
+    /String\(value\)\.replace\(\/\\s\+\/g, ""\)/.test(appJs));
   ok("copying falls back to execCommand where the clipboard API is refused",
     /navigator\.clipboard\.writeText/.test(appJs) && /execCommand\("copy"\)/.test(appJs));
   ok("the copy never depends on the drawing: it reads the record, not a canvas",
-    /var digits = a\.acct\.replace/.test(appJs) && !/getImageData[\s\S]{0,80}acct/.test(appJs));
+    /var digits = String\(value\)\.replace/.test(appJs) &&
+    !/getImageData[\s\S]{0,80}(acct|ref1)/.test(appJs));
+  /* ONE COPY PATH FOR BOTH RAILS. Written twice, the half that drifts is the JomPAY half,
+   * because it belongs to the single account that has a biller code and so is the one nobody
+   * exercises by accident. */
+  ok("the account number and the JomPAY reference share one copy path",
+    /function copyValue\(value, label\)/.test(appJs) &&
+    /function copyAcct\(\)[\s\S]{0,120}?copyValue\(a\.acct/.test(appJs) &&
+    /function copyRef1\(\)[\s\S]{0,400}?copyValue\(a\.ref1/.test(appJs));
+  /* THE REFERENCE IS NEVER ECHOED. On Instapay Ref-1 is a mobile number, so a confirmation
+   * reading "Copied 6011111809738" would put it on screen and into any screenshot, which is the
+   * whole thing copying instead of drawing exists to avoid. The account number IS echoed, and
+   * that difference is deliberate: putting numbers in the bundle was decided on 11 Aug 2026,
+   * a mobile number is a reachable identifier rather than an address that can only receive. */
+  ok("the JomPAY confirmation names the rail, never the reference",
+    /copyValue\(a\.ref1, "JomPAY Ref-1"\)/.test(appJs));
   /* Unconditionally, not only on a change of account. When this was conditional the very first
    * account you opened had no label at all, because nothing had changed yet. */
   ok("every account arrival writes the hint, not only a change of account",
@@ -1085,10 +1107,27 @@ section("2. The bundle carries the codes and nothing else");
   ok("every code-less account names its bank and its number (" + plates.length + ")",
     thin.length === 0, thin.map((c) => c.key).join(", "));
 
-  // And the other way, so the two shapes cannot blur into one another.
-  const muddled = codes.filter((c) => c.bank || c.holder);
-  ok("an account WITH a code carries no bank and no holder; the name is in the payload already",
-    muddled.length === 0, muddled.map((c) => c.key).join(", "));
+  /* THE BANK NOW SHIPS ON EVERY ACCOUNT, THE HOLDER STILL ON ALMOST NONE, and the asymmetry is
+   * the assertion rather than an inconsistency to tidy away.
+   *
+   * This used to demand that a code account carry neither, on the reasoning that a code account
+   * says nothing about a bank. That held only while scanning was the sole way to pay one. Since
+   * 4 Sep 2026 all fourteen also have an account number at a real institution, so all fourteen
+   * are payable by DuitNow Transfer, and a transfer starts by picking that institution from a
+   * list. The bank is now the answer to a question the phone is actually asked.
+   *
+   * The holder is a different field doing a different job and it stays shut. On a code account
+   * the receiver is the owner, so a holder there would be his own legal name on a public page.
+   * It is only ever set where the receiver is an INSTITUTION a payer would not expect, which is
+   * the Wise account and nothing else. The leak check and the stem check below are the belt;
+   * this is the brace. */
+  const noBank = codes.filter((c) => !c.bank);
+  ok("every account names its institution, code or not, because all of them take a transfer",
+    noBank.length === 0, noBank.map((c) => c.key).join(", "));
+
+  const named = codes.filter((c) => c.holder);
+  ok("an account WITH a code carries no holder; the receiver is the owner and is never printed",
+    named.length === 0, named.map((c) => c.key).join(", "));
 
   const master2 = JSON.parse(read(path.join(MASTER, "accounts.json")));
   const want = master2.accounts.filter((a) => !a.payload).map((a) => a.key).sort().join();

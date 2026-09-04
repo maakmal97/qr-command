@@ -161,6 +161,49 @@ body.view-code .codeview{
   color:var(--ink-3);
 }
 
+/* THE RAIL FILTER. It WRAPS, and does not scroll sideways.
+ *
+ * A scrolling chip row was the obvious build and it is the wrong one here: this app's whole
+ * navigation used to be a sideways rail of codes nobody could find the end of, that design was
+ * thrown out, and `npm test` asserts `overflow-x:auto` appears nowhere in this sheet so it
+ * cannot creep back. A filter row is not that rail, but the cheap way to keep the guard honest
+ * is not to need the exception. Measured at 375px the four chips come to about 321px inside
+ * 343px of room, so they sit on one line on the narrowest phone anyway; a fifth rail would
+ * take a second line, which costs less than a control that can hide its own options. */
+.rails{
+  flex:0 0 auto;
+  display:flex;gap:7px;flex-wrap:wrap;
+}
+.railbtn{
+  appearance:none;-webkit-appearance:none;
+  flex:0 0 auto;
+  font:inherit;font-size:13px;font-weight:600;
+  cursor:pointer;
+  padding:7px 13px;
+  min-height:var(--tap);
+  border:1px solid var(--brd);
+  border-radius:var(--pill);
+  background:rgba(255,255,255,0.05);
+  color:var(--ink-2);
+  transition:background-color var(--t-fast),border-color var(--t-fast),color var(--t-fast),transform var(--t-fast);
+}
+.railbtn:hover{background-color:rgba(255,255,255,0.10);color:var(--ink);}
+.railbtn:active{transform:scale(.97);}
+.railbtn:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
+.railbtn[aria-pressed="true"]{
+  background-color:rgba(255,255,255,0.16);
+  border-color:var(--brd-2);
+  color:var(--ink);
+}
+/* The count is quieter than the name: it is a fact about the list, not a label for it. */
+.railn{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-left:5px;}
+.railbtn[aria-pressed="true"] .railn{color:var(--ink-2);}
+/* A tile the current filter excludes. `display:none` is right here and wrong for the two
+   VIEWS: a hidden view has to stay laid out because the zoom measures it, but a filtered-out
+   tile is not an animation endpoint and must leave the grid flow entirely, or auto-fill keeps
+   a hole where it used to be. */
+.tile[hidden]{display:none;}
+
 /* Two columns on the narrowest phone. 132px is the floor, not the target: at 375px it gives two
  * 167px columns, and one column would mean hunting up and down a single file.
  *
