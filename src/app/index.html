@@ -23,7 +23,12 @@
 
 <!-- The home screen. Every account, named, one tap away, nothing hidden. -->
 <section id="accounts" class="accounts" aria-label="Accounts">
-  <h1 class="atitle">Accounts</h1>
+  <div class="ahead">
+    <h1 class="atitle">Accounts</h1>
+    <!-- The one door to the edit surface. It is a plain link: /admin/ sits behind Cloudflare
+         Access, which does the signing in; nothing on this page knows or asks who you are. -->
+    <a class="signin" href="./admin/">Sign in</a>
+  </div>
   <!-- THE RAILS FILTER ONE LIST, they do not split it into three.
        A rail is a property of an account, not a category of account: thirteen of fourteen are
        payable by both QR and transfer, and Instapay by all three. Three separate books would

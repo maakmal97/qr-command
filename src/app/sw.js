@@ -33,17 +33,19 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  /* /state.json IS NEVER TOUCHED BY THIS WORKER, in either direction.
+  /* /state.json IS NEVER TOUCHED BY THIS WORKER, in either direction, AND NOR IS /admin/ OR /api/.
    *
-   * It says which codes are suspended, and it changes without a deploy, which is the whole
-   * reason it exists. A cached copy is a suspended code still being shown, which is the single
-   * failure the flag is there to prevent. Returning without calling respondWith lets the
-   * request go straight to the network, so nothing here can hold a stale copy of it, and it
-   * never enters the cache because it is never put there.
+   * state.json says which codes are suspended and in what order, and it changes without a
+   * deploy, which is the whole reason it exists. A cached copy is a suspended code still being
+   * shown, which is the single failure the flag is there to prevent. Returning without calling
+   * respondWith lets the request go straight to the network, so nothing here can hold a stale
+   * copy of it, and it never enters the cache because it is never put there.
    *
-   * Offline, the fetch simply fails and the app keeps the flag baked into the bundle. That is
-   * the fail-safe, and it is why this file may ignore this URL rather than fall back for it. */
-  if (url.pathname === "/state.json") return;
+   * Offline, the fetch simply fails and the app keeps the state it last stored. The admin page
+   * and its routes sit behind Cloudflare Access, whose sign-in page is precisely the kind of
+   * response this file must never cache as the app. */
+  if (url.pathname === "/state.json" || url.pathname === "/admin" ||
+      url.pathname.startsWith("/admin/") || url.pathname.startsWith("/api/")) return;
 
   // Navigations go to the network first so a deploy lands on the next open. Everything else
   // is stamped with the build id in its query string, so a cache hit is by definition the

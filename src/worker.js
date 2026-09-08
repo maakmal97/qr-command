@@ -1,15 +1,25 @@
 /* The Worker.
  *
- * This site is static and read-only. There is no store, no key, no write path and no KV
- * binding, because the phone is a viewer: the account list is baked into the bundle at build
- * time and a change is shipped by deploying, not by posting. That is the whole security
- * model, and it is why there is so little here.
+ * The public site is static: the account list is baked into the bundle at build time, and an
+ * account is added or removed by editing data/accounts.json and deploying. What changes without
+ * a deploy is one small JSON value in KV, `state`: which accounts are suspended and what order
+ * the tiles stand in. Since 8 Sep 2026 that value is written from the site itself, on /admin/,
+ * behind Cloudflare Access; the laptop switch that used to write it is retired.
  *
- * The Worker exists for one reason: to put the security headers on every response itself,
- * rather than trusting a `_headers` file to be honoured by the asset router. `X-Robots-Tag`
- * is the only thing keeping this address out of a search index, so it is not something to
- * assume; set here, it is asserted by test/verify.mjs offline and by curl against the live
- * origin after deploy.
+ * THE GATE IS THE TOKEN, NOT THE HEADER. Access injects Cf-Access-Jwt-Assertion on every request
+ * that passed the application, but the application covers /admin/ and the write route is reached
+ * by a fetch from that page carrying the CF_Authorization cookie. So every gated route verifies
+ * the JWT itself: RS256 signature against the team's published keys, issuer, audience and expiry.
+ * Presence of a header would not do, because a misconfigured Access application is exactly the
+ * case in which a stranger could reach the route with a header of their own.
+ *
+ * FAIL CLOSED. With ACCESS_TEAM or ACCESS_AUD unset, every gated route answers 401 and nothing is
+ * written, so this can be deployed before the Access application exists without opening a write.
+ *
+ * The Worker also puts the security headers on every response itself, rather than trusting a
+ * `_headers` file to be honoured by the asset router. `X-Robots-Tag` is the only thing keeping
+ * this address out of a search index, so it is set here and asserted by test/verify.mjs offline
+ * and by curl against the live origin after deploy.
  */
 
 const SECURITY = {
@@ -39,51 +49,111 @@ const SECURITY = {
 };
 
 // Paths that must never be served from a stale cache, or a deploy would not reach the phone.
-const NO_CACHE = /^\/(?:|index\.html|sw\.js|rev\.json|manifest\.webmanifest)$/;
+const NO_CACHE = /^\/(?:|index\.html|sw\.js|rev\.json|manifest\.webmanifest|admin|admin\/index\.html)$/;
+
+const KEY_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
+const MAX_STATE = 8 * 1024;
+
+const text = (body, status, extra) => new Response(body, {
+  status,
+  headers: { "content-type": "text/plain; charset=utf-8", ...SECURITY, ...(extra || {}) },
+});
+const json = (body, status) => new Response(JSON.stringify(body), {
+  status: status || 200,
+  headers: {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store, must-revalidate",
+    ...SECURITY,
+  },
+});
+
+/* ------------------------------------------------------------- the Access token */
+
+function b64url(s) {
+  s = s.replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function cookie(request, name) {
+  const all = request.headers.get("cookie") || "";
+  for (const part of all.split(";")) {
+    const [k, ...v] = part.trim().split("=");
+    if (k === name) return v.join("=");
+  }
+  return "";
+}
+
+/* Who passed Access, or null. Never throws: a malformed token, an unreachable key server or an
+ * unset variable all read as "nobody", which is the answer that opens nothing. */
+async function identity(request, env) {
+  const team = String((env && env.ACCESS_TEAM) || "").trim();
+  const aud = String((env && env.ACCESS_AUD) || "").trim();
+  if (!team || !aud) return null;
+  const token = request.headers.get("cf-access-jwt-assertion") || cookie(request, "CF_Authorization");
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const dec = new TextDecoder();
+    const header = JSON.parse(dec.decode(b64url(parts[0])));
+    const claims = JSON.parse(dec.decode(b64url(parts[1])));
+    const iss = "https://" + team + ".cloudflareaccess.com";
+    const auds = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+    if (header.alg !== "RS256" || claims.iss !== iss || !auds.includes(aud)) return null;
+    if (typeof claims.exp !== "number" || claims.exp <= Date.now() / 1000) return null;
+    const certs = await (await fetch(iss + "/cdn-cgi/access/certs")).json();
+    const jwk = (certs.keys || []).find((k) => k.kid === header.kid && k.kty === "RSA");
+    if (!jwk) return null;
+    const key = await crypto.subtle.importKey("jwk", { kty: "RSA", n: jwk.n, e: jwk.e },
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+    const good = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64url(parts[2]),
+      new TextEncoder().encode(parts[0] + "." + parts[1]));
+    return good ? { email: String(claims.email || "") } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------------- the state */
+
+/* The whole of what the admin may write: booleans against account keys, and an order of keys.
+ * The Worker does not know the account list (that is an asset), so shape is checked here and
+ * the phone ignores any key it does not recognise. Anything else in the body is dropped. */
+function cleanState(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const maintenance = {};
+  const m = raw.maintenance;
+  if (m && typeof m === "object" && !Array.isArray(m)) {
+    for (const k of Object.keys(m)) {
+      if (KEY_RE.test(k) && typeof m[k] === "boolean") maintenance[k] = m[k];
+    }
+  }
+  const order = Array.isArray(raw.order)
+    ? raw.order.filter((k, i, a) => typeof k === "string" && KEY_RE.test(k) && a.indexOf(k) === i)
+    : [];
+  if (order.length > 200) return null;
+  return { maintenance, order, at: new Date().toISOString() };
+}
 
 export default {
   async fetch(request, env) {
     if (!env || !env.ASSETS) {
       // Fail closed and say why. A silent fallthrough here would serve nothing and look like
       // a platform outage.
-      return new Response("no ASSETS binding: check assets.binding in wrangler.jsonc", {
-        status: 500,
-        headers: { "content-type": "text/plain; charset=utf-8", ...SECURITY },
-      });
-    }
-
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      return new Response("This site is read only.", {
-        status: 405,
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          allow: "GET, HEAD",
-          ...SECURITY,
-        },
-      });
+      return text("no ASSETS binding: check assets.binding in wrangler.jsonc", 500);
     }
 
     const url = new URL(request.url);
+    const method = request.method;
 
-    /* /state.json - the one thing the bundle cannot carry, because it changes without a deploy.
-     *
-     * READ ONLY, like everything else here. The Worker calls QR_STATE.get and nothing more;
-     * there is no route that writes it, no secret and nothing to authenticate. The value is
-     * put there from the laptop by wrangler, under the owner's own Cloudflare login, so the
-     * public surface gained a JSON file and not a write path.
-     *
-     * It carries account keys and booleans. The keys are already public in data.js, so this
-     * discloses nothing new: it says which of the codes already on the page is currently being
-     * changed and should not be shown.
-     *
-     * NEVER CACHED, anywhere. A suspended code that is still being served from a cache is the
-     * one failure this whole mechanism exists to prevent, so it is no-store at the edge and the
-     * service worker is forbidden from precaching it.
-     *
-     * A miss, an empty namespace or a KV outage all answer {} rather than an error. The phone
-     * then falls back to the flag baked into the bundle, which is the durable truth; this is
-     * the fast path, never the only one. */
-    if (url.pathname === "/state.json") {
+    /* /state.json - what changes without a deploy. Public, read only, never cached anywhere: a
+     * suspended code still being served from a cache is the one failure this exists to prevent.
+     * It carries account keys, booleans and an order; the keys are already public in data.js.
+     * A miss, an empty namespace or a KV outage answers {} and the phone keeps what it last saw. */
+    if (url.pathname === "/state.json" && (method === "GET" || method === "HEAD")) {
       let body = "{}";
       try {
         if (env.QR_STATE) {
@@ -99,6 +169,39 @@ export default {
           ...SECURITY,
         },
       });
+    }
+
+    /* The gated routes. /admin/ is the page, /api/me says who is signed in, /api/state writes.
+     * Each one verifies the token; none of them trusts the other to have done so. */
+    const gated = url.pathname === "/admin" || url.pathname.startsWith("/admin/") ||
+                  url.pathname.startsWith("/api/");
+    if (gated) {
+      const who = await identity(request, env);
+      if (!who) {
+        return url.pathname.startsWith("/api/")
+          ? json({ ok: false, error: "not signed in" }, 401)
+          : text("Sign in through Cloudflare Access to manage the accounts. If you are signed " +
+                 "in and still see this, the Access application or its variables are not set.", 401);
+      }
+      if (url.pathname === "/api/me" && method === "GET") return json({ ok: true, email: who.email });
+      if (url.pathname === "/api/state" && method === "POST") {
+        if (!env.QR_STATE) return json({ ok: false, error: "no QR_STATE binding" }, 500);
+        let raw = null;
+        try {
+          const body = await request.text();
+          if (body.length > MAX_STATE) return json({ ok: false, error: "too large" }, 413);
+          raw = JSON.parse(body);
+        } catch (e) { return json({ ok: false, error: "not JSON" }, 400); }
+        const next = cleanState(raw);
+        if (!next) return json({ ok: false, error: "bad shape" }, 400);
+        await env.QR_STATE.put("state", JSON.stringify(next));
+        return json({ ok: true, state: next });
+      }
+      if (url.pathname.startsWith("/api/")) return json({ ok: false, error: "no such route" }, 404);
+    }
+
+    if (method !== "GET" && method !== "HEAD") {
+      return text("This site is read only.", 405, { allow: "GET, HEAD" });
     }
 
     const upstream = await env.ASSETS.fetch(request);
@@ -118,4 +221,4 @@ export default {
   },
 };
 
-export { SECURITY, NO_CACHE };
+export { SECURITY, NO_CACHE, identity, cleanState };

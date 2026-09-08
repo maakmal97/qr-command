@@ -1,0 +1,181 @@
+{
+ "version": 2,
+ "payee": "MUHAMMAD AFIF AKMAL BIN AFFIAN",
+ "groups": {
+  "bank": "Bank accounts",
+  "wallet": "E-wallets",
+  "biz": "Business"
+ },
+ "accounts": [
+  {
+   "key": "wise",
+   "name": "JPMorgan Chase",
+   "sub": "3121 0000 1330 933",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#5B2F12",
+   "bank": "JPMorgan Chase Bank Berhad",
+   "holder": "Wise Payments Malaysia Sdn Bhd",
+   "bankMark": "jpmc",
+   "holderMark": "wise",
+   "tag": "Name not shown",
+   "ring": "#9FE870"
+  },
+  {
+   "key": "maybank",
+   "name": "Maybank",
+   "sub": "1571 5788 9482",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#F5B400",
+   "mid": "588734",
+   "payload": "00020201021126690014A000000615000101065887340220MAEPP111136012069171031316925400347355204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY6304A4DC",
+   "bank": "Maybank"
+  },
+  {
+   "key": "ambank",
+   "name": "AmBank",
+   "sub": "8881 07200072 2",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#C8102E",
+   "mid": "564169",
+   "payload": "00020201021126530014A000000615000101065641690221QRAMB00000000029740115204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6008SELANGOR610543900826441e6835dcebbd2d3d58171ab188218a13721c2a62db17c517c489f20202018666304EF6B",
+   "bank": "AmBank"
+  },
+  {
+   "key": "gx",
+   "name": "GX Bank",
+   "sub": "8888 00299586 8",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#7A2FF5",
+   "mid": "629279",
+   "payload": "00020201021126480014A000000615000101066292790216aAe3JBl7P7ncQunH5204000053034585802MY5925Muhammad Afif Akmal Bin A6002MY62110507fjuJk3n64350002EN0125Muhammad Afif Akmal Bin A6304C989",
+   "bank": "GX Bank"
+  },
+  {
+   "key": "boostbank",
+   "name": "Boost Bank",
+   "sub": "1003 0043 4015",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#ED1C24",
+   "mid": "629303",
+   "payload": "00020201021126560014A00000061500010106629303022400000000944a4bf94cf2e9185204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6006Sepang8264AC7313DF4E99D1D8BAEBF185E1B2E7CFCA2962310DAB9FD1689ED8222F4C31CF63046D8F",
+   "bank": "Boost Bank"
+  },
+  {
+   "key": "aeon",
+   "name": "AEON Bank",
+   "sub": "9988 19747 8097",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#EC008C",
+   "mid": "629295",
+   "payload": "00020201021126450014A00000061500010106629295021399881974780975204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY6304F493",
+   "bank": "AEON Bank"
+  },
+  {
+   "key": "ryt",
+   "name": "Ryt Bank",
+   "sub": "86 2209 4232",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#1F1FE0",
+   "mid": "629287",
+   "payload": "00020201021126420014A00000061500010106629287021086220942325204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY63043F42",
+   "bank": "Ryt Bank"
+  },
+  {
+   "key": "kaf",
+   "name": "KAF Digital Bank",
+   "sub": "1600 3747 09",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#BB571F",
+   "mid": "629311",
+   "payload": "00020201021126420014A00000061500010106629311021016003747095204000053034585802MY5930MUHAMMAD AFIF AKMAL BIN AFFIAN6002MY63040B53",
+   "bank": "KAF Digital Bank"
+  },
+  {
+   "key": "tng",
+   "name": "Touch 'n Go",
+   "sub": "1205 6116 5020",
+   "owner": "me",
+   "group": "wallet",
+   "brand": "#1A2B6B",
+   "mid": "890053",
+   "payload": "00020201021126440014A0000006150001010689005302121205611650205204000053034585802MY5921MUHAMMADAFIFAKMALBINA6002MY62130609732073603630462BD",
+   "bank": "Touch 'n Go eWallet"
+  },
+  {
+   "key": "tngbiz",
+   "name": "Touch 'n Go Business",
+   "sub": "9988 00112763 9",
+   "owner": "me",
+   "group": "biz",
+   "brand": "#1A2B6B",
+   "mid": "890053",
+   "payload": "00020201021126520014A000000615000101068900530220MDN177104459556739375204739953034585802MY5925MUHAMMADAFIFAKMALBINAFFIA6011KUALALUMPUR6304FF56",
+   "bank": "Touch 'n Go eWallet"
+  },
+  {
+   "key": "spay",
+   "name": "ShopeePay",
+   "sub": "1818 589039225 0",
+   "owner": "me",
+   "group": "wallet",
+   "brand": "#EE4D2D",
+   "mid": "890004",
+   "payload": "00020201021126440014A000000615000101068900040212P2P9635725205204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY8216cb96e6fd72318100630433E5",
+   "bank": "ShopeePay",
+   "maintenance": true
+  },
+  {
+   "key": "boostw",
+   "name": "Boost",
+   "sub": "1009 3608 2156",
+   "owner": "me",
+   "group": "wallet",
+   "brand": "#ED1C24",
+   "mid": "890061",
+   "payload": "00020201021126560014A0000006150001010689006102246a64b8f92187eb0b38a361e15204000053034585802MY5925MUHAMMAD AFIF AKMAL BI...6002MY824080fccb5c3e85a4cf0593c50fe7e86c5ee0cb70a863043F9A",
+   "bank": "Boost"
+  },
+  {
+   "key": "setel",
+   "name": "Setel",
+   "sub": "1182 3926 8074",
+   "owner": "me",
+   "group": "wallet",
+   "brand": "#00AFFE",
+   "mid": "890129",
+   "payload": "00020201021126440014A0000006150001010689012902121182392680745204000053034585802MY5925Muhammad Afif Akmal Bin A6002MY63042A43",
+   "bank": "Setel"
+  },
+  {
+   "key": "instapay",
+   "name": "Instapay",
+   "sub": "2236 9026 4534",
+   "owner": "me",
+   "group": "wallet",
+   "brand": "#EA1824",
+   "mid": "890178",
+   "payload": "00020201021126440014A0000006150001010689017802122236902645345204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6012KAULA LUMPUR6304B96F",
+   "bank": "Instapay",
+   "biller": "11445",
+   "ref1": "6011111809738"
+  }
+ ],
+ "rev": "1a0809f8a94-cf0cf7",
+ "updated": "2026-09-08T18:45:34+08:00",
+ "owners": [
+  {
+   "id": "me",
+   "name": "Afif Akmal",
+   "legal": "MUHAMMAD AFIF AKMAL BIN AFFIAN",
+   "self": true
+  }
+ ]
+}

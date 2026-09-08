@@ -6,29 +6,31 @@ never repeats a root rule. British English, no em-dashes, in files, code and cop
 Correct stale facts in place; the dated record is the project changelog / journal.
 Set 6 Sep 2026. Ceiling 15 KB.
 
-The payment-QR consolidator, read-only, on the phone: a Cloudflare Worker serving a static
-bundle built from the master at `Code\pay-afif-site`. Two screens: the accounts grid, and
-one code drawn on the device as a struck coin held in a gravitational lens. The coin has
-one side; a tap saves it, and `Copy account number` puts the digits on the clipboard
-without showing them. The reasoning and the measurements behind every line below are in
-`docs/NOTES.md`, the former body of this file, verbatim.
+The payment-QR consolidator on the phone: a Cloudflare Worker serving a static bundle built
+from `data/accounts.json` in this repo. Two screens: the accounts grid, and one code drawn on
+the device as a struck coin held in a gravitational lens. The coin has one side; a tap saves
+it, and `Copy account number` puts the digits on the clipboard without showing them. Since
+8 Sep 2026 there is one edit surface, `/admin/`, behind Cloudflare Access, for the two things
+that change: which accounts are shown and what order they stand in. The reasoning and the
+measurements behind every line below are in `docs/NOTES.md`.
 
 ## Hard rules
 
-1. **Deploy surface, not a source.** The master is `Code\pay-afif-site`; `public/` is its
-   build output. A hand edit there is overwritten by `npm run build` and the suite fails
-   meanwhile because the build id no longer hashes the files on disk.
+1. **`public/` is build output.** A hand edit there is overwritten by `npm run build` and
+   the suite fails meanwhile because the build id no longer hashes the files on disk.
+   **The store is `data/accounts.json`, committed** (owner, 8 Sep 2026; the laptop master
+   `Code\pay-afif-site` is retired and this private repo is the store's only home). Adding
+   or removing an account is an edit there, `npm run deploy`, nothing else.
 2. **Never rewrite a `payload` string.** The trailing four characters are a CRC, so a
    tidied payload can still scan and pay somebody else. The build copies and checks;
-   it never repairs.
-3. **Payload validation is imported** from the master's `functions/_lib/store.js`, never
-   reimplemented: a third copy once rejected all thirteen live payloads over a guessed
-   prefix. If the master moves, the build fails loudly.
-4. **The bundle carries twelve fields:** `key`, `name`, `brand`, `payload`, `acct`,
-   `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`, `tag`, `ring`. Owner, group
-   and DuitNow member number stay on the laptop. Build and suite search `public/` for
-   every dropped value, and assert every account number IS there. A new field is added
-   in `SHIP` in `tools/build.mjs` and nowhere else.
+   it never repairs. A payload is never typed into a page: `/admin/` cannot add an account.
+3. **Payload validation is `tools/store.js`,** one copy, imported by build and suite, never
+   reimplemented: a third copy once rejected all thirteen live payloads over a guessed prefix.
+4. **The bundle carries fourteen fields:** `key`, `name`, `brand`, `payload`, `acct`,
+   `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`, `tag`, `ring`, `biller`, `ref1`.
+   Owner, group and DuitNow member number stay in the repo and never ship. Build and suite
+   search `public/` for every dropped value, and assert every account number IS there. A new
+   field is added in `SHIP` in `tools/build.mjs` and nowhere else.
    - `acct` ships (owner, 11 Aug 2026): every account number is readable as text by
      anyone with the address. The build prints that disclosure on every run.
    - `holder` is the beneficiary, never the owner. The owner's name, by exact string or
@@ -90,19 +92,41 @@ Every number here is re-asserted by `npm test`.
   number, `jompay` = biller code and Ref-1). Chips filter by hiding, never rebuilding,
   so `tiles[i]` stays aligned with `CODES[i]`; the chip row wraps and `overflow-x:auto`
   is asserted absent. `bank` ships for every account (the institution is tag `26.01`,
-  the member code the master keeps as `mid`; Touch 'n Go and Touch 'n Go Business share
+  the member code the store keeps as `mid`; Touch 'n Go and Touch 'n Go Business share
   890053). Ref-1 is his mobile number: it ships, is never drawn, and the toast names the
   rail, never the value. One `copyValue(value, label)` serves both.
 - **Suspended accounts draw no code at all:** canvases cleared to 8x8, `prerender()`
-  null, no miniature, copy and save refused. Two sources, in this precedence:
-  `/state.json` from KV first (seconds, no deploy), the baked `maintenance` flag second
-  (durable, what an offline phone reads). A failed fetch leaves the override untouched;
-  only booleans on known keys are trusted. KV is read-only here (`QR_STATE.get` and
-  nothing else, no write route); `/state.json` is `no-store` and bypassed by the service
-  worker; KV is eventually consistent (about 20 s), so the laptop writes `accounts.json`
-  first and KV second, `push_kv` retrying three times. `drawThumbs` runs on every state
-  change and must CLEAR a suspended tile's miniature (`el.width = 8`); it only skipped,
-  and GX Bank showed a readable code on a suspended tile (3 Sep 2026).
+  null, no miniature, copy and save refused. Three sources, in this precedence:
+  `/state.json` from KV first (seconds, no deploy), the state this phone last read from it
+  (`localStorage` `pay-state`, restored before the first frame, what an offline phone
+  reads), the baked `maintenance` flag last (only a first-ever open). A failed fetch leaves
+  the override untouched; only booleans on known keys are trusted, and only known keys in
+  the order. `/state.json` is `no-store` and bypassed by the service worker, as are
+  `/admin/` and `/api/`. `drawThumbs` runs on every state change and must CLEAR a suspended
+  tile's miniature (`el.width = 8`); it only skipped, and GX Bank showed a readable code on
+  a suspended tile (3 Sep 2026).
+
+## The edit surface, `/admin/` (8 Sep 2026)
+
+- **One value in KV, `state`:** `{maintenance: {key: bool}, order: [keys], at}`. Written by
+  `POST /api/state`, read by `/state.json`. The admin writes it COMPLETE: every account gets
+  a boolean and the order names every key, so after the first save the baked flag is moot.
+- **The gate is the token, not the header.** `identity()` in `src/worker.js` verifies the
+  Access JWT (RS256 against `https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`,
+  issuer, audience, expiry) from the `CF_Authorization` cookie or the
+  `Cf-Access-Jwt-Assertion` header, on `/admin`, `/admin/*` and `/api/*`. The suite mints
+  tokens with its own key pair and breaks them eight ways. **Fails closed:** `ACCESS_TEAM`
+  and `ACCESS_AUD` empty in `wrangler.jsonc` means every gated route is 401 and nothing
+  is written. Neither variable is a secret; there are no secrets in this Worker.
+- **The Access application** is Self-hosted, domain the workers.dev host, path `admin`,
+  policy Allow for the owner's address. `QR_STATE.put` appears exactly once, after the
+  identity check, asserted.
+- `src/app/admin.html` ships as `public/admin/index.html`; `admin.js` is stamped, never
+  precached. Rows drag by the handle or move with the arrow keys; Hidden/Shown per row;
+  one Save. The page reads `/state.json` and `/api/me` and writes `/api/state`, nothing
+  else, asserted. The public page's `Sign in` is a plain link to `/admin/`.
+- **Retired with the laptop master:** `maintenance.py`, `push_kv`, `deploy_runner.py`, the
+  design sync, `QR_MASTER`. Nothing deploys after a state change any more.
 
 ## Motion, zoom, layout
 
@@ -120,7 +144,7 @@ Every number here is re-asserted by `npm test`.
   `transform` only with `will-change`; a step pre-renders offscreen.
 - Grid `minmax` 132 px (two columns at 375 px); rows fixed at 138 px so the list scrolls
   (owner, 25 Aug 2026); tiles stack coin over name, side by side broke "ShopeePa / y"; a
-  tagged account is full width with the coin beside; master order except JPMorgan Chase
+  tagged account is full width with the coin beside; store order (until `/admin/` sets one) except JPMorgan Chase
   first (owner, 26 Aug 2026); suspended accounts sink at run time through `orderTiles()`,
   which moves rather than rebuilds and renumbers `--i`; `classOf()` is the one place a
   tile's classes are built; `--thumb` and `THUMB` are one number, 56 px; `.accounts` adds
@@ -134,7 +158,10 @@ Every number here is re-asserted by `npm test`.
 | Path | What it is |
 |---|---|
 | `src/worker.js` | The Worker. Serves `public/` and sets every security header itself |
+| `data/accounts.json` | **The store.** Committed; every private field lives here and only here |
+| `tools/store.js` | The validator, one copy, imported by build and suite |
 | `src/app/index.html` | Markup only, no inline script or style |
+| `src/app/admin.html`, `admin.js` | The edit surface, shipped under `/admin/` |
 | `src/app/app.css` | Liquid Glass, presentation density; tuning from the brand colour |
 | `src/app/app.js` | The app: rail, keyboard, swipe, hash, per-account tuning |
 | `src/app/qr-art.js` | The coin and `drawCard`. Read the note at the top first |
@@ -153,14 +180,14 @@ Every number here is re-asserted by `npm test`.
 ## Working on it
 
 ```
-npm run build     # master -> public/
+npm run build     # data/accounts.json -> public/
 npm test          # about 180 assertions, ten seconds, no network
 npm run check     # both
 npm run dev       # build, then wrangler dev
 npm run deploy    # build, test, then wrangler deploy; the test is not optional
 ```
 
-`QR_MASTER` overrides the master path for build and suite. Things that bite:
+Things that bite:
 
 - `compatibility_date` must not exceed the installed runtime: wrangler 4.120.0 tops out
   at 2026-08-08.
@@ -198,12 +225,10 @@ the strip, never move sideways; 44 px minimum from `--tap`; no field under 16 px
 never `vh`. This app already met all of it; the master's `edit.html` did not and was fixed
 2 Sep 2026.
 
-## Design sync (2 Sep 2026)
+## Design sync (2 Sep 2026, retired 8 Sep 2026)
 
-This app is the reference design. Three files flow out of here and are generated at the
-destination by `pay-afif-site\tools\sync-design.mjs`: `src/app/qr-art.js`, the `:root`
-block of `src/app/app.css`, and `src/vendor/*-mark.js` concatenated as `marks.js`.
-Accounts flow the other way. Change the look here, then run the sync there; a hand edit at
-the destination is lost. Shared tokens alone do not make one design, and drift reaches
-through call sites: `paintFace` here, one place assembling the coin's options with the
-`acct`-is-absent note attached, is the shape to copy.
+This app was the reference design for the laptop master, and three files flowed out of it
+through the master's `sync-design.mjs`. With the master retired nothing flows anywhere:
+this repo is the only design. The lesson stands: shared tokens alone do not make one
+design, and drift reaches through call sites. `paintFace` is still the one place
+assembling the coin's options, with the `acct`-is-absent note attached.

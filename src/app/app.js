@@ -258,48 +258,72 @@
    * still pays, just to somebody else. So this does not dim a code, it refuses to draw one. */
   /* THE OVERRIDE, and the precedence rule is the whole of it.
    *
-   * `override` holds whatever /state.json last said, which the laptop can change without a
-   * deploy. It is consulted FIRST, so suspending an account reaches the phone in seconds; if it
-   * says nothing about an account, the flag baked into the bundle stands.
+   * `override` holds whatever /state.json last said: which accounts are suspended and what order
+   * the tiles stand in, both written from /admin/ without a deploy. It is consulted FIRST, so a
+   * suspension reaches the phone in seconds; if it says nothing about an account, the flag baked
+   * into the bundle stands, and if it carries no order the build order stands.
    *
-   * The bake is the fail-safe and the override is the fast path, never the only one. A phone
-   * with no signal cannot fetch this at all, so the durable truth has to live in the bundle,
-   * which is why the local toggle deploys as well as writing to KV.
+   * THE LAST GOOD STATE IS KEPT ON THE PHONE. There is no laptop switch deploying a fresh bake
+   * behind every change any more, so the bundle's flag is only what a phone knows on its very
+   * first open. After that the phone remembers the last state it read, and a phone with no
+   * signal shows what was true when it last had one, never what was true at the last deploy.
    *
    * An unreadable, malformed or missing response leaves `override` exactly as it was rather
    * than clearing it. Treating a failed fetch as "nothing is suspended" would turn a dropped
    * connection into a suspended code coming back on screen. */
+  var STORE_KEY = "pay-state";
   var override = null;
 
   function down(a) {
     if (!a) return false;
-    if (override && Object.prototype.hasOwnProperty.call(override, a.key)) {
-      return override[a.key] === true;
+    if (override && Object.prototype.hasOwnProperty.call(override.maintenance, a.key)) {
+      return override.maintenance[a.key] === true;
     }
     return a.maintenance === true;
+  }
+
+  /* Only real booleans and real keys, against accounts this bundle knows. Anything else in
+   * the file is ignored rather than trusted, because this decides whether a payment code is
+   * shown. Returns null for a body that is not a state at all. */
+  function cleanState(j) {
+    if (!j || typeof j !== "object") return null;
+    var known = {};
+    for (var i = 0; i < CODES.length; i++) known[CODES[i].key] = true;
+    var next = { maintenance: {}, order: [] };
+    var m = j.maintenance;
+    if (m && typeof m === "object") {
+      for (var k in known) {
+        if (Object.prototype.hasOwnProperty.call(m, k) && typeof m[k] === "boolean") next.maintenance[k] = m[k];
+      }
+    }
+    if (Array.isArray(j.order)) {
+      for (var n = 0; n < j.order.length; n++) {
+        var key = j.order[n];
+        if (known[key] && next.order.indexOf(key) < 0) next.order.push(key);
+      }
+    }
+    return next;
+  }
+
+  function takeState(j) {
+    var next = cleanState(j);
+    if (!next) return false;
+    var before = JSON.stringify(override);
+    override = next;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(next)); } catch (e) {}
+    return before !== JSON.stringify(override);
+  }
+
+  function rememberedState() {
+    try { takeState(JSON.parse(localStorage.getItem(STORE_KEY))); } catch (e) {}
   }
 
   function readState() {
     if (!self.fetch) return Promise.resolve(false);
     return fetch("state.json", { cache: "no-store", credentials: "omit" })
       .then(function (r) { return r && r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (!j || typeof j !== "object") return false;
-        var m = j.maintenance;
-        if (!m || typeof m !== "object") return false;
-        // Only real booleans against known keys. Anything else in the file is ignored rather
-        // than trusted, because this decides whether a payment code is shown.
-        var next = {}, changed = false;
-        for (var i = 0; i < CODES.length; i++) {
-          var k = CODES[i].key;
-          if (Object.prototype.hasOwnProperty.call(m, k) && typeof m[k] === "boolean") next[k] = m[k];
-        }
-        var before = JSON.stringify(override);
-        override = next;
-        changed = before !== JSON.stringify(override);
-        return changed;
-      })
-      .catch(function () { return false; });   // offline: the baked flag stands
+      .then(takeState)
+      .catch(function () { return false; });   // offline: the remembered state stands
   }
 
   /* Re-read on open and whenever the app comes back to the front, which is the moment somebody
@@ -782,8 +806,20 @@
    * The stagger is renumbered to follow the VISIBLE order; left on the build index the list
    * would deal itself in out of sequence, which reads as a stutter rather than a deal. */
   function orderTiles() {
+    /* THE ARRANGEMENT COMES FROM THE STATE, set on /admin/, and the build order is only what
+     * stands until one is set. Keys the state names come first in its order; anything it
+     * does not name follows in build order, so a newly added account appears at the end rather
+     * than vanishing. Suspended accounts then sink, whatever the arrangement says. */
+    var placed = [], seen = {};
+    var want = override ? override.order : [];
+    for (var o = 0; o < want.length; o++) {
+      for (var j = 0; j < tiles.length; j++) {
+        if (CODES[j].key === want[o] && !seen[j]) { placed.push(j); seen[j] = true; }
+      }
+    }
+    for (var r = 0; r < tiles.length; r++) if (!seen[r]) placed.push(r);
     var live = [], held = [];
-    for (var i = 0; i < tiles.length; i++) (down(CODES[i]) ? held : live).push(i);
+    for (var p = 0; p < placed.length; p++) (down(CODES[placed[p]]) ? held : live).push(placed[p]);
     var order = live.concat(held);
     /* THE FILTER HIDES, IT DOES NOT REBUILD, for exactly the reason the sort moves rather than
      * rebuilds: `tiles[i]` must stay aligned with `CODES[i]` or every index the app holds
@@ -1031,11 +1067,12 @@
       document.querySelector(".atitle").textContent = "No codes in this build";
       return;
     }
+    rememberedState();   // what this phone last read, before the first frame
     buildGrid();
     wire();
-    // Asked for after the list is built, never waited on. The baked flags are already correct
-    // on screen; this only narrows the window between suspending a code on the laptop and the
-    // phone agreeing, and a network round trip must never hold up the first frame.
+    // Asked for after the list is built, never waited on. The remembered state is already on
+    // screen; this only narrows the window between a change made on /admin/ and the phone
+    // agreeing, and a network round trip must never hold up the first frame.
     watchState();
 
     // The first frame is the list, dealt in. Anything else would flash the wrong screen.

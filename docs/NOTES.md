@@ -886,3 +886,41 @@ rim, which is why the big coin's canvas carries none. But the disc is not only a
 a SUSPENDED account never gets its coin drawn at all, so it is what that tile shows for the
 whole suspension, and a grey square there reads as a failed image where a grey circle reads as
 a coin deliberately withheld. Visible today on GX Bank.
+
+## 8 Sep 2026: the laptop master retired, the edit surface moved into the cloud
+
+**The decision.** Two of them, both the owner's, in one line: "no more laptop master, rather
+just a github local repo", and "fully on the cloud, one public facing one, with a login at the
+top right, which I will need to enter using only my cloudflare access sso, where I can amend
+the status and the layout". So: the store `accounts.json` and its validator `store.js` moved
+into this repo, committed (the same call the old master made for its own private repo on 9 Aug),
+and the two edits that actually happen day to day, suspending and arranging, happen on the site.
+Adding an account stays an edit to the file and a deploy, because a payload is never typed into
+a page and the private fields never leave the repo.
+
+**The gate verifies the token; a header would not do.** The Access application covers `/admin/`
+and injects `Cf-Access-Jwt-Assertion` there, but the write route is reached by a fetch from that
+page carrying the `CF_Authorization` cookie, and a misconfigured application is precisely the
+case in which a stranger reaches the route with a header of their own. So `identity()` checks
+RS256 against the team's published keys, the issuer, the audience and the expiry, on every gated
+request, and the suite mints tokens with its own key pair and breaks them eight ways. With the
+two variables empty every gated route is 401 and nothing is written, so the deploy is safe
+before the application exists. Salt-command's 8 Aug gate checked only the header; that was
+enough for an origin wholly behind Access, and it is not enough for one that is mostly public.
+
+**The phone remembers.** The old design deployed a fresh bake behind every toggle so that an
+offline phone read the truth; with no laptop switch nothing deploys, so the phone stores the last
+state it read and restores it before the first frame. The baked flag is now only what a phone
+knows on its very first open. The admin writes a COMPLETE state, a boolean for every key and an
+order naming every key, so after the first save the bake is moot in both directions.
+
+**Ordering is now three-layered** and `orderTiles()` is still the one place: keys the state
+names first, in its order; anything unnamed after them in build order, so a newly added account
+appears at the end rather than nowhere; suspended accounts sink last. Tiles are still moved,
+never rebuilt, so `tiles[i]` stays aligned with `CODES[i]`.
+
+**Measured in the browser** against a mock of the gated routes: drag by the handle, arrow keys
+on the handle, Hidden/Shown, Save; then the public page opened in the saved order with the two
+hidden accounts at the bottom and the state in `localStorage`. Against wrangler dev with the real
+Worker and the variables empty: `/` 200, `/state.json` 200, `/admin/` 401 with the sentence,
+`/api/me` 401, `POST /api/state` 401, `POST /` 405, headers intact. 240 assertions.

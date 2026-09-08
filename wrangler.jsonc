@@ -34,29 +34,30 @@
 		"run_worker_first": true
 	},
 
-	// ONE KV NAMESPACE, AND THE WORKER ONLY EVER READS IT.
+	// ONE KV NAMESPACE, holding one value: which accounts are suspended and what order the
+	// tiles stand in. The account list itself is still baked into the bundle at build time.
 	//
-	// The account list is still baked into the bundle at build time. This holds one thing the
-	// bundle cannot: whether an account has been suspended since the last deploy, so a code
-	// being changed on the laptop stops being shown on the phone within seconds instead of
-	// within a deploy.
+	// THE ONE WRITE ROUTE, POST /api/state, exists since 8 Sep 2026 and is gated by Cloudflare
+	// Access. The Worker verifies the Access JWT itself (signature against the team's public
+	// keys, issuer, audience, expiry) on every gated request; a header alone is not trusted.
+	// A stranger with the address still gains only /state.json: keys, booleans and an order,
+	// and the keys are already public in data.js.
 	//
-	// IT DOES NOT REOPEN THE WRITE PATH. src/worker.js calls QR_STATE.get and nothing else;
-	// there is no route that writes, no secret, no EDIT_KEY and nothing to authenticate,
-	// which is the property the site was built around. The value is written from the laptop
-	// through the Cloudflare API by wrangler, under the owner's own login. A stranger with
-	// the address gains a JSON file listing account keys and booleans, and the keys are
-	// already public in data.js.
-	//
-	// The baked flag remains the fail-safe. A phone with no signal cannot read this, so the
-	// bundle still has to carry the truth, and the local toggle deploys as well as writing
-	// here. KV is the fast path, never the only one.
+	// THE TWO VARIABLES BELOW ARE THE GATE'S CONFIGURATION AND NEITHER IS A SECRET. Empty,
+	// every gated route answers 401 and nothing is written, so a deploy before the Access
+	// application exists is safe. ACCESS_TEAM is the first label of the team domain
+	// (<team>.cloudflareaccess.com); ACCESS_AUD is the application's Audience tag from its
+	// Overview tab in Zero Trust.
 	"kv_namespaces": [
 		{
 			"binding": "QR_STATE",
 			"id": "5b09e99f07e147f09a88fc1325203ead"
 		}
 	],
+	"vars": {
+		"ACCESS_TEAM": "",
+		"ACCESS_AUD": ""
+	},
 
 	"observability": {
 		"enabled": true

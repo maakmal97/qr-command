@@ -8,11 +8,14 @@ node_modules/
 # gets deployed, so the deployed bytes are the reviewed bytes. Never hand-edit it; the build
 # regenerates it and `npm run deploy` rebuilds before shipping.
 
-# The master's own store never lands here. The build reads it from the Cow-Fin06 project
-# folder and writes only the sanitised cut into public/data.js. These are a safety net so a
-# stray copy can never be committed by accident.
+# THE STORE IS data/accounts.json AND IT IS COMMITTED, since 8 Sep 2026, by the owner's
+# decision: the laptop master is retired and this private repo is the store's only home,
+# exactly as the old master committed the same file to its own private repo on 9 Aug 2026.
+# Every OTHER copy of an accounts file is still refused, so a stray backup or export can
+# never land here by accident. The build writes only the sanitised cut into public/data.js.
 accounts.json
 **/accounts.json
+!data/accounts.json
 *.accounts.json
 backups/
 

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0d18">
+<title>Manage</title>
+<link rel="icon" href="../favicon-32.png" sizes="32x32">
+<link rel="stylesheet" href="../app.css?v=4b2a7412cde9">
+</head>
+<body class="admin">
+
+<div class="sky on" aria-hidden="true"></div>
+
+<!-- The edit surface. Reached through Cloudflare Access; the Worker verifies the token on this
+     page and on every route it calls, so nothing here decides who may be here. Two things can
+     be changed: whether an account is shown, and the order the tiles stand in. Adding an
+     account is an edit to data/accounts.json and a deploy, on purpose: a payload is never
+     typed into a page. -->
+<section class="manage" aria-label="Manage accounts">
+  <div class="bar">
+    <a class="back" href="../">
+      <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false" class="chev">
+        <path d="M7.6 1.6 3.2 6l4.4 4.4" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Accounts
+    </a>
+    <span class="who" id="who" aria-live="polite"></span>
+  </div>
+
+  <h1 class="atitle">Manage</h1>
+  <p class="hint">Drag the handle to arrange. Switch an account off to hide its code.</p>
+
+  <ol class="rows" id="rows"></ol>
+
+  <div class="savebar">
+    <p id="say" class="say" role="status" aria-live="polite"></p>
+    <button type="button" id="save" class="pill save" disabled>Save</button>
+  </div>
+</section>
+
+<noscript>
+  <p class="noscript">This page needs JavaScript.</p>
+</noscript>
+
+<script src="../data.js?v=4b2a7412cde9"></script>
+<script src="../admin.js?v=4b2a7412cde9"></script>
+</body>
+</html>

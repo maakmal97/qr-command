@@ -18,8 +18,8 @@ const REPO = path.resolve(HERE, "..");
  * overrides this line without editing it. */
 const URL_BASE = (process.argv[2] || process.env.QR_HOST ||
   "https://jb3zkzyqguu5.qyts8mh72kyg.workers.dev").replace(/\/+$/, "");
-const MASTER = process.env.QR_MASTER ||
-  "C:/Users/maakm/Claude/Code/pay-afif-site";
+// The store lives in this repo since 8 Sep 2026; the laptop master is retired.
+const STORE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "data", "accounts.json");
 
 let pass = 0, fail = 0;
 const ok = (what, cond, detail) => {
@@ -124,7 +124,7 @@ ok("index.html served byte for byte as built",
 /* ----------------------------------------------- nothing private on the wire */
 
 {
-  const master = JSON.parse(fs.readFileSync(path.join(MASTER, "accounts.json"), "utf8"));
+  const master = JSON.parse(fs.readFileSync(STORE, "utf8"));
   const secret = new Set();
   const add = (v) => {
     if (typeof v !== "string") return;
@@ -195,7 +195,7 @@ ok("index.html served byte for byte as built",
   const jsQR = js.jsQR;
   const codes = JSON.parse(fetched["data.js"].match(/self\.QR_CODES = ([\s\S]*?);\nself\.QR_BUILD/)[1]);
 
-  const master = JSON.parse(fs.readFileSync(path.join(MASTER, "accounts.json"), "utf8"));
+  const master = JSON.parse(fs.readFileSync(STORE, "utf8"));
   const bad = [];
   /* AN ACCOUNT WITH NO CODE IS NOT DECODED, and skipping it is not the same as ignoring it.
    * Handed an empty payload the encoder encodes the empty string and jsQR reads back "", so

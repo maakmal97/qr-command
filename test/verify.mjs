@@ -32,8 +32,8 @@ globalThis.Path2D = Path2D;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
 const PUB = path.join(REPO, "public");
-const MASTER = process.env.QR_MASTER ||
-  "C:/Users/maakm/Claude/Code/pay-afif-site";
+// The store lives in this repo since 8 Sep 2026; the laptop master is retired.
+const STORE = path.join(REPO, "data", "accounts.json");
 
 const read = (p) => fs.readFileSync(p, "utf8");
 
@@ -48,8 +48,8 @@ const section = (s) => console.log("\n" + s);
 
 /* -------------------------------------------------------------- shared fixtures */
 
-const master = JSON.parse(read(path.join(MASTER, "accounts.json")));
-const V = await import(pathToFileURL(path.join(MASTER, "functions", "_lib", "store.js")).href);
+const master = JSON.parse(read(STORE));
+const V = await import(pathToFileURL(path.join(REPO, "tools", "store.js")).href);
 const rev = JSON.parse(read(path.join(PUB, "rev.json")));
 const dataSrc = read(path.join(PUB, "data.js"));
 const shipped = JSON.parse(dataSrc.match(/self\.QR_CODES = ([\s\S]*?);\nself\.QR_BUILD/)[1]);
@@ -499,20 +499,35 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   ok("the flag is read in one place, and only a real boolean counts",
     /function down\(a\)/.test(appJsSrc) &&
     /return a\.maintenance === true;/.test(appJsSrc) &&
-    /override\[a\.key\] === true/.test(appJsSrc));
+    /override\.maintenance\[a\.key\] === true/.test(appJsSrc));
   ok("a failed or malformed state read leaves the previous state alone",
     /\.catch\(function \(\) { return false; \}\);/.test(appJsSrc) &&
-    /if \(!j \|\| typeof j !== "object"\) return false;/.test(appJsSrc));
-  ok("only booleans against known account keys are trusted from the wire",
-    /typeof m\[k\] === "boolean"/.test(appJsSrc));
-  ok("the state file is fetched no-store and never precached",
+    /if \(!j \|\| typeof j !== "object"\) return null;/.test(appJsSrc) &&
+    /if \(!next\) return false;/.test(appJsSrc));
+  ok("only booleans against known account keys are trusted from the wire, and only known keys in the order",
+    /typeof m\[k\] === "boolean"/.test(appJsSrc) &&
+    /if \(known\[key\] && next\.order\.indexOf\(key\) < 0\) next\.order\.push\(key\);/.test(appJsSrc));
+  /* THE PHONE REMEMBERS. Nothing deploys a fresh bake behind a change any more, so the last
+   * state read is stored and restored before the first frame; the bundle's flag is only what a
+   * phone knows on its very first open. */
+  ok("the last good state is stored on the phone and restored before the grid is built",
+    /localStorage\.setItem\(STORE_KEY/.test(appJsSrc) &&
+    /rememberedState\(\);[\s\S]{0,120}?buildGrid\(\);/.test(appJsSrc));
+  ok("the state file is fetched no-store and never precached, and nor is the edit surface",
     /fetch\("state\.json", { cache: "no-store"/.test(appJsSrc) &&
-    /if \(url\.pathname === "\/state\.json"\) return;/.test(read(path.join(REPO, "src", "app", "sw.js"))));
-  ok("the Worker only ever reads the namespace, and answers {} when it cannot",
+    (function () {
+      const sw = read(path.join(REPO, "src", "app", "sw.js"));
+      return /url\.pathname === "\/state\.json" \|\| url\.pathname === "\/admin" \|\|\s*url\.pathname\.startsWith\("\/admin\/"\) \|\| url\.pathname\.startsWith\("\/api\/"\)\) return;/.test(sw);
+    })());
+  /* ONE WRITE, AND IT IS INSIDE THE GATE. The Worker puts to the namespace in exactly one place,
+   * after identity() has answered, and reads it in exactly one. */
+  ok("the Worker writes the namespace once, behind the token check, and answers {} when it cannot read",
     (function () {
       const w = read(path.join(REPO, "src", "worker.js"));
-      return /env\.QR_STATE\.get\("state"\)/.test(w) &&
-             !/QR_STATE\.(?:put|delete)/.test(w) && /body = "{}";/.test(w);
+      const puts = w.match(/QR_STATE\.put\(/g) || [];
+      return /env\.QR_STATE\.get\("state"\)/.test(w) && puts.length === 1 &&
+             /const who = await identity\(request, env\);\s*if \(!who\) \{[\s\S]*?QR_STATE\.put\(/.test(w) &&
+             !/QR_STATE\.(?:delete|list)/.test(w) && /body = "{}";/.test(w);
     })());
   ok("the build normalises the flag rather than shipping whatever the master had",
     /rec\.maintenance = a\.maintenance === true;/.test(read(path.join(REPO, "tools", "build.mjs"))));
@@ -750,8 +765,14 @@ section("2. The bundle carries the codes and nothing else");
    * with CODES[i] and every index the app holds keeps its meaning. */
   ok("suspended accounts are sorted to the end, and re-sorted when the state changes",
     /function orderTiles\(\)/.test(appJs) &&
-    /\(down\(CODES\[i\]\) \? held : live\)\.push\(i\)/.test(appJs) &&
+    /\(down\(CODES\[placed\[p\]\]\) \? held : live\)\.push\(placed\[p\]\)/.test(appJs) &&
     /orderTiles\(\);[\s\S]{0,900}?if \(idx >= 0\) paint\(\);/.test(appJs));
+  /* THE ARRANGEMENT COMES FROM THE STATE, and every account still appears: keys the state
+   * names first, in its order, then the rest in build order, so a newly added account shows
+   * up at the end rather than nowhere. */
+  ok("the tile order follows the state's order, and unlisted accounts follow in build order",
+    /var want = override \? override\.order : \[\];/.test(appJs) &&
+    /for \(var r = 0; r < tiles\.length; r\+\+\) if \(!seen\[r\]\) placed\.push\(r\);/.test(appJs));
   /* A STATE CHANGE MUST REDRAW THE MINIATURES TOO. Re-classing a tile greys it and moving it
    * sinks it; neither takes the code off it. This is the other half of the 3 Sep bug: the
    * watcher did everything except the one thing that removes the picture. */
@@ -1129,7 +1150,7 @@ section("2. The bundle carries the codes and nothing else");
   ok("an account WITH a code carries no holder; the receiver is the owner and is never printed",
     named.length === 0, named.map((c) => c.key).join(", "));
 
-  const master2 = JSON.parse(read(path.join(MASTER, "accounts.json")));
+  const master2 = JSON.parse(read(STORE));
   const want = master2.accounts.filter((a) => !a.payload).map((a) => a.key).sort().join();
   ok("the code-less accounts are exactly the ones the master has no payload for",
     plates.map((c) => c.key).sort().join() === want, "master: " + want);
@@ -1149,7 +1170,7 @@ section("2. The bundle carries the codes and nothing else");
    *
    * The forbidden-set sweep earlier in this section is what does the work meanwhile: with no
    * holder shipped, the payee's name is refused outright wherever it appears. */
-  const authorised = new Map(JSON.parse(read(path.join(MASTER, "accounts.json")))
+  const authorised = new Map(JSON.parse(read(STORE))
     .accounts.map((a) => [a.key, String(a.holder || "").trim()]));
   const invented = shipped.filter((c) => c.holder !== (authorised.get(c.key) || ""));
   ok("a holder name ships only where the master explicitly sets one, never derived (" +
@@ -1187,7 +1208,7 @@ section("2. The bundle carries the codes and nothing else");
    * holder may match the payee or an owner, by exact string or by squashed stem, and the payee's
    * name must appear nowhere outside a payload. The build refuses such a holder outright rather
    * than stripping and pinning it, so this is the second lock on the same door. */
-  const doc = JSON.parse(read(path.join(MASTER, "accounts.json")));
+  const doc = JSON.parse(read(STORE));
   const payee = String(doc.payee || "").trim();
   const personStems = [payee, ...(doc.owners || []).flatMap((o) => [o && o.name, o && o.legal])]
     .map((v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12))
@@ -1451,14 +1472,21 @@ if (wrangler) {
    * and the value is written from the laptop through the Cloudflare API under the
    * owner's own login, so the public surface gained a JSON file and not a write path.
    * Anything beyond this one binding is still refused. */
-  ok("exactly one KV namespace, bound QR_STATE, and no other storage or secret",
+  ok("exactly one KV namespace, bound QR_STATE, and no other storage",
     Array.isArray(wrangler.kv_namespaces) && wrangler.kv_namespaces.length === 1 &&
     wrangler.kv_namespaces[0].binding === "QR_STATE" &&
-    !wrangler.vars && !wrangler.d1_databases && !wrangler.r2_buckets &&
+    !wrangler.d1_databases && !wrangler.r2_buckets &&
     !wrangler.durable_objects && !wrangler.queues);
-  ok("the Worker never writes to it, so there is still nothing to authenticate",
-    !/QR_STATE\.(?:put|delete|list)/.test(workerSrc) &&
-    /This site is read only\./.test(workerSrc));
+  /* THE GATE'S TWO VARIABLES AND NOTHING ELSE. Neither is a secret: the team domain is in every
+   * Access login URL and the audience tag only names an application. What matters is that
+   * nothing that IS a secret is declared here, and that the Worker reads exactly these. */
+  ok("the config declares exactly ACCESS_TEAM and ACCESS_AUD, both strings, and no secret",
+    wrangler.vars && Object.keys(wrangler.vars).sort().join() === "ACCESS_AUD,ACCESS_TEAM" &&
+    typeof wrangler.vars.ACCESS_TEAM === "string" && typeof wrangler.vars.ACCESS_AUD === "string" &&
+    !/KEY|SECRET|TOKEN|PASS/i.test(Object.keys(wrangler.vars).join()));
+  ok("the public surface is still read only: the only writes are behind identity()",
+    /This site is read only\./.test(workerSrc) &&
+    (workerSrc.match(/QR_STATE\.put\(/g) || []).length === 1);
 }
 
 /* ==================================================== 4. the Worker's behaviour */
@@ -1517,6 +1545,107 @@ const hit = (url, init) => worker.fetch(new Request("https://pay.example" + url,
   ok("the 404 still carries the security headers", !!r.headers.get("x-robots-tag"));
 }
 
+/* THE GATE, with a real key pair. A token is minted here and signed RS256 with a key the test
+ * generated, the team's certificate endpoint is mocked to publish that key, and the Worker is
+ * asked to verify it exactly as it would verify Cloudflare's. Then the same token is broken in
+ * every way that matters: wrong audience, wrong issuer, expired, altered payload, foreign key,
+ * and the variables unset. Each must read as nobody. */
+{
+  const TEAM = "team-under-test", AUD = "aud-" + crypto.randomBytes(8).toString("hex");
+  const ISS = "https://" + TEAM + ".cloudflareaccess.com";
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const jwk = publicKey.export({ format: "jwk" });
+  const other = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey;
+  const b64u = (s) => Buffer.from(s).toString("base64url");
+  const mint = (claims, key = privateKey, kid = "k1") => {
+    const head = b64u(JSON.stringify({ alg: "RS256", kid, typ: "JWT" }));
+    const body = b64u(JSON.stringify(claims));
+    const sig = crypto.sign("sha256", Buffer.from(head + "." + body), key).toString("base64url");
+    return head + "." + body + "." + sig;
+  };
+  const now = Math.floor(Date.now() / 1000);
+  const good = { aud: [AUD], iss: ISS, exp: now + 300, iat: now, email: "owner@example.test" };
+  const token = mint(good);
+
+  const realFetch = globalThis.fetch;
+  let certHits = 0;
+  globalThis.fetch = async (u) => {
+    certHits++;
+    if (String(u) !== ISS + "/cdn-cgi/access/certs") return new Response("no", { status: 404 });
+    return new Response(JSON.stringify({ keys: [{ ...jwk, kid: "k1", use: "sig", alg: "RS256" }] }),
+      { headers: { "content-type": "application/json" } });
+  };
+  const kv = { store: new Map(),
+    get: async (k) => kv.store.get(k) || null,
+    put: async (k, v) => { kv.store.set(k, v); } };
+  const envOn = { ...mockEnv(), QR_STATE: kv, ACCESS_TEAM: TEAM, ACCESS_AUD: AUD };
+  const envOff = { ...mockEnv(), QR_STATE: kv };
+  const call = (env, url, init) => worker.fetch(new Request("https://pay.example" + url, init), env);
+  const withCookie = (t, init) => ({ ...(init || {}), headers: { ...((init || {}).headers || {}), cookie: "CF_Authorization=" + t } });
+
+  ok("with the variables unset, /admin/, /api/me and POST /api/state all answer 401 even with a valid token",
+    (await call(envOff, "/admin/", withCookie(token))).status === 401 &&
+    (await call(envOff, "/api/me", withCookie(token))).status === 401 &&
+    (await call(envOff, "/api/state", withCookie(token, { method: "POST", body: "{}" }))).status === 401);
+  ok("nothing was written while the gate was unconfigured", kv.store.size === 0);
+  ok("no certificate fetch happens before the cheap checks pass", certHits === 0);
+
+  ok("with no token at all the gated routes answer 401 and the page says how to sign in",
+    (await call(envOn, "/api/me")).status === 401 &&
+    /Cloudflare Access/.test(await (await call(envOn, "/admin/")).text()));
+
+  const me = await call(envOn, "/api/me", withCookie(token));
+  ok("a valid token in the CF_Authorization cookie is verified against the team's key and names the signer",
+    me.status === 200 && (await me.json()).email === "owner@example.test");
+  const meH = await call(envOn, "/api/me", { headers: { "cf-access-jwt-assertion": token } });
+  ok("the same token in the Cf-Access-Jwt-Assertion header is accepted too", meH.status === 200);
+
+  const bad = [
+    ["wrong audience", mint({ ...good, aud: ["someone-else"] })],
+    ["wrong issuer", mint({ ...good, iss: "https://other.cloudflareaccess.com" })],
+    ["expired", mint({ ...good, exp: now - 5 })],
+    ["signed by a foreign key", mint(good, other)],
+    ["unknown key id", mint(good, privateKey, "k9")],
+    ["altered payload", token.split(".")[0] + "." + b64u(JSON.stringify({ ...good, email: "x@y" })) + "." + token.split(".")[2]],
+    ["alg none", b64u(JSON.stringify({ alg: "none", kid: "k1" })) + "." + token.split(".")[1] + "."],
+    ["garbage", "not.a.token"],
+  ];
+  for (const [what, t] of bad) {
+    ok("a token that is " + what + " is refused", (await call(envOn, "/api/me", withCookie(t))).status === 401);
+  }
+
+  const put = await call(envOn, "/api/state", withCookie(token, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ maintenance: { spay: true, gx: false, "Bad Key": true, wise: "yes" },
+                           order: ["gx", "spay", "gx", 7, "no such"], extra: "dropped" }),
+  }));
+  const putBody = await put.json();
+  const stored = JSON.parse(kv.store.get("state") || "null");
+  ok("a signed-in POST /api/state writes the namespace once, cleaned: booleans on slug keys, a de-duplicated order, nothing else",
+    put.status === 200 && putBody.ok && stored &&
+    JSON.stringify(stored.maintenance) === JSON.stringify({ spay: true, gx: false }) &&
+    JSON.stringify(stored.order) === JSON.stringify(["gx", "spay", "no such"].filter((k) => /^[a-z0-9][a-z0-9-]{0,39}$/.test(k))) &&
+    !("extra" in stored) && typeof stored.at === "string", JSON.stringify(stored));
+  ok("what was written is what /state.json now serves, publicly and no-store",
+    (await (await call(envOff, "/state.json")).text()) === kv.store.get("state") &&
+    (await call(envOff, "/state.json")).headers.get("cache-control") === "no-store, must-revalidate");
+  ok("a body that is not JSON is a 400 and a body over the cap is a 413",
+    (await call(envOn, "/api/state", withCookie(token, { method: "POST", body: "{nope" }))).status === 400 &&
+    (await call(envOn, "/api/state", withCookie(token, { method: "POST", body: "{\"order\":[\"" + "a".repeat(9000) + "\"]}" }))).status === 413);
+  ok("a GET on the write route and an unknown /api/ path are not routes",
+    (await call(envOn, "/api/state", withCookie(token))).status === 404 &&
+    (await call(envOn, "/api/nothing", withCookie(token))).status === 404);
+  ok("POST anywhere outside /api/ is still refused with 405, signed in or not",
+    (await call(envOn, "/", withCookie(token, { method: "POST" }))).status === 405 &&
+    (await call(envOn, "/admin/", withCookie(token, { method: "POST" }))).status === 405);
+  ok("the admin page itself is served from the assets once the token checks out, and is never cached",
+    (await call(envOn, "/admin/", withCookie(token))).status === 200 &&
+    (await call(envOn, "/admin/", withCookie(token))).headers.get("cache-control") === "no-cache");
+
+  globalThis.fetch = realFetch;
+}
+
 /* ============================================ 5. the service worker cannot poison */
 
 section("5. The service worker's guards");
@@ -1544,6 +1673,28 @@ section("5. The service worker's guards");
   ok("every file the shell precaches exists in public/", missing.length === 0, missing.join(", "));
   const unstamped = shell.filter((u) => u !== "./" && !u.includes("?v=" + rev.id));
   ok("every precached URL carries this build's stamp", unstamped.length === 0, unstamped.join(", "));
+  ok("the edit surface is not in the shell: no admin file is precached",
+    shell.every((u) => !/admin/.test(u)), shell.join(", "));
+}
+
+/* THE EDIT SURFACE HOLDS TO THE SAME POLICY as the public page: no inline script, no inline
+ * style, stamped assets, and nothing typed into it that the bundle does not already carry. */
+{
+  const adminHtml = read(path.join(PUB, "admin", "index.html"));
+  const adminJs = read(path.join(PUB, "admin.js"));
+  ok("admin/index.html has no inline script",
+    !/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?\S[\s\S]*?<\/script>/i.test(adminHtml));
+  ok("admin/index.html has no inline style block or style attribute",
+    !/<style\b/i.test(adminHtml) && !/\sstyle=/i.test(adminHtml));
+  ok("admin/index.html stamps its assets with this build",
+    (adminHtml.match(/\?v=([a-f0-9]{12})/g) || []).length >= 3 &&
+    adminHtml.split("?v=").slice(1).every((s) => s.startsWith(rev.id)));
+  ok("the admin script writes only through POST /api/state and reads only /state.json and /api/me",
+    /fetch\("\/api\/state", \{\s*method: "POST"/.test(adminJs) &&
+    (adminJs.match(/fetch\(/g) || []).length === 3 &&
+    !/QR_STATE|wrangler|localStorage/.test(adminJs));
+  ok("the admin script never touches a payload or an account number",
+    !/payload|acct|ref1/.test(adminJs));
 }
 
 /* ====================================================== 6. the build is coherent */

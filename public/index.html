@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=86176c52d908">
+<link rel="stylesheet" href="./app.css?v=4b2a7412cde9">
 </head>
 <body class="view-list">
 
@@ -23,7 +23,12 @@
 
 <!-- The home screen. Every account, named, one tap away, nothing hidden. -->
 <section id="accounts" class="accounts" aria-label="Accounts">
-  <h1 class="atitle">Accounts</h1>
+  <div class="ahead">
+    <h1 class="atitle">Accounts</h1>
+    <!-- The one door to the edit surface. It is a plain link: /admin/ sits behind Cloudflare
+         Access, which does the signing in; nothing on this page knows or asks who you are. -->
+    <a class="signin" href="./admin/">Sign in</a>
+  </div>
   <!-- THE RAILS FILTER ONE LIST, they do not split it into three.
        A rail is a property of an account, not a category of account: thirteen of fourteen are
        payable by both QR and transfer, and Instapay by all three. Three separate books would
@@ -83,12 +88,12 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=86176c52d908"></script>
+<script src="./qrcode.js?v=4b2a7412cde9"></script>
 <!-- The traced marks, registering themselves on self.MARKS. Path data, so no image is fetched
      and the Content-Security-Policy stays `default-src 'none'` with no img-src at all. -->
-<script src="./marks.js?v=86176c52d908"></script>
-<script src="./qr-art.js?v=86176c52d908"></script>
-<script src="./data.js?v=86176c52d908"></script>
-<script src="./app.js?v=86176c52d908"></script>
+<script src="./marks.js?v=4b2a7412cde9"></script>
+<script src="./qr-art.js?v=4b2a7412cde9"></script>
+<script src="./data.js?v=4b2a7412cde9"></script>
+<script src="./app.js?v=4b2a7412cde9"></script>
 </body>
 </html>
