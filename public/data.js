@@ -171,7 +171,7 @@ self.QR_CODES = [
     "brand": "#EE4D2D",
     "payload": "00020201021126440014A000000615000101068900040212P2P9635725205204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY8216cb96e6fd72318100630433E5",
     "acct": "1818 589039225 0",
-    "maintenance": false,
+    "maintenance": true,
     "bank": "ShopeePay",
     "holder": "",
     "bankMark": "",
@@ -230,4 +230,4 @@ self.QR_CODES = [
     "ref1": "6011111809738"
   }
 ];
-self.QR_BUILD = "fb59b002c029";
+self.QR_BUILD = "86176c52d908";
