@@ -55,8 +55,8 @@
 		}
 	],
 	"vars": {
-		"ACCESS_TEAM": "",
-		"ACCESS_AUD": ""
+		"ACCESS_TEAM": "maakmal",
+		"ACCESS_AUD": "11b14f9ccb32d786b9b2fe0762a58dcbd3d80c02217b5851b177767e051a5f9e"
 	},
 
 	"observability": {
