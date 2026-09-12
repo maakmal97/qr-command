@@ -52,13 +52,13 @@ still works, instantly.
 
 ## Changing the list of codes
 
-Not here. **Adding, editing and removing codes is a laptop job**, in the master project:
+Two different jobs since 8 Sep 2026.
 
-```
-C:\Users\maakm\Claude\Code\pay-afif-site
-```
+**Hiding an account or arranging the tiles** is done on the site: tap `Sign in` top right,
+pass Cloudflare Access, drag and switch, Save. No deploy.
 
-Run `serve.py` there, use `edit.html`, save. Then come back here and ship it:
+**Adding or removing an account** is an edit to `data/accounts.json` in this repo (the
+laptop master is retired; the store lives here), then ship it:
 
 ```bash
 npm run deploy
