@@ -884,10 +884,11 @@
     drawThumbs();
   }
 
-  /* THE BADGE (owner, 14 Sep 2026): the brand disc with the account's initials struck on it,
-   * for a row on a rail that is not about codes. Derived from the name, so nothing new ships:
-   * the initials of up to three words, or the first two letters of a one-word name, in whichever
-   * ink clears the disc. */
+  /* THE BADGE (owner, 14 Sep 2026): the brand disc with the institution's mark on it, for a row
+   * on a rail that is not about codes. The mark is the traced `bankMark` where one exists, drawn
+   * through the renderer's own routine; where none has been traced yet the initials stand in,
+   * derived from the name so nothing new ships: up to three words' initials, or the first two
+   * letters of a one-word name. Either way in whichever ink clears the disc. */
   function initialsOf(name) {
     var words = String(name).split(/\s+/).filter(function (w) { return /^[A-Za-z]/.test(w); });
     var s = words.length > 1
@@ -905,8 +906,11 @@
     g.fillStyle = a.brand;
     g.fill();
     var C = self.QRArt.colour;
+    var ink = C.contrast(C.hex2rgb(a.brand), [242, 244, 245]) >= 3 ? "#f2f4f5" : "#0b1215";
+    var mark = markOf(a.bankMark);
+    if (mark && self.QRArt.drawMark(g, mark, px / 2, px / 2, px * 0.34, px / 2, px / 2 - dpr, ink)) return;
     var text = initialsOf(a.name);
-    g.fillStyle = C.contrast(C.hex2rgb(a.brand), [242, 244, 245]) >= 3 ? "#f2f4f5" : "#0b1215";
+    g.fillStyle = ink;
     g.font = "700 " + Math.round(px * (text.length > 2 ? 0.28 : 0.34)) +
       "px 'JetBrains Mono','Cascadia Mono',Consolas,Menlo,monospace";
     g.textAlign = "center";

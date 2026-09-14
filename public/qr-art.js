@@ -1215,6 +1215,7 @@ self.QRArt = (function () {
     DEFAULTS: DEFAULTS,
     draw: draw,
     drawPlate: drawPlate,
+    drawMark: drawMark,     // the list's badge paints a traced mark through the same routine
     drawCard: drawCard,
     plan: plan,
     coinFrame: coinFrame,

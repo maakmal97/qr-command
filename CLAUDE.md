@@ -100,9 +100,12 @@ Every number here is re-asserted by `npm test`.
   remembered in `localStorage` `pay:rail`, default QR. `body[data-view]` switches the coin
   and the plate; only a coin flies, a plate fades in. The code miniatures appear on the QR
   rail only: on any other rail `drawThumbs()` strikes the badge instead, `drawBadge()`, the
-  brand disc with initials derived from `name` (`initialsOf()`: up to three words' initials,
-  or the first two letters of one word); an account with no code keeps its plate and marks.
-  `setRail()` redraws (owner, 14 Sep 2026). Steps and swipes walk `shownOrder`,
+  brand disc carrying the institution's traced `bankMark` through `QRArt.drawMark` where one
+  exists, else initials derived from `name` (`initialsOf()`: up to three words' initials, or
+  the first two letters of one word); an account with no code keeps its plate and marks.
+  `setRail()` redraws (owner, 14 Sep 2026). **Adding a logo:** the owner supplies the
+  artwork (flat, one colour traces best; nothing is redrawn from memory or fetched), then
+  `node tools/vectorise.mjs <image> <id>`, `"bankMark": "<id>"` on the record, rebuild. Steps and swipes walk `shownOrder`,
   the visible tiles in display order, never the build order. Chips filter by hiding, never
   rebuilding, so `tiles[i]` stays aligned with `CODES[i]`; the chip row wraps and
   `overflow-x:auto` is asserted absent. `bank` ships for every account and is what the row
