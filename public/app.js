@@ -908,7 +908,12 @@
     var C = self.QRArt.colour;
     var ink = C.contrast(C.hex2rgb(a.brand), [242, 244, 245]) >= 3 ? "#f2f4f5" : "#0b1215";
     var mark = markOf(a.bankMark);
-    if (mark && self.QRArt.drawMark(g, mark, px / 2, px / 2, px * 0.34, px / 2, px / 2 - dpr, ink)) return;
+    // As tall as three fifths of the disc, or as broad as four fifths, whichever binds: a square
+    // app icon fills the disc, a long wordmark runs across it.
+    if (mark) {
+      var h = Math.min(px * 0.58, (px * 0.78) / mark.aspect);
+      if (self.QRArt.drawMark(g, mark, px / 2, px / 2, h, px / 2, px / 2 - dpr, ink)) return;
+    }
     var text = initialsOf(a.name);
     g.fillStyle = ink;
     g.font = "700 " + Math.round(px * (text.length > 2 ? 0.28 : 0.34)) +
