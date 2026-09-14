@@ -316,12 +316,12 @@
   /* THE TRANSFER AND JOMPAY VIEWS (owner, 14 Sep 2026). The number and the references are ON
    * SCREEN now, which reverses 25 Aug: a plate reading the bank's DuitNow name and the number
    * straight off the record, or the biller code and the references, and each value copies on a
-   * tap. Ref-2 is always nil and says so, because a JomPAY form asks for it and nil is the
-   * answer. The number is spaced in fours to be read; the copy strips the spaces. */
+   * tap. Ref-2 is always empty and shows a dash, because a JomPAY form asks for it and the
+   * dash is the answer (owner, 14 Sep 2026). The number is spaced in fours to be read; the copy strips the spaces. */
   function spaced(n) { return String(n).replace(/(\d{4})(?=\d)/g, "$1 "); }
   function fillPlate(a, v) {
     var rows = v === "jompay"
-      ? [["Biller code", a.biller, "biller code"], ["Ref-1", a.ref1, "Ref-1"], ["Ref-2", "nil"]]
+      ? [["Biller code", a.biller, "biller code"], ["Ref-1", a.ref1, "Ref-1"], ["Ref-2", "-"]]
       : [["Bank", a.bank], ["Account", spaced(a.acct), "account number"]]
           .concat(a.holder ? [["Receiver", a.holder]] : []);
     elPlate.textContent = "";
@@ -844,6 +844,7 @@
       i++;
     });
     orderTiles();
+    drawThumbs();   // the miniatures follow the rail: coins on QR, brand discs elsewhere
   }
 
   function buildGrid() {
@@ -916,7 +917,10 @@
     for (var i = 0; i < CODES.length; i++) {
       var a = CODES[i], el = thumbOf(i);
       if (!el || !el.getContext) continue;
-      if (down(a)) {
+      // THE CODES APPEAR ON THE QR RAIL ONLY (owner, 14 Sep 2026). On Transfer and JomPAY a
+      // row carries the plain brand disc; a code on a list that is not about codes is a code
+      // on screen for no reason. Same clear as a suspension, for the same reason.
+      if (down(a) || rail !== "qr") {
         el.width = 8; el.height = 8;          // the pixels are gone, not covered
         el.style.background = a.brand;        // back to the plain disc, round again
         el.classList.remove("drawn");

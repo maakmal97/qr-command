@@ -545,7 +545,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
    * with .tiledot.drawn. The old assertion passed throughout, because it was pinning the shape
    * of the fault. */
   ok("a suspended account's miniature is CLEARED, not merely skipped",
-    /function drawThumbs\(\)[\s\S]{0,1200}?if \(down\(a\)\) \{[\s\S]{0,240}?el\.width = 8; el\.height = 8;[\s\S]{0,240}?el\.classList\.remove\("drawn"\);/
+    /function drawThumbs\(\)[\s\S]{0,1200}?if \(down\(a\) \|\| rail !== "qr"\) \{[\s\S]{0,240}?el\.width = 8; el\.height = 8;[\s\S]{0,240}?el\.classList\.remove\("drawn"\);/
       .test(appJsSrc));
   ok("and the clear happens before the renderer is ever asked for that account",
     (() => {
@@ -804,6 +804,9 @@ section("2. The bundle carries the codes and nothing else");
     /function viewOf\(a\) \{\s*if \(onRail\(a, rail\)\) return rail;/.test(appJs) &&
     /document\.body\.setAttribute\("data-view", v\);/.test(appJs) &&
     !/id: "all"/.test(appJs));
+  ok("the code miniatures appear on the QR rail only, and a change of rail redraws them",
+    /if \(down\(a\) \|\| rail !== "qr"\) \{/.test(appJs) &&
+    /remember\("rail", id\);[\s\S]{0,600}?orderTiles\(\);\s*drawThumbs\(\);/.test(appJs));
   ok("a step walks the visible order, never the build order",
     /shownOrder\.push\(order\[k\]\)/.test(appJs) &&
     /var i = shownOrder\[\(pos \+ dir \+ shownOrder\.length\) % shownOrder\.length\];/.test(appJs));
@@ -906,13 +909,13 @@ section("2. The bundle carries the codes and nothing else");
 
   /* THE NUMBER IS ON SCREEN, ON THE TRANSFER VIEW ONLY (owner, 14 Sep 2026, reversing 25 Aug).
    * A plate of the bank's name and the number, and on JomPAY the biller code, Ref-1 and a Ref-2
-   * of nil; each value copies on a tap. The QR view shows the coin and nothing else. It is still
+   * shown as a dash; each value copies on a tap. The QR view shows the coin and nothing else. It is still
    * written to the DOM from the record, never drawn onto a canvas, so the renderer stays clean. */
   ok("the Transfer view shows the bank and the number, and JomPAY the biller code and both references",
     /id="plate"/.test(indexHtml) &&
     /function fillPlate\(a, v\)/.test(appJs) &&
     /\["Bank", a\.bank\], \["Account", spaced\(a\.acct\), "account number"\]/.test(appJs) &&
-    /\["Biller code", a\.biller, "biller code"\], \["Ref-1", a\.ref1, "Ref-1"\], \["Ref-2", "nil"\]/.test(appJs) &&
+    /\["Biller code", a\.biller, "biller code"\], \["Ref-1", a\.ref1, "Ref-1"\], \["Ref-2", "-"\]/.test(appJs) &&
     /copyValue\(r\[1\], r\[2\]\)/.test(appJs));
   ok("the QR view is the coin alone, and the other views have no coin",
     /body\[data-view="qr"\] \.plate\{display:none;\}/.test(cssCode) &&
@@ -1030,7 +1033,7 @@ section("2. The bundle carries the codes and nothing else");
    * because decorative mode draws each module as a plain rect rather than a rounded blob, which
    * at a module of about one pixel is identical to look at and several times cheaper. */
   ok("every thumbnail is drawn at once, not one at a time",
-    /for \(var i = 0; i < CODES\.length; i\+\+\) \{[\s\S]{0,400}?paintFace\(el/.test(appJs) &&
+    /for \(var i = 0; i < CODES\.length; i\+\+\) \{[\s\S]{0,700}?paintFace\(el/.test(appJs) &&
     !/idle\(step\)/.test(appJs));
   ok("a thumbnail's modules are plain rects, which is what makes drawing them all affordable",
     /if \(opts\.decorative\) \{[\s\S]{0,400}?g\.fillRect\(bx, by/.test(read(path.join(PUB, "qr-art.js"))));

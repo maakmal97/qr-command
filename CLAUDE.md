@@ -89,7 +89,7 @@ Every number here is re-asserted by `npm test`.
 - **The number is on screen again, on the Transfer view only (owner, 14 Sep 2026,
   reversing 25 Aug).** `fillPlate()` writes a plate into `#plate` from the record: BANK and
   ACCOUNT (spaced in fours, RECEIVER when `holder` is set) on Transfer; BILLER CODE, REF-1
-  and REF-2 `nil` on JomPAY. Each value is a button that copies through the one
+  and REF-2 `-` on JomPAY. Each value is a button that copies through the one
   `copyValue(value, label)`; the toast names the label. Nothing hands the number to a
   renderer, asserted. A suspended account empties the plate and refuses to copy.
 - **The rail is a mode (14 Sep 2026), not only a filter.** Three rails, DuitNow QR,
@@ -98,7 +98,9 @@ Every number here is re-asserted by `npm test`.
   The chosen rail filters the list and decides what an opened account shows (`viewOf()`;
   an account reached by hash that is not on the rail shows the first rail it is on); it is
   remembered in `localStorage` `pay:rail`, default QR. `body[data-view]` switches the coin
-  and the plate; only a coin flies, a plate fades in. Steps and swipes walk `shownOrder`,
+  and the plate; only a coin flies, a plate fades in. The code miniatures appear on the QR
+  rail only: `drawThumbs()` clears a row to its brand disc on any other rail, and
+  `setRail()` redraws (owner, 14 Sep 2026). Steps and swipes walk `shownOrder`,
   the visible tiles in display order, never the build order. Chips filter by hiding, never
   rebuilding, so `tiles[i]` stays aligned with `CODES[i]`; the chip row wraps and
   `overflow-x:auto` is asserted absent. `bank` ships for every account and is what the row
