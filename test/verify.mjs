@@ -545,7 +545,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
    * with .tiledot.drawn. The old assertion passed throughout, because it was pinning the shape
    * of the fault. */
   ok("a suspended account's miniature is CLEARED, not merely skipped",
-    /function drawThumbs\(\)[\s\S]{0,1200}?if \(down\(a\) \|\| rail !== "qr"\) \{[\s\S]{0,240}?el\.width = 8; el\.height = 8;[\s\S]{0,240}?el\.classList\.remove\("drawn"\);/
+    /function drawThumbs\(\)[\s\S]{0,1200}?if \(down\(a\)\) \{[\s\S]{0,240}?el\.width = 8; el\.height = 8;[\s\S]{0,240}?el\.classList\.remove\("drawn"\);/
       .test(appJsSrc));
   ok("and the clear happens before the renderer is ever asked for that account",
     (() => {
@@ -804,8 +804,9 @@ section("2. The bundle carries the codes and nothing else");
     /function viewOf\(a\) \{\s*if \(onRail\(a, rail\)\) return rail;/.test(appJs) &&
     /document\.body\.setAttribute\("data-view", v\);/.test(appJs) &&
     !/id: "all"/.test(appJs));
-  ok("the code miniatures appear on the QR rail only, and a change of rail redraws them",
-    /if \(down\(a\) \|\| rail !== "qr"\) \{/.test(appJs) &&
+  ok("the code miniatures appear on the QR rail only; elsewhere a row wears an initials badge",
+    /if \(rail === "qr" \|\| plate\(a\)\) \{[\s\S]{0,200}?paintFace\(el[\s\S]{0,300}?drawBadge\(el, a\);/.test(appJs) &&
+    /function initialsOf\(name\)/.test(appJs) && /function drawBadge\(el, a\)/.test(appJs) &&
     /remember\("rail", id\);[\s\S]{0,600}?orderTiles\(\);\s*drawThumbs\(\);/.test(appJs));
   ok("a step walks the visible order, never the build order",
     /shownOrder\.push\(order\[k\]\)/.test(appJs) &&
@@ -1033,7 +1034,7 @@ section("2. The bundle carries the codes and nothing else");
    * because decorative mode draws each module as a plain rect rather than a rounded blob, which
    * at a module of about one pixel is identical to look at and several times cheaper. */
   ok("every thumbnail is drawn at once, not one at a time",
-    /for \(var i = 0; i < CODES\.length; i\+\+\) \{[\s\S]{0,700}?paintFace\(el/.test(appJs) &&
+    /for \(var i = 0; i < CODES\.length; i\+\+\) \{[\s\S]{0,1000}?paintFace\(el/.test(appJs) &&
     !/idle\(step\)/.test(appJs));
   ok("a thumbnail's modules are plain rects, which is what makes drawing them all affordable",
     /if \(opts\.decorative\) \{[\s\S]{0,400}?g\.fillRect\(bx, by/.test(read(path.join(PUB, "qr-art.js"))));

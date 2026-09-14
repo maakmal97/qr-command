@@ -884,6 +884,36 @@
     drawThumbs();
   }
 
+  /* THE BADGE (owner, 14 Sep 2026): the brand disc with the account's initials struck on it,
+   * for a row on a rail that is not about codes. Derived from the name, so nothing new ships:
+   * the initials of up to three words, or the first two letters of a one-word name, in whichever
+   * ink clears the disc. */
+  function initialsOf(name) {
+    var words = String(name).split(/\s+/).filter(function (w) { return /^[A-Za-z]/.test(w); });
+    var s = words.length > 1
+      ? words.slice(0, 3).map(function (w) { return w.charAt(0); }).join("")
+      : String(name).slice(0, 2);
+    return s.toUpperCase();
+  }
+  function drawBadge(el, a) {
+    var dpr = self.devicePixelRatio || 1, px = Math.round(THUMB * dpr);
+    el.width = px; el.height = px;
+    var g = el.getContext("2d");
+    g.clearRect(0, 0, px, px);
+    g.beginPath();
+    g.arc(px / 2, px / 2, px / 2 - dpr, 0, Math.PI * 2);
+    g.fillStyle = a.brand;
+    g.fill();
+    var C = self.QRArt.colour;
+    var text = initialsOf(a.name);
+    g.fillStyle = C.contrast(C.hex2rgb(a.brand), [242, 244, 245]) >= 3 ? "#f2f4f5" : "#0b1215";
+    g.font = "700 " + Math.round(px * (text.length > 2 ? 0.28 : 0.34)) +
+      "px 'JetBrains Mono','Cascadia Mono',Consolas,Menlo,monospace";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(text, px / 2, px / 2 + px * 0.02);
+  }
+
   /* The thumbnails, drawn ALL AT ONCE, before the list is ever shown.
    *
    * They used to go in one per idle callback, and that was wrong: thirteen coins appearing one
@@ -917,20 +947,25 @@
     for (var i = 0; i < CODES.length; i++) {
       var a = CODES[i], el = thumbOf(i);
       if (!el || !el.getContext) continue;
-      // THE CODES APPEAR ON THE QR RAIL ONLY (owner, 14 Sep 2026). On Transfer and JomPAY a
-      // row carries the plain brand disc; a code on a list that is not about codes is a code
-      // on screen for no reason. Same clear as a suspension, for the same reason.
-      if (down(a) || rail !== "qr") {
+      if (down(a)) {
         el.width = 8; el.height = 8;          // the pixels are gone, not covered
         el.style.background = a.brand;        // back to the plain disc, round again
         el.classList.remove("drawn");
         continue;
       }
       try {
-        paintFace(el, a, {
-          size: THUMB, pixelRatio: self.devicePixelRatio || 1,
-          plain: false, decorative: true
-        });
+        /* THE CODES APPEAR ON THE QR RAIL ONLY (owner, 14 Sep 2026). On Transfer and JomPAY a
+         * row wears its badge instead: a code on a list that is not about codes is a code on
+         * screen for no reason. An account with no code keeps its plate, whose marks are its
+         * identity. */
+        if (rail === "qr" || plate(a)) {
+          paintFace(el, a, {
+            size: THUMB, pixelRatio: self.devicePixelRatio || 1,
+            plain: false, decorative: true
+          });
+        } else {
+          drawBadge(el, a);
+        }
         el.style.background = "none";
         el.classList.add("drawn");   // drops the disc's radius, which would clip the scallops
       } catch (e) { /* the brand disc stays, round; nothing is lost */ }

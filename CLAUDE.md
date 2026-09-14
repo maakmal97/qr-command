@@ -99,7 +99,9 @@ Every number here is re-asserted by `npm test`.
   an account reached by hash that is not on the rail shows the first rail it is on); it is
   remembered in `localStorage` `pay:rail`, default QR. `body[data-view]` switches the coin
   and the plate; only a coin flies, a plate fades in. The code miniatures appear on the QR
-  rail only: `drawThumbs()` clears a row to its brand disc on any other rail, and
+  rail only: on any other rail `drawThumbs()` strikes the badge instead, `drawBadge()`, the
+  brand disc with initials derived from `name` (`initialsOf()`: up to three words' initials,
+  or the first two letters of one word); an account with no code keeps its plate and marks.
   `setRail()` redraws (owner, 14 Sep 2026). Steps and swipes walk `shownOrder`,
   the visible tiles in display order, never the build order. Chips filter by hiding, never
   rebuilding, so `tiles[i]` stays aligned with `CODES[i]`; the chip row wraps and
