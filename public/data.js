@@ -16,7 +16,7 @@ self.QR_CODES = [
     "holder": "Wise Payments Malaysia Sdn Bhd",
     "bankMark": "jpmc",
     "holderMark": "wise",
-    "tag": "Name not shown",
+    "tag": "Wise",
     "ring": "#9FE870",
     "biller": "",
     "ref1": ""
@@ -160,7 +160,7 @@ self.QR_CODES = [
     "holder": "",
     "bankMark": "",
     "holderMark": "",
-    "tag": "",
+    "tag": "Business",
     "ring": "",
     "biller": "",
     "ref1": ""
@@ -230,4 +230,4 @@ self.QR_CODES = [
     "ref1": "6011111809738"
   }
 ];
-self.QR_BUILD = "688a4f2cce61";
+self.QR_BUILD = "e6254b07dca1";

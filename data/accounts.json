@@ -18,7 +18,7 @@
    "holder": "Wise Payments Malaysia Sdn Bhd",
    "bankMark": "jpmc",
    "holderMark": "wise",
-   "tag": "Name not shown",
+   "tag": "Wise",
    "ring": "#9FE870"
   },
   {
@@ -118,7 +118,8 @@
    "brand": "#1A2B6B",
    "mid": "890053",
    "payload": "00020201021126520014A000000615000101068900530220MDN177104459556739375204739953034585802MY5925MUHAMMADAFIFAKMALBINAFFIA6011KUALALUMPUR6304FF56",
-   "bank": "Touch 'n Go eWallet"
+   "bank": "Touch 'n Go eWallet",
+   "tag": "Business"
   },
   {
    "key": "spay",

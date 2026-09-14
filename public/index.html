@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=688a4f2cce61">
+<link rel="stylesheet" href="./app.css?v=e6254b07dca1">
 </head>
 <body class="view-list">
 
@@ -66,6 +66,11 @@
       <!-- Shown OVER the coin rather than in place of it. The coin box stays laid out, because
            the zoom measures it and an element inside a display:none view reports a zero rect,
            which cancels the animation silently. -->
+      <!-- THE RAIL DECIDES WHAT IS SHOWN (owner, 14 Sep 2026). On QR the coin stands alone. On
+           Transfer and JomPAY the coin is taken down and this plate carries the bank and the
+           number, or the biller code and the references, each value copying on a tap. Filled by
+           app.js from the record; body[data-view] switches between the two. -->
+      <div class="plate" id="plate" aria-label="Payment details"></div>
       <div class="maint" id="maint" aria-hidden="true">
         <p class="maint-h">Under maintenance</p>
       </div>
@@ -73,13 +78,6 @@
 
     <div class="tools">
       <p id="say" class="say" role="status" aria-live="polite"></p>
-      <!-- One action per rail this account actually has, and nothing for a rail it lacks. The
-           JomPAY button is hidden rather than disabled on the thirteen without a biller code:
-           disabled would say "you could pay this way but not now", which is untrue. -->
-      <div class="pills">
-        <button type="button" id="copybtn" class="pill">Copy account number</button>
-        <button type="button" id="jompaybtn" class="pill" hidden>Copy JomPAY Ref-1</button>
-      </div>
     </div>
   </main>
 </section>
@@ -88,12 +86,12 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=688a4f2cce61"></script>
+<script src="./qrcode.js?v=e6254b07dca1"></script>
 <!-- The traced marks, registering themselves on self.MARKS. Path data, so no image is fetched
      and the Content-Security-Policy stays `default-src 'none'` with no img-src at all. -->
-<script src="./marks.js?v=688a4f2cce61"></script>
-<script src="./qr-art.js?v=688a4f2cce61"></script>
-<script src="./data.js?v=688a4f2cce61"></script>
-<script src="./app.js?v=688a4f2cce61"></script>
+<script src="./marks.js?v=e6254b07dca1"></script>
+<script src="./qr-art.js?v=e6254b07dca1"></script>
+<script src="./data.js?v=e6254b07dca1"></script>
+<script src="./app.js?v=e6254b07dca1"></script>
 </body>
 </html>

@@ -30,8 +30,7 @@
   var elSay = document.getElementById("say");
   var elGrid = document.getElementById("grid");
   var elBack = document.getElementById("back");
-  var elCopy = document.getElementById("copybtn");
-  var elJom = document.getElementById("jompaybtn");
+  var elPlate = document.getElementById("plate");
   var elRails = document.getElementById("rails");
   var elList = document.getElementById("accounts");
 
@@ -80,6 +79,7 @@
    * and removing the button does not remove it. `meta.plain` is still read and still styles the
    * frame; nothing here ever asks for it. */
   var tiles = [];
+  var shownOrder = [];   // indices of the tiles on screen, in display order; steps walk it
   var cards = {};        // one saveable image per account, built once and kept
   var sayTimer = null;
   var depth = 0;         // how many entries WE pushed, so back is never a guess
@@ -150,17 +150,27 @@
    *   jompay    a biller code and a reference, both or neither
    */
   var RAILS = [
-    { id: "all", label: "All", has: function () { return true; } },
     { id: "qr", label: "QR", has: function (a) { return !!a.payload; } },
     { id: "transfer", label: "Transfer", has: function (a) { return !!(a.bank && a.acct); } },
     { id: "jompay", label: "JomPAY", has: function (a) { return !!(a.biller && a.ref1); } }
   ];
-  var rail = "all";
   function railOf(id) {
     for (var i = 0; i < RAILS.length; i++) if (RAILS[i].id === id) return RAILS[i];
     return RAILS[0];
   }
   function onRail(a, id) { return railOf(id).has(a); }
+  /* THE RAIL IS A MODE, NOT ONLY A FILTER (owner, 14 Sep 2026). It picks which accounts are
+   * listed AND what an account shows when opened: the code alone on QR, the bank and the number
+   * on Transfer, the biller code and the references on JomPAY. It is remembered, so the app
+   * opens the way it was left; QR is the default because thirteen of fourteen have a code. An
+   * account opened by hash that is not on the current rail shows the first rail it is on, so a
+   * link never lands on nothing. */
+  var rail = railOf(recall("rail")).id;
+  function viewOf(a) {
+    if (onRail(a, rail)) return rail;
+    for (var i = 0; i < RAILS.length; i++) if (RAILS[i].has(a)) return RAILS[i].id;
+    return rail;
+  }
 
   // A traced mark by id, or nothing. An unknown id draws no mark rather than throwing; the
   // build already refuses an id with no file behind it, so this is the belt to that brace.
@@ -180,7 +190,8 @@
    * and spent halfway through a transition it drops one exactly where the eye is following the
    * coin. Rendered up front, the swap becomes a drawImage of about a hundredth of that. */
   function prerender(i) {
-    if (down(CODES[i])) return null;
+    // Only a coin flies. The Transfer and JomPAY views are text and simply arrive.
+    if (down(CODES[i]) || viewOf(CODES[i]) !== "qr") return null;
     var a = CODES[i];
     if (!a) return null;
     var off = document.createElement("canvas");
@@ -302,34 +313,66 @@
     });
   }
 
+  /* THE TRANSFER AND JOMPAY VIEWS (owner, 14 Sep 2026). The number and the references are ON
+   * SCREEN now, which reverses 25 Aug: a plate reading the bank's DuitNow name and the number
+   * straight off the record, or the biller code and the references, and each value copies on a
+   * tap. Ref-2 is always nil and says so, because a JomPAY form asks for it and nil is the
+   * answer. The number is spaced in fours to be read; the copy strips the spaces. */
+  function spaced(n) { return String(n).replace(/(\d{4})(?=\d)/g, "$1 "); }
+  function fillPlate(a, v) {
+    var rows = v === "jompay"
+      ? [["Biller code", a.biller, "biller code"], ["Ref-1", a.ref1, "Ref-1"], ["Ref-2", "nil"]]
+      : [["Bank", a.bank], ["Account", spaced(a.acct), "account number"]]
+          .concat(a.holder ? [["Receiver", a.holder]] : []);
+    elPlate.textContent = "";
+    rows.forEach(function (r) {
+      var el = document.createElement(r[2] ? "button" : "div");
+      if (r[2]) el.type = "button";
+      el.className = "prow";
+      var l = document.createElement("span");
+      l.className = "plabel";
+      l.textContent = r[0];
+      var val = document.createElement("span");
+      val.className = "pvalue";
+      val.textContent = r[1];
+      el.appendChild(l);
+      el.appendChild(val);
+      if (r[2]) el.addEventListener("click", function () { copyValue(r[1], r[2]); });
+      elPlate.appendChild(el);
+    });
+  }
+
   function paint(pre) {
     var a = CODES[idx];
     if (!a) return null;
     var meta;
+    var v = viewOf(a);
+    document.body.setAttribute("data-view", v);
 
     if (down(a)) {
-      /* NOTHING SCANNABLE IS DRAWN AT ALL. The canvas is cleared rather than covered: a coin
-       * drawn and then hidden behind a panel is still a photograph away from being scanned, and
-       * the panel is a stylesheet away from not being there. */
+      /* NOTHING SCANNABLE OR COPIABLE IS DRAWN AT ALL. The canvas is cleared rather than
+       * covered: a coin drawn and then hidden behind a panel is still a photograph away from
+       * being scanned, and the panel is a stylesheet away from not being there. The plate is
+       * emptied for the same reason: the number may be the one being changed. */
       elCoin.width = 8; elCoin.height = 8;
       elCoin.getContext("2d").clearRect(0, 0, 8, 8);
+      elPlate.textContent = "";
       document.body.classList.add("maintenance");
       elCoin.setAttribute("aria-label", a.name + " is under maintenance and its code is not shown");
       elBtn.setAttribute("aria-label", a.name + " is under maintenance");
-      /* Copying is refused too, and disabled rather than hidden. The number may be the one
-       * being changed on the laptop, and handing out a stale account number is the same failure
-       * as showing a stale code. The panel already explains why, so the button does not. */
-      elCopy.disabled = true;
-      elJom.disabled = true;
       say("");
       return { plain: false, fellBack: false, maintenance: true };
     }
     document.body.classList.remove("maintenance");
-    elCopy.disabled = false;
-    /* Hidden, not disabled, on the thirteen accounts with no biller code. Disabled would say
-     * "payable this way, but not now", which is untrue: they are not on that rail at all. */
-    elJom.hidden = !(a.biller && a.ref1);
-    elJom.disabled = false;
+    if (v !== "qr") {
+      // Text, not a coin. The canvas is cleared rather than left holding the last code under
+      // a display:none, which would still be a code on the page.
+      elCoin.width = 8; elCoin.height = 8;
+      elCoin.getContext("2d").clearRect(0, 0, 8, 8);
+      fillPlate(a, v);
+      return { plain: false, fellBack: false, view: v };
+    }
+    elPlate.textContent = "";
     if (pre && pre.canvas) {
       elCoin.width = pre.canvas.width;
       elCoin.height = pre.canvas.height;
@@ -342,31 +385,16 @@
     }
     // meta.plain, not the local flag: the renderer drops to the plain code by itself when the
     // screen is too small to draw a coin anyone could scan, and the page must follow it.
-    if (plate(a)) {
-      /* THE LABEL DESCRIBES WHAT IS DRAWN, and the number is not. Reading it aloud would put it
-       * back on the one output we had just taken it off, and out loud is the last place you want
-       * an account number in a room with other people. The button says how to get it.
-       *
-       * The holder is usually absent, and a screen reader must not announce a trailing "in the
-       * name of" with nothing after it. */
-      elCoin.setAttribute("aria-label", "Bank, " + a.bank +
-        (a.holder ? ". Receiver, " + a.holder : "") + ".");
-      elBtn.setAttribute("aria-label",
-        a.name + ". Bank, " + a.bank + (a.holder ? ". Receiver, " + a.holder : "") +
-        ". Tap to copy the account number.");
-    } else {
-      elCoin.setAttribute("aria-label", a.name + " payment code");
-      elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");
-    }
+    elCoin.setAttribute("aria-label", a.name + " payment code");
+    elBtn.setAttribute("aria-label", a.name + " payment code. Press and hold to save it to your photos.");
     elBtn.classList.toggle("plainmode", meta.plain);
     return meta;
   }
 
-  /* THE COIN NAMES ITS OWN TAP, and the label is held open rather than timed out, because it
-   * describes what is on screen rather than reporting something that just happened. A plate has
-   * no code to save, so its tap copies instead; see save(). */
+  /* THE VIEW NAMES ITS OWN TAP, and the label is held open rather than timed out, because it
+   * describes what is on screen rather than reporting something that just happened. */
   function sayTap() {
-    say(plate(CODES[idx]) ? "Tap to copy" : "Tap to save", false);
+    say(viewOf(CODES[idx]) === "qr" ? "Tap to save" : "Tap a value to copy", false);
   }
 
   /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
@@ -403,19 +431,10 @@
     } else fallback();
   }
 
+  // The keyboard's copy. The plate's rows copy their own value through copyValue directly.
   function copyAcct() {
     var a = CODES[idx];
-    if (a) copyValue(a.acct, a.acct);
-  }
-
-  /* THE REFERENCE IS COPIED, NEVER SAID. The confirmation names the rail rather than the value,
-   * which is not tidiness: on Instapay Ref-1 is a mobile number, and "Copied 6011111809738"
-   * would put it on screen and into any screenshot, which is the one thing copying instead of
-   * drawing exists to avoid. The account number is echoed because that decision was already
-   * taken for it, deliberately, on 11 Aug 2026. */
-  function copyRef1() {
-    var a = CODES[idx];
-    if (a) copyValue(a.ref1, "JomPAY Ref-1");
+    if (a) copyValue(a.acct, "account number");
   }
 
   /* -------------------------------------------------------------------- motion */
@@ -612,7 +631,7 @@
     var was = idx;
     var from = still() ? null : rectOf(elBtn);
     var shot = null;
-    if (from && elCoin.width) {
+    if (from && elCoin.width > 8) {   // 8 is a cleared canvas: a plate view, nothing to fly
       shot = document.createElement("canvas");
       shot.width = elCoin.width;
       shot.height = elCoin.height;
@@ -642,9 +661,13 @@
 
   /* Stepping between codes REPLACES rather than pushes, so Accounts always returns to the list
    * rather than walking backwards through everything swiped past. */
-  function step(i, dir) {
-    i = (i + CODES.length) % CODES.length;
-    if (i === idx) return;
+  function step(dir) {
+    /* STEPS STAY ON THE RAIL. The neighbour is the next VISIBLE tile in display order, so a
+     * swipe on the Transfer view never lands on an account with no number to show, and the
+     * order swiped through is the order the list shows. */
+    var pos = shownOrder.indexOf(idx);
+    if (shownOrder.length < 2 || pos < 0) return;
+    var i = shownOrder[(pos + dir + shownOrder.length) % shownOrder.length];
     var out = dir < 0 ? "out-left" : "out-right";
     var into = dir < 0 ? "in-right" : "in-left";
     var pre = still() ? null : prerender(i);
@@ -704,11 +727,8 @@
     if (!a) return;
     // Nothing to save, and nothing that should be saved: see down().
     if (down(a)) { say("Under maintenance"); return; }
-    /* A PLATE HAS NO CODE TO SAVE, so the gesture does the useful thing instead of refusing.
-     * The saved image exists to be scanned out of somebody's photo library; a picture of a
-     * number is not that, and the number itself is what anyone asking for these details wants.
-     * This is why the caption on a plate reads "Tap to copy" rather than "Tap to save". */
-    if (plate(a)) { copyAcct(); return; }
+    // Only the QR view has a coin to keep; the other views copy from their rows.
+    if (viewOf(a) !== "qr") return;
     var card;
     try { card = cardOf(a); }
     catch (e) { say("Could not draw the image"); return; }
@@ -741,7 +761,7 @@
    * rebuilt the string as `"tile down"` or `"tile"`, which quietly dropped `wide` off the
    * featured account, so a suspension arriving from the laptop collapsed its full-width row. */
   function classOf(a) {
-    return "tile" + (down(a) ? " down" : "") + (a.tag ? " wide" : "");
+    return "tile" + (down(a) ? " down" : "");
   }
 
   /* SUSPENDED ACCOUNTS SINK TO THE BOTTOM, and this is a RUNTIME sort rather than the master's
@@ -780,23 +800,23 @@
      * filter showing one account in fourteen would deal it in on the fourteenth beat, which
      * reads as the app having hung. */
     var shown = 0;
+    shownOrder = [];
     for (var k = 0; k < order.length; k++) {
       var el = tiles[order[k]], on = onRail(CODES[order[k]], rail);
       el.hidden = !on;
-      if (on) el.style.setProperty("--i", String(shown++));
+      if (on) { el.style.setProperty("--i", String(shown++)); shownOrder.push(order[k]); }
       elGrid.appendChild(el);
     }
   }
 
-  /* The chips, built from the data so a count cannot go stale against it. "All" is always
-   * offered; a rail nobody is on is not, because a filter that can only ever return nothing is
-   * a dead control. */
+  /* The chips, built from the data so a count cannot go stale against it. A rail nobody is on
+   * is not offered, because a filter that can only ever return nothing is a dead control. */
   function buildRails() {
     if (!elRails) return;
     elRails.textContent = "";
     RAILS.forEach(function (r) {
       var n = CODES.filter(r.has).length;
-      if (!n && r.id !== "all") return;
+      if (!n) return;
       var b = document.createElement("button");
       b.type = "button";
       b.className = "railbtn";
@@ -814,11 +834,12 @@
   function setRail(id) {
     if (id === rail) return;
     rail = id;
+    remember("rail", id);
     var btns = elRails ? elRails.querySelectorAll(".railbtn") : [];
     var i = 0;
     RAILS.forEach(function (r) {
       var n = CODES.filter(r.has).length;
-      if (!n && r.id !== "all") return;
+      if (!n) return;
       if (btns[i]) btns[i].setAttribute("aria-pressed", String(r.id === rail));
       i++;
     });
@@ -830,11 +851,9 @@
     CODES.forEach(function (a, i) {
       var b = document.createElement("button");
       b.type = "button";
-      /* A TAGGED ACCOUNT TAKES A ROW OF ITS OWN. The tag is a purpose label, so the account
-       * carrying one is the featured account, and a featured account is not sharing its row
-       * with another. Full width also means the tile can lay the coin BESIDE the name rather
-       * than above it: the reason tiles stack is that a two-column tile leaves only 72px of
-       * text column, and a full-width one leaves about 250px. */
+      /* EVERY ACCOUNT IS ONE ROW, none featured (owner, 14 Sep 2026). The row names the
+       * institution as the DuitNow list names it, and a tag is a sub-line telling two accounts
+       * at the same institution apart. */
       b.className = classOf(a);
       b.style.setProperty("--dot", a.brand);
       b.style.setProperty("--i", String(i));
@@ -845,7 +864,7 @@
       sw.style.background = a.brand;    // a brand disc until the miniature arrives
       var tx = document.createElement("span");
       tx.className = "tiletext";
-      tx.textContent = a.name;
+      tx.textContent = a.bank || a.name;
       if (a.tag) {
         var tg = document.createElement("span");
         tg.className = "tiletag";
@@ -955,26 +974,13 @@
       save();
     });
 
-    /* COPY WITHOUT SHOWING. The number never reaches the screen: it goes from the record
-     * straight to the clipboard, so it cannot be read over a shoulder or caught in a
-     * screenshot of the code. stopPropagation keeps the press off the coin behind it, which
-     * would otherwise also fire a save. */
-    elCopy.addEventListener("click", function (e) {
-      e.stopPropagation();
-      copyAcct();
-    });
-    elJom.addEventListener("click", function (e) {
-      e.stopPropagation();
-      copyRef1();
-    });
-
     document.addEventListener("keydown", function (e) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       var onCode = document.body.className.indexOf("view-code") >= 0;
       if (e.key === "Escape") { if (onCode) { close(); e.preventDefault(); } return; }
       if (!onCode) return;
-      if (e.key === "ArrowRight") { step(idx + 1, 1); e.preventDefault(); }
-      else if (e.key === "ArrowLeft") { step(idx - 1, -1); e.preventDefault(); }
+      if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
+      else if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
       else if (e.key === "s" || e.key === "Enter") { save(); e.preventDefault(); }
       else if (e.key === "d" || e.key === "c") { copyAcct(); e.preventDefault(); }
     });
@@ -996,7 +1002,7 @@
       var dx = e.changedTouches[0].clientX - x0;
       var dy = e.changedTouches[0].clientY - y0;
       x0 = null;
-      if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(dy) * 1.6) step(idx + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+      if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(dy) * 1.6) step(dx < 0 ? 1 : -1);
     }, { passive: true });
 
     var t = null;

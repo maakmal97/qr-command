@@ -7,9 +7,10 @@ Correct stale facts in place; the dated record is the project changelog / journa
 Set 6 Sep 2026. Ceiling 15 KB.
 
 The payment-QR consolidator on the phone: a Cloudflare Worker serving a static bundle built
-from `data/accounts.json` in this repo. Two screens: the accounts grid, and one code drawn on
-the device as a struck coin held in a gravitational lens. The coin has one side; a tap saves
-it, and `Copy account number` puts the digits on the clipboard without showing them. Since
+from `data/accounts.json` in this repo. Two screens: the accounts list, and one account shown
+the way the chosen rail pays it: on QR a code drawn on the device as a struck coin held in a
+gravitational lens (one side, a tap saves it), on Transfer the bank and the number, on JomPAY
+the biller code and the references, each value copying on a tap (owner, 14 Sep 2026). Since
 8 Sep 2026 there is one edit surface, `/admin/`, behind Cloudflare Access, for the two things
 that change: which accounts are shown and what order they stand in. The reasoning and the
 measurements behind every line below are in `docs/NOTES.md`.
@@ -83,18 +84,27 @@ Every number here is re-asserted by `npm test`.
 
 ## The number, the rails, maintenance
 
-- **One face since 25 Aug 2026.** `Copy account number` copies the digits; `drawBack`,
-  `drawMark`, the flip and PayNet's artwork are removed completely, asserted as
-  complete. `acct` still ships in `data.js`; this changed the screen, not the bundle. A
-  suspended account refuses to copy, button disabled not hidden.
-- **Three rails (4 Sep 2026):** DuitNow QR, DuitNow Transfer, JomPAY. A rail is a
-  property of an account, derived never stored (`qr` = payload, `transfer` = bank and
-  number, `jompay` = biller code and Ref-1). Chips filter by hiding, never rebuilding,
-  so `tiles[i]` stays aligned with `CODES[i]`; the chip row wraps and `overflow-x:auto`
-  is asserted absent. `bank` ships for every account (the institution is tag `26.01`,
-  the member code the store keeps as `mid`; Touch 'n Go and Touch 'n Go Business share
-  890053). Ref-1 is his mobile number: it ships, is never drawn, and the toast names the
-  rail, never the value. One `copyValue(value, label)` serves both.
+- **One face since 25 Aug 2026.** `drawBack`, `drawMark`, the flip and PayNet's artwork are
+  removed completely, asserted as complete. The coin never carries the number.
+- **The number is on screen again, on the Transfer view only (owner, 14 Sep 2026,
+  reversing 25 Aug).** `fillPlate()` writes a plate into `#plate` from the record: BANK and
+  ACCOUNT (spaced in fours, RECEIVER when `holder` is set) on Transfer; BILLER CODE, REF-1
+  and REF-2 `nil` on JomPAY. Each value is a button that copies through the one
+  `copyValue(value, label)`; the toast names the label. Nothing hands the number to a
+  renderer, asserted. A suspended account empties the plate and refuses to copy.
+- **The rail is a mode (14 Sep 2026), not only a filter.** Three rails, DuitNow QR,
+  DuitNow Transfer, JomPAY, no "All". A rail is a property of an account, derived never
+  stored (`qr` = payload, `transfer` = bank and number, `jompay` = biller code and Ref-1).
+  The chosen rail filters the list and decides what an opened account shows (`viewOf()`;
+  an account reached by hash that is not on the rail shows the first rail it is on); it is
+  remembered in `localStorage` `pay:rail`, default QR. `body[data-view]` switches the coin
+  and the plate; only a coin flies, a plate fades in. Steps and swipes walk `shownOrder`,
+  the visible tiles in display order, never the build order. Chips filter by hiding, never
+  rebuilding, so `tiles[i]` stays aligned with `CODES[i]`; the chip row wraps and
+  `overflow-x:auto` is asserted absent. `bank` ships for every account and is what the row
+  and the plate show: the institution's name as the DuitNow list has it (the member code
+  the store keeps as `mid`; Touch 'n Go and Touch 'n Go Business share 890053, told apart
+  by the `tag` sub-line).
 - **Suspended accounts draw no code at all:** canvases cleared to 8x8, `prerender()`
   null, no miniature, copy and save refused. Three sources, in this precedence:
   `/state.json` from KV first (seconds, no deploy), the state this phone last read from it
@@ -142,10 +152,11 @@ Every number here is re-asserted by `npm test`.
   are `decorative: true` exactly once and drawn together at startup.
 - The aurora is two gradient layers cross-faded, no filter; the coin transitions
   `transform` only with `will-change`; a step pre-renders offscreen.
-- Grid `minmax` 132 px (two columns at 375 px); rows fixed at 138 px so the list scrolls
-  (owner, 25 Aug 2026); tiles stack coin over name, side by side broke "ShopeePa / y"; a
-  tagged account is full width with the coin beside; store order (until `/admin/` sets one) except JPMorgan Chase
-  first (owner, 26 Aug 2026); suspended accounts sink at run time through `orderTiles()`,
+- One column of rows, 72 px, coin left and the institution's name beside it in mono caps,
+  a `tag` sub-line under it (owner, 14 Sep 2026; the two-column tile grid and the featured
+  full-width JPMorgan row are gone, no account is featured); rows fixed so the list scrolls
+  (owner, 25 Aug 2026); store order until `/admin/` sets one; suspended accounts sink at run
+  time through `orderTiles()`,
   which moves rather than rebuilds and renumbers `--i`; `classOf()` is the one place a
   tile's classes are built; `--thumb` and `THUMB` are one number, 56 px; `.accounts` adds
   the safe-area insets back with `calc()`; closing scrolls the tile into view with

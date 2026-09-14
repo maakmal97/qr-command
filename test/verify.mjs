@@ -534,7 +534,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
   ok("a suspended account is cleared off the canvas, not merely covered",
     /if \(down\(a\)\) \{[\s\S]{0,400}?elCoin\.width = 8; elCoin\.height = 8;/.test(appJsSrc));
   ok("nothing is pre-rendered for a suspended account either",
-    /function prerender\(i\) \{[\s\S]{0,40}?if \(down\(CODES\[i\]\)\) return null;/.test(appJsSrc));
+    /function prerender\(i\) \{[\s\S]{0,120}?if \(down\(CODES\[i\]\) \|\| viewOf\(CODES\[i\]\) !== "qr"\) return null;/.test(appJsSrc));
   /* THE MINIATURE IS CLEARED, NOT MERELY SKIPPED, and the difference is a live bug.
    *
    * This used to assert `if (down(a)) continue;`, which is correct only on the first pass, when
@@ -756,7 +756,7 @@ section("2. The bundle carries the codes and nothing else");
    * rebuilt the string from scratch and dropped `wide`, so a suspension arriving from the laptop
    * collapsed the featured account's full-width row. Both callers go through classOf now. */
   ok("a tile's classes are built in one place, so a state change cannot drop one",
-    /function classOf\(a\) \{[\s\S]{0,160}?a\.tag \? " wide" : ""/.test(appJs) &&
+    /function classOf\(a\) \{\s*return "tile" \+ \(down\(a\) \? " down" : ""\);/.test(appJs) &&
     !/tiles\[i\]\.className = down\(/.test(appJs));
 
   /* SUSPENDED ACCOUNTS SINK, AT RUNTIME. It cannot be the master's order: /state.json suspends
@@ -787,12 +787,26 @@ section("2. The bundle carries the codes and nothing else");
      "means CODES[i]",
     /el\.hidden = !on;/.test(appJs) && !/elGrid\.textContent = ""/.test(appJs));
 
-  /* A TAGGED ACCOUNT IS THE FEATURED ONE and takes a row to itself. `1 / -1` spans whatever
-   * auto-fill resolved to rather than assuming two columns, so this survives a wider screen. */
-  ok("a tagged account takes a row of its own and shows its tag",
-    /\(a\.tag \? " wide" : ""\)/.test(appJs) &&
+  /* NO ACCOUNT IS FEATURED (owner, 14 Sep 2026): one column of rows, every row alike, named as
+   * the DuitNow list names the institution, and a tag is a sub-line telling two accounts at one
+   * institution apart. */
+  ok("every account is one row alike, named after its institution, and a tag is a sub-line",
+    !/ wide/.test(appJs) && !/\.tile\.wide\{/.test(cssCode) &&
+    /tx\.textContent = a\.bank \|\| a\.name;/.test(appJs) &&
     /tg\.className = "tiletag"/.test(appJs) &&
-    /\.tile\.wide\{[^}]*grid-column:1 \/ -1/.test(cssCode));
+    /grid-template-columns:1fr;/.test(cssCode));
+  /* THE RAIL IS A MODE. It filters the list and decides what an opened account shows, it is
+   * remembered, and an account reached by hash that is not on the current rail falls back to
+   * the first rail it is on. Steps walk the visible order, so a swipe stays on the rail. */
+  ok("the rail is remembered, and decides the view of an opened account",
+    /var rail = railOf\(recall\("rail"\)\)\.id;/.test(appJs) &&
+    /remember\("rail", id\);/.test(appJs) &&
+    /function viewOf\(a\) \{\s*if \(onRail\(a, rail\)\) return rail;/.test(appJs) &&
+    /document\.body\.setAttribute\("data-view", v\);/.test(appJs) &&
+    !/id: "all"/.test(appJs));
+  ok("a step walks the visible order, never the build order",
+    /shownOrder\.push\(order\[k\]\)/.test(appJs) &&
+    /var i = shownOrder\[\(pos \+ dir \+ shownOrder\.length\) % shownOrder\.length\];/.test(appJs));
   ok("a code has an explicit way back to the accounts",
     /id="back"/.test(indexHtml) && /elBack\.addEventListener\("click", close\)/.test(appJs));
 
@@ -830,8 +844,8 @@ section("2. The bundle carries the codes and nothing else");
    * said nothing, so the same gesture read as a feature on one face and a secret on the
    * other. The label is held open rather than timed out, because it describes what is on
    * screen rather than reporting something that just happened. */
-  ok("the coin says what a tap does, and the label does not time out",
-    /say\(plate\(CODES\[idx\]\) \? "Tap to copy" : "Tap to save", false\);/.test(appJs) &&
+  ok("the view says what a tap does, and the label does not time out",
+    /say\(viewOf\(CODES\[idx\]\) === "qr" \? "Tap to save" : "Tap a value to copy", false\);/.test(appJs) &&
     /if \(msg && hold !== false\)/.test(appJs));
   ok("a hold does not then also fire the tap, so one press never saves twice",
     /if \(held\)/.test(appJs));
@@ -890,25 +904,29 @@ section("2. The bundle carries the codes and nothing else");
       read(path.join(PUB, "qr-art.js")).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")) &&
     !/duitnow-mark/.test(indexHtml));
 
-  /* COPY WITHOUT SHOWING is the whole point of the change, so it is asserted directly: the
-   * button reads the number out of the record and writes it to the clipboard, and no code path
-   * draws it onto a canvas or into the DOM. */
-  ok("the control copies rather than flips, and says so",
-    /id="copybtn" class="pill">Copy account number</.test(indexHtml) &&
-    /elCopy\.addEventListener\("click"/.test(appJs) &&
-    /copyAcct\(\);/.test(appJs));
-  ok("the account number is never drawn or written to the page, only to the clipboard",
-    !/textContent = a\.acct|innerHTML = a\.acct/.test(appJs));
-  ok("a suspended account refuses to hand out its number either",
-    /elCopy\.disabled = true;/.test(appJs) && /if \(down\(a\)\) \{ say\("Under maintenance"\); return; }/.test(appJs));
+  /* THE NUMBER IS ON SCREEN, ON THE TRANSFER VIEW ONLY (owner, 14 Sep 2026, reversing 25 Aug).
+   * A plate of the bank's name and the number, and on JomPAY the biller code, Ref-1 and a Ref-2
+   * of nil; each value copies on a tap. The QR view shows the coin and nothing else. It is still
+   * written to the DOM from the record, never drawn onto a canvas, so the renderer stays clean. */
+  ok("the Transfer view shows the bank and the number, and JomPAY the biller code and both references",
+    /id="plate"/.test(indexHtml) &&
+    /function fillPlate\(a, v\)/.test(appJs) &&
+    /\["Bank", a\.bank\], \["Account", spaced\(a\.acct\), "account number"\]/.test(appJs) &&
+    /\["Biller code", a\.biller, "biller code"\], \["Ref-1", a\.ref1, "Ref-1"\], \["Ref-2", "nil"\]/.test(appJs) &&
+    /copyValue\(r\[1\], r\[2\]\)/.test(appJs));
+  ok("the QR view is the coin alone, and the other views have no coin",
+    /body\[data-view="qr"\] \.plate\{display:none;\}/.test(cssCode) &&
+    /body:not\(\[data-view="qr"\]\) \.coinbtn\{display:none;\}/.test(cssCode) &&
+    !/copybtn|jompaybtn/.test(indexHtml) &&
+    /if \(v !== "qr"\) \{[\s\S]{0,400}?elCoin\.width = 8;[\s\S]{0,200}?fillPlate\(a, v\);/.test(appJs));
+  ok("a suspended account shows neither a code nor a number, and refuses to copy",
+    /document\.body\.classList\.add\("maintenance"\);/.test(appJs) &&
+    /if \(down\(a\)\) \{[\s\S]{0,600}?elPlate\.textContent = "";/.test(appJs) &&
+    /if \(down\(a\)\) \{ say\("Under maintenance"\); return; }/.test(appJs));
 
   ok("the number is embossed rather than printed: a shadow, a highlight and a face",
     /function emboss\(/.test(read(path.join(PUB, "qr-art.js"))) &&
     /rgba\(255,255,255,0\.42\)/.test(read(path.join(PUB, "qr-art.js"))));
-  /* The press must not fall through to the coin behind it, or one tap would copy AND save. */
-  ok("the button copies, and the coin saves, and neither does the other's job",
-    /elCopy\.addEventListener\("click"/.test(appJs) &&
-    /e\.stopPropagation\(\);[\s\S]{0,40}?copyAcct\(\);/.test(appJs));
   ok("the digits are copied without the spacing that is only there to be read",
     /String\(value\)\.replace\(\/\\s\+\/g, ""\)/.test(appJs));
   ok("copying falls back to execCommand where the clipboard API is refused",
@@ -919,17 +937,14 @@ section("2. The bundle carries the codes and nothing else");
   /* ONE COPY PATH FOR BOTH RAILS. Written twice, the half that drifts is the JomPAY half,
    * because it belongs to the single account that has a biller code and so is the one nobody
    * exercises by accident. */
-  ok("the account number and the JomPAY reference share one copy path",
+  ok("the account number, the biller code and the reference share one copy path",
     /function copyValue\(value, label\)/.test(appJs) &&
-    /function copyAcct\(\)[\s\S]{0,120}?copyValue\(a\.acct/.test(appJs) &&
-    /function copyRef1\(\)[\s\S]{0,400}?copyValue\(a\.ref1/.test(appJs));
-  /* THE REFERENCE IS NEVER ECHOED. On Instapay Ref-1 is a mobile number, so a confirmation
-   * reading "Copied 6011111809738" would put it on screen and into any screenshot, which is the
-   * whole thing copying instead of drawing exists to avoid. The account number IS echoed, and
-   * that difference is deliberate: putting numbers in the bundle was decided on 11 Aug 2026,
-   * a mobile number is a reachable identifier rather than an address that can only receive. */
-  ok("the JomPAY confirmation names the rail, never the reference",
-    /copyValue\(a\.ref1, "JomPAY Ref-1"\)/.test(appJs));
+    /function copyAcct\(\)[\s\S]{0,120}?copyValue\(a\.acct, "account number"\)/.test(appJs) &&
+    !/function copyRef1\(/.test(appJs));
+  /* The confirmation names the value's label, never the value: it is on screen already, and a
+   * status line that repeats it says nothing new. */
+  ok("the confirmation names what was copied by its label",
+    /say\("Copied " \+ label\)/.test(appJs) && !/say\("Copied " \+ digits/.test(appJs));
   /* Unconditionally, not only on a change of account. When this was conditional the very first
    * account you opened had no label at all, because nothing had changed yet. */
   ok("every account arrival writes the hint, not only a change of account",
@@ -1309,7 +1324,7 @@ section("2. The bundle carries the codes and nothing else");
     ok("a row with NO mark still draws its name, so a logoless bank is not a blank space",
       /rows\[r\]\.fit = layoutValue\(/.test(plateBody));
     ok("the full names survive for a screen reader, which cannot see a logo",
-      /aria-label", "Bank, " \+ a\.bank/.test(read(path.join(PUB, "app.js"))));
+      /\["Bank", a\.bank\]/.test(read(path.join(PUB, "app.js"))));
   }
 
   /* NO FACE DRAWS THE ACCOUNT NUMBER, and this is the last one that did. Taking it off the
@@ -1414,8 +1429,9 @@ section("2. The bundle carries the codes and nothing else");
     /function plate\(a\) \{ return !!a && !a\.payload; }/.test(appJs));
   ok("every account has the same single control, because every coin has one face",
     !/elFlip|hidden = plate/.test(appJs));
-  ok("a hold or tap on a code-less account copies the number instead of saving nothing",
-    /if \(plate\(a\)\) \{ copyAcct\(\); return; }/.test(appJs));
+  ok("a hold or tap saves only on the QR view; the other views copy from their rows",
+    /if \(viewOf\(a\) !== "qr"\) return;/.test(appJs) &&
+    /if \(down\(CODES\[i\]\) \|\| viewOf\(CODES\[i\]\) !== "qr"\) return null;/.test(appJs));
   ok("no card is built for an account with no code",
     /if \(!plate\(a\)\) idle\(function \(\) \{ cardOf\(a\); }\);/.test(appJs));
 }
