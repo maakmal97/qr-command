@@ -1048,9 +1048,12 @@ section("2. The bundle carries the codes and nothing else");
    * rather than by reading. Each is now forbidden by assertion. */
   ok("the aurora uses no filter, so changing it cannot re-blur a full-screen layer per frame",
     !/filter:\s*blur/.test(cssCode) && /\.sky\{/.test(cssCode));
-  ok("the aurora changes by cross-fading opacity, which the compositor does on its own",
-    /\.sky\.on\{opacity/.test(cssCode) && /transition:opacity/.test(cssCode) &&
-    /classList\.add\("on"\)/.test(appJs) && /classList\.remove\("on"\)/.test(appJs));
+  /* THE LIGHT IS THE IDENTITY'S, NOT THE ACCOUNT'S (14 Sep 2026). Salt has one accent, copper
+   * and brass, and the coin already carries the provider's colour; so the page is never
+   * re-tuned per account, and there is no second sky layer to cross-fade to. */
+  ok("the aurora is copper and brass for every account, never re-tuned from the brand",
+    !/function tune\(/.test(appJs) && !/setProperty\("--s[123]"/.test(appJs) &&
+    !/\.sky\.on\{/.test(cssCode) && /rgba\(184,115,51/.test(cssCode) && /rgba\(197,160,89/.test(cssCode));
   ok("nothing transitions background-color on a full-screen element",
     !/\.sky[^{]*\{[^}]*transition:[^;}]*background-color/.test(cssCode));
   ok("the coin transitions transform only, never its box-shadow",

@@ -1,64 +1,64 @@
-/* Pay - Liquid Glass, presentation density, one idea per viewport.
+/* Pay, in the Salt identity (14 Sep 2026).
  *
- * The tuning is derived per account from the provider's own brand colour and written onto
- * :root by app.js as --brand, --brand-soft and the three aurora anchors. The material and the
- * ink never move; only the light does. Opening an account moves the whole page.
+ * The tokens and recipes are salt-ds (Code\salt-ds, DESIGN.md is the ethos), applied by hand
+ * because nothing here may load off another origin: the CSP is self-only, so Fraunces and
+ * JetBrains Mono fall back to Georgia and a system mono, exactly as salt-command's desk does.
+ *
+ * What the identity decides for this app, in one line each: the ground is obsidian and the
+ * light is one copper-and-brass aurora, the same for every account, because the identity has
+ * one accent and the coin already carries the provider's colour; labels, names, controls and
+ * the status line are mono caps; the only sentences (the maintenance notice, the admin hint)
+ * are the display face; a tile is glass once, white 3% with a hairline; the maintenance panel
+ * is a well; the save bar is a veil; the one filled button is the brass-to-copper pill on the
+ * admin page, and every other button is a ghost.
  */
 
 :root{
   color-scheme:dark;
   font-synthesis:none;
 
-  /* material */
-  --glass:rgba(255,255,255,0.10);
-  --brd:rgba(255,255,255,0.13);
-  --brd-2:rgba(255,255,255,0.24);
-  --well:rgba(0,0,0,0.30);
-  --veil:rgba(15,14,24,0.58);
+  /* the identity */
+  --salt-obsidian:#05080a;
+  --salt-slate:#0b1215;
+  --salt-brass:#c5a059;
+  --salt-copper:#b87333;
+  --salt-salt:#f2f4f5;
+  --salt-mist:#7a8690;
+  --salt-mist-light:#a6afb5;
+  --salt-ember:#d4694c;
 
-  /* ink */
-  --ink:#f4f5f7;
-  --ink-2:rgba(244,245,247,0.66);
-  --ink-3:rgba(244,245,247,0.40);
+  /* materials */
+  --salt-glass:rgba(255,255,255,0.03);
+  --salt-line:rgba(197,160,89,0.22);
+  --salt-line-strong:rgba(197,160,89,0.45);
+  --salt-line-faint:rgba(255,255,255,0.06);
+  --salt-highlight:rgba(255,255,255,0.08);
+  --salt-well:rgba(0,0,0,0.28);
+  --salt-veil:rgba(5,8,10,0.86);
+  --salt-gradient:linear-gradient(135deg,var(--salt-brass),var(--salt-copper));
 
-  /* light, replaced per account by app.js */
-  --brand:#7f8899;
-  --brand-soft:#c3cbdb;
-  --a1:#3a2f6b;
-  --a2:#7a2f4f;
-  --a3:#15506b;
+  /* type */
+  --salt-font-display:"Fraunces",Georgia,"Times New Roman",serif;
+  --salt-font-mono:"JetBrains Mono","Cascadia Mono",Consolas,Menlo,monospace;
 
   /* geometry */
-  --r:22px;
+  --r:24px;
   --r-sm:16px;
-  --pill:999px;
+  --pill:100px;
   --thumb:56px;
-  --sh:0 8px 40px rgba(0,0,0,0.35);
+  --tap:44px;
 
-  /* MOTION IS TIERED, and one curve for everything was the bug rather than the discipline.
-   *
-   * Measured on the real zoom: cubic-bezier(.32,.72,0,1) over 420ms reaches 95 per cent of the
-   * distance in 203ms and then spends the remaining 217ms creeping through the last five per
-   * cent. Fifty-two per cent of the duration is spent on motion the eye cannot see, and what it
-   * can see is a snap followed by a long dead pause. That reads as lag, not as smoothness, and
-   * it is what "barely working" was describing.
-   *
-   * (.22,.8,.36,1) over 300ms spends 41 per cent on that tail instead of 52, and finishes in
-   * three fifths of the time. Same family of curve, same absence of bounce, but it uses the
-   * time it takes. The pair comes from salt-command, which tiers its motion the same way.
-   *
-   * FAST is for anything that answers a finger: a press, a hover, a colour. At 140ms it is
-   * under the threshold where a response starts to feel detached from the touch that caused it.
-   * Slow feedback is the single easiest way to make an interface feel broken. */
+  /* MOTION IS TIERED. (.22,.8,.36,1) over 300ms spends 41 per cent of its time on the tail the
+   * eye cannot see, against 52 for the curve it replaced, and finishes in three fifths of the
+   * time. FAST is for anything answering a finger: at 140ms a response still belongs to the
+   * touch that caused it. Same pair as salt-command. */
   --ease:cubic-bezier(.22,.8,.36,1);
   --dur:300ms;
   --ease-fast:cubic-bezier(.22,1,.36,1);
   --dur-fast:140ms;
   --t:var(--dur) var(--ease);
   --t-fast:var(--dur-fast) var(--ease-fast);
-  --tap:44px;
-  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",
-         Roboto,Helvetica,Arial,sans-serif;
+  --out:150ms cubic-bezier(.4,0,1,1);
 }
 
 *{box-sizing:border-box;}
@@ -66,29 +66,28 @@ html,body{height:100%;}
 
 body{
   margin:0;
-  color:var(--ink);
-  font-family:var(--sans);
-  font-size:16px;
-  line-height:1.5;
+  color:var(--salt-salt);
+  font-family:var(--salt-font-display);
+  font-weight:340;
+  font-size:15px;
+  line-height:1.6;
   -webkit-font-smoothing:antialiased;
-  background:linear-gradient(160deg,#14121f 0%,#0d1020 60%,#0a0d18 100%);
-  background-attachment:fixed;
+  background:var(--salt-obsidian);
   overflow:hidden;
   overscroll-behavior:none;
   -webkit-tap-highlight-color:transparent;
 }
 
-/* TWO VIEWS, BOTH ALWAYS LAID OUT, cross-faded.
- *
- * They used to be toggled with display, and that is why the transition read as a glitch: a
- * display swap cannot be animated, so the list vanished in a single frame while the coin was
- * still flying. It also made every measurement conditional, because an element inside a
- * display:none view reports a zero rect, which silently cancelled the zoom more than once.
- * Laid out permanently and faded by opacity, both ends can be measured at any moment and the
- * change of screen is something the compositor does on its own.
- *
- * visibility is what takes the hidden one out of hit-testing and out of the accessibility
- * tree; it is delayed by the duration on the way out so it does not disappear mid-fade. */
+/* Every control and label is mono; the split between figures and sentences is the whole
+ * typographic system, so it is set once here and the sentences opt out below. */
+button,.mono{
+  font-family:var(--salt-font-mono);
+  font-variant-numeric:tabular-nums;
+}
+
+/* TWO VIEWS, BOTH ALWAYS LAID OUT, cross-faded. A display swap cannot be animated, and an
+ * element inside a display:none view reports a zero rect, which silently cancelled the zoom.
+ * visibility takes the hidden one out of hit-testing, delayed by the duration on the way out. */
 .accounts,.codeview{
   position:fixed;
   inset:0;
@@ -108,44 +107,27 @@ body.view-code .codeview{
   transition:opacity var(--dur) var(--ease), visibility 0s linear 0s;
 }
 
-/* The aurora, and the one thing in this file that had to be rebuilt for speed.
- *
- * It was three fixed circles carrying `filter: blur(74px)`, with their `background-color`
- * transitioned when the account changed. That is the most expensive shape a change can take:
- * a colour transition is not compositable, so each of three 568px layers was re-blurred on
- * every frame for the whole half second, at exactly the moment the coin was also animating.
- * `will-change: background-color` bought nothing, because there is no layer a colour change
- * can be promoted to.
- *
- * Now there is no filter at all. Two stacked layers each paint the same three washes as
- * radial gradients, which is what a blurred circle was approximating anyway and costs one
- * ordinary paint; the change is a cross-fade of OPACITY between them, which the compositor
- * does on its own without touching the main thread. app.js writes the incoming colours to
- * whichever layer is hidden and then swaps them. */
+/* THE AURORA: copper upper left, brass lower right, as SaltProvider draws it, and the same on
+ * every screen. The identity has one accent, and the coin already carries the provider's
+ * colour, so the page no longer takes its light from the account. Painted as two radial
+ * gradients rather than blurred discs: a blur filter on a full-screen layer is re-rastered
+ * whenever anything over it animates, and the suite forbids it. */
 .sky{
   position:fixed;
-  inset:-10%;
+  inset:0;
   z-index:0;
   pointer-events:none;
-  opacity:0;
-  transition:opacity var(--t);
+  opacity:.85;
   background-repeat:no-repeat;
   background-image:
-    radial-gradient(closest-side circle at 18% 12%, var(--s1,#3a2f6b), transparent),
-    radial-gradient(closest-side circle at 88% 20%, var(--s2,#7a2f4f), transparent),
-    radial-gradient(closest-side circle at 46% 96%, var(--s3,#15506b), transparent);
-  background-size:130% 130%, 118% 118%, 145% 145%;
-  background-position:18% 12%, 88% 20%, 46% 96%;
+    radial-gradient(circle max(380px,55vw) at -6% -8%, rgba(184,115,51,.42), transparent 72%),
+    radial-gradient(circle max(320px,45vw) at 106% 108%, rgba(197,160,89,.34), transparent 72%);
 }
-.sky.on{opacity:.5;}
 
 /* ==================================================================== accounts */
 
-/* THE SAFE AREA HAS TO BE ADDED BACK, not restated. The rule above sets all four insets in one
- * `padding` shorthand, and every longhand here overrides it, so writing plain 16px silently
- * threw the insets away on every notched phone. It hardly showed while the list could not
- * scroll; the moment it could, the last row went under the home indicator, into the strip iOS
- * reserves for the swipe-up gesture, which is the definition of awkward to use. */
+/* The safe area is ADDED BACK, not restated: every longhand here overrides the shorthand
+ * above, and plain 16px threw the insets away on every notched phone. */
 .accounts{
   gap:14px;
   padding-top:calc(env(safe-area-inset-top) + clamp(16px,3.4vh,30px));
@@ -159,85 +141,67 @@ body.view-code .codeview{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   min-height:var(--tap);
 }
+/* An eyebrow: mono caps, tracked 24%, copper. */
 .atitle{
   margin:0;
   flex:0 0 auto;
-  font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;
-  color:var(--ink-3);
+  font-family:var(--salt-font-mono);
+  font-size:12px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--salt-copper);
 }
-/* The sign-in link, top right. Quiet on purpose: it is for one person, and everyone else
- * should be able to not notice it. */
-.signin{
-  display:inline-flex;align-items:center;
-  min-height:var(--tap);
-  padding:0 12px;
-  font-size:13px;font-weight:600;
-  color:var(--ink-3);
-  text-decoration:none;
-  border:1px solid var(--brd);
-  border-radius:var(--pill);
-  background-color:rgba(255,255,255,0.05);
-  transition:background-color var(--t-fast),color var(--t-fast);
-}
-.signin:hover{background-color:rgba(255,255,255,0.10);color:var(--ink);}
-.signin:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
 
-/* THE RAIL FILTER. It WRAPS, and does not scroll sideways.
- *
- * A scrolling chip row was the obvious build and it is the wrong one here: this app's whole
- * navigation used to be a sideways rail of codes nobody could find the end of, that design was
- * thrown out, and `npm test` asserts `overflow-x:auto` appears nowhere in this sheet so it
- * cannot creep back. A filter row is not that rail, but the cheap way to keep the guard honest
- * is not to need the exception. Measured at 375px the four chips come to about 321px inside
- * 343px of room, so they sit on one line on the narrowest phone anyway; a fifth rail would
- * take a second line, which costs less than a control that can hide its own options. */
+/* GHOSTS. Navigation, filters and dismissals: transparent, a faint hairline, mist type, brass
+ * on hover. One recipe, four uses: the sign-in link, the back button, the rail chips and the
+ * copy buttons. */
+.signin,.back,.railbtn,.pill{
+  appearance:none;-webkit-appearance:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:var(--tap);
+  padding:8px 16px;
+  font-family:var(--salt-font-mono);
+  font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--salt-mist);
+  background:transparent;
+  border:1px solid var(--salt-line-faint);
+  border-radius:var(--pill);
+  text-decoration:none;
+  cursor:pointer;
+  transition:color var(--t-fast),border-color var(--t-fast),background-color var(--t-fast),transform var(--t-fast);
+}
+.signin:hover,.back:hover,.railbtn:hover,.pill:hover:not(:disabled){
+  color:var(--salt-brass);
+  border-color:var(--salt-line);
+}
+.signin:focus-visible,.back:focus-visible,.railbtn:focus-visible,.pill:focus-visible{
+  outline:2px solid var(--salt-brass);outline-offset:2px;
+}
+.railbtn:active,.pill:active:not(:disabled){transform:scale(.97);}
+.railbtn[aria-pressed="true"],.pill[aria-pressed="true"]{
+  color:var(--salt-salt);
+  background-color:var(--salt-glass);
+  border-color:var(--salt-line);
+}
+.pill:disabled{opacity:.45;cursor:not-allowed;}
+/* The display above out-ranks the `hidden` attribute, so the JomPAY button on the thirteen
+ * accounts without a biller code has to be taken away again here. */
+.pill[hidden]{display:none;}
+/* The sign-in link is for one person, and everyone else should be able to not notice it. */
+.signin{padding:8px 14px;font-size:10px;}
+
+/* THE RAIL FILTER WRAPS, and does not scroll sideways: the suite asserts overflow-x:auto
+ * appears nowhere in this sheet. At 375px the four chips sit on one line anyway. */
 .rails{
   flex:0 0 auto;
-  display:flex;gap:7px;flex-wrap:wrap;
+  display:flex;gap:8px;flex-wrap:wrap;
 }
-.railbtn{
-  appearance:none;-webkit-appearance:none;
-  flex:0 0 auto;
-  font:inherit;font-size:13px;font-weight:600;
-  cursor:pointer;
-  padding:7px 13px;
-  min-height:var(--tap);
-  border:1px solid var(--brd);
-  border-radius:var(--pill);
-  background:rgba(255,255,255,0.05);
-  color:var(--ink-2);
-  transition:background-color var(--t-fast),border-color var(--t-fast),color var(--t-fast),transform var(--t-fast);
-}
-.railbtn:hover{background-color:rgba(255,255,255,0.10);color:var(--ink);}
-.railbtn:active{transform:scale(.97);}
-.railbtn:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
-.railbtn[aria-pressed="true"]{
-  background-color:rgba(255,255,255,0.16);
-  border-color:var(--brd-2);
-  color:var(--ink);
-}
-/* The count is quieter than the name: it is a fact about the list, not a label for it. */
-.railn{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-left:5px;}
-.railbtn[aria-pressed="true"] .railn{color:var(--ink-2);}
-/* A tile the current filter excludes. `display:none` is right here and wrong for the two
-   VIEWS: a hidden view has to stay laid out because the zoom measures it, but a filtered-out
-   tile is not an animation endpoint and must leave the grid flow entirely, or auto-fill keeps
-   a hole where it used to be. */
+/* The count is a fact about the list, not a label for it: copper, as the tab strip has it. */
+.railn{color:var(--salt-copper);margin-left:4px;}
+/* A filtered-out tile leaves the grid flow entirely, or auto-fill keeps a hole where it was. */
 .tile[hidden]{display:none;}
 
-/* Two columns on the narrowest phone. 132px is the floor, not the target: at 375px it gives two
- * 167px columns, and one column would mean hunting up and down a single file.
- *
- * THE ROWS ARE A FIXED HEIGHT, AND THAT IS WHAT MAKES THE LIST SCROLL. They were
- * minmax(60px,1fr), which stretched every row to divide up whatever height was left, so
- * thirteen accounts always fitted exactly and overflow-y below could never fire. The tiles
- * were big and empty while the coin and the name inside them stayed tiny, which is the wrong
- * way round: it is the CONTENT that has to be legible at arm's length, not the box.
- *
- * Fixed at 104px the content sets the size, the list overflows on a normal phone, and the row
- * that is cut off at the bottom edge is the signal that there is more below. Trading "all
- * thirteen on screen at once" for a list you can actually read is the owner's call, made
- * 25 Aug 2026. */
+/* Two columns on the narrowest phone; 132px is the floor. THE ROWS ARE A FIXED HEIGHT, AND
+ * THAT IS WHAT MAKES THE LIST SCROLL: minmax(60px,1fr) stretched every row to fit the screen,
+ * so the content shrank while the boxes grew. Owner's call, 25 Aug 2026. */
 .grid{
   flex:1 1 auto;
   min-height:0;
@@ -248,68 +212,55 @@ body.view-code .codeview{
   padding-bottom:4px;
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
-  /* Breathing room for the scrollIntoView on the way back, so a tile that had to be scrolled
-   * to arrives sitting in the list rather than jammed flush against its edge. */
   scroll-padding-block:10px;
   overscroll-behavior:contain;
   align-content:start;
 }
 
+/* A tile is a pane: glass once, white 3%, a faint hairline that turns brass under the finger
+ * or when it is the account on screen. THE TILE STACKS, coin above and name below: side by
+ * side left 72px of text column, and "ShopeePay" broke as "ShopeePa / y". */
 .tile{
   appearance:none;-webkit-appearance:none;
-  font:inherit;cursor:pointer;text-align:left;
-  /* THE TILE STACKS: coin above, name below. Side by side, the coin ate the width the name
-   * needed. At two columns on a 375px phone a tile is 168px, so a 56px coin plus the padding
-   * and the gap left about 72px of text column, and 72px is not enough for the words this app
-   * actually contains: "ShopeePay" broke as "ShopeePa / y" and the maintenance label as
-   * "MAINTENA / NCE", mid-word, which reads as a rendering fault rather than a layout.
-   * Stacked, the name gets the full 148px, and a wallet of coins with their names under them
-   * is the pattern every phone home screen already teaches. */
+  cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;gap:9px;
+  text-align:center;gap:10px;
   min-height:138px;
   padding:12px 10px;
-  border:1px solid var(--brd);
+  border:1px solid var(--salt-line-faint);
   border-radius:var(--r-sm);
-  background:rgba(255,255,255,0.05);
-  color:var(--ink);
-  transition:background-color var(--t-fast),border-color var(--t-fast),transform var(--t-fast);
+  background:var(--salt-glass);
+  box-shadow:inset 0 1px 0 var(--salt-highlight);
+  color:var(--salt-mist-light);
+  transition:color var(--t-fast),border-color var(--t-fast),transform var(--t-fast);
 }
-.tile:hover{background-color:rgba(255,255,255,0.10);border-color:var(--brd-2);}
+.tile:hover,.tile[aria-current="true"]{border-color:var(--salt-line);color:var(--salt-salt);}
 .tile:active{transform:scale(.975);}
-.tile:focus-visible{outline:2px solid var(--soft,#fff);outline-offset:2px;}
-/* The miniature coin. It is the SAME coin the code view shows, drawn small, which is what
- * makes opening an account read as one object moving rather than a dot being replaced by a
- * coin. --thumb must match THUMB in app.js. */
-/* Same rule as the big coin: the shadow is cast from the alpha, so it follows the scallops
- * instead of drawing a circle behind them. */
+.tile:focus-visible{outline:2px solid var(--salt-brass);outline-offset:2px;}
+/* The miniature: the SAME coin the code view shows, drawn small. --thumb must match THUMB in
+ * app.js. The shadow is cast from the alpha, so it follows the scallops. ROUND while it is a
+ * plain brand disc, square the moment a coin is painted into it: at 50 per cent the radius
+ * clips the tips off the rim, but a suspended account keeps the disc for as long as the
+ * suspension lasts, and a grey circle reads as a coin withheld where a grey square reads as an
+ * image that failed to load. */
 .tiledot{
   flex:0 0 auto;
   width:var(--thumb);height:var(--thumb);
   display:block;
-  /* ROUND WHILE IT IS A PLAIN BRAND DISC, square the moment a coin is painted into it.
-   *
-   * The radius has to go at that point, and that is the renderer's rule rather than taste: at
-   * 50 per cent it clips the tips off the scalloped rim, which is the same reason the big coin's
-   * canvas carries none. But the disc is not a passing state. A SUSPENDED account never gets
-   * its coin drawn at all, so the disc is what that tile shows for as long as the suspension
-   * lasts, and a grey square there reads as an image that failed to load where a grey circle
-   * reads as a coin deliberately withheld. */
   border-radius:50%;
   filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));
 }
 .tiledot.drawn{border-radius:0;}
-/* `overflow-wrap:break-word` is the last resort and it is what produced "ShopeePa / y": with
- * too little room it will split inside a word rather than overflow. The width above is the real
- * fix; this keeps a freakishly long single word from spilling out of the tile instead. */
-.tiletext{font-size:14.5px;font-weight:600;line-height:1.28;overflow-wrap:break-word;min-width:0;}
+/* A name is a label, so it is mono caps. overflow-wrap is the last resort against one
+ * freakishly long word; the column width above is the real fix. */
+.tiletext{
+  font-family:var(--salt-font-mono);
+  font-size:11.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;
+  line-height:1.4;overflow-wrap:break-word;min-width:0;
+}
 
-/* A TAGGED ACCOUNT TAKES THE WHOLE ROW, and can therefore go back to coin-beside-name.
- *
- * Stacking exists because a two-column tile is 168px wide and leaves about 72px of text column,
- * which is narrower than the words this app contains. Full width leaves roughly 250px, so the
- * constraint that forced the stack is simply not present here. `1 / -1` spans every column
- * whatever the viewport resolves auto-fill to, so this does not assume two. */
+/* A TAGGED ACCOUNT TAKES THE WHOLE ROW, coin beside name, with the brass hairline the
+ * featured account earns. `1 / -1` spans whatever auto-fill resolved to. */
 .tile.wide{
   grid-column:1 / -1;
   flex-direction:row;
@@ -318,20 +269,17 @@ body.view-code .codeview{
   text-align:left;
   gap:14px;
   padding:12px 16px;
+  border-color:var(--salt-line);
 }
 .tiletag{
   display:block;
-  margin-top:4px;
-  font-size:10.5px;
-  font-weight:700;
-  letter-spacing:.09em;
-  text-transform:uppercase;
-  color:var(--ink-3);
+  margin-top:5px;
+  font-size:9.5px;
+  letter-spacing:.18em;
+  color:var(--salt-copper);
 }
 
 /* ==================================================================== the code */
-
-
 
 .bar{
   flex:0 0 auto;
@@ -339,24 +287,9 @@ body.view-code .codeview{
   align-items:center;
   padding:8px 10px 0;
 }
-
-.back{
-  text-decoration:none;
-  appearance:none;-webkit-appearance:none;
-  font:inherit;font-size:15px;font-weight:600;
-  cursor:pointer;
-  display:inline-flex;align-items:center;gap:5px;
-  min-height:var(--tap);
-  padding:0 14px 0 10px;
-  border:1px solid transparent;
-  border-radius:var(--pill);
-  background:none;
-  color:var(--brand-soft);
-  transition:background-color var(--t-fast),color var(--t-fast);
-}
-.back:hover{background-color:rgba(255,255,255,0.08);}
-.back:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
-.back .chev{width:15px;height:15px;flex:0 0 auto;}
+/* The way back is a nav link, not a chip: no hairline until hovered. */
+.back{border-color:transparent;padding:8px 14px 8px 10px;}
+.back .chev{width:13px;height:13px;flex:0 0 auto;}
 
 .stage{
   flex:1 1 auto;
@@ -370,15 +303,10 @@ body.view-code .codeview{
   text-align:center;
 }
 
-@supports not ((-webkit-background-clip:text) or (background-clip:text)){
-}
-
-/* UNDER MAINTENANCE.
- *
- * The panel is laid over the coin, not swapped in for it: the coin box has to keep its size or
- * the zoom measures a zero rect and cancels without a word, which is a bug this app has already
- * had once. Cross-faded by opacity and taken out of hit-testing by visibility, exactly as the
- * two screens are. */
+/* UNDER MAINTENANCE. A well, laid OVER the coin rather than swapped in for it: the coin box
+ * keeps its size or the zoom measures a zero rect and cancels without a word. Cross-faded by
+ * opacity and taken out of hit-testing by visibility, as the two screens are. No blur: what is
+ * behind it is a cleared canvas, and the suite forbids the filter outright. */
 .maint{
   position:absolute;
   inset:0;
@@ -390,34 +318,28 @@ body.view-code .codeview{
   padding:0 28px;
   text-align:center;
   border-radius:var(--r);
-  background:var(--well);
-  border:1px solid var(--brd);
-  /* No backdrop-filter. What is behind this panel is a canvas that has been cleared to nothing,
-     so a blur would cost a full-screen re-raster to smear an empty rectangle. The suite forbids
-     any blur filter outright, which is the rule that caught this one. */
+  background:var(--salt-well);
+  border:1px solid var(--salt-line-faint);
   opacity:0;
   visibility:hidden;
   transition:opacity var(--t), visibility 0s linear var(--dur);
 }
 body.maintenance .maint{opacity:1;visibility:visible;transition:opacity var(--t), visibility 0s linear 0s;}
-/* The coin is drawn blank for a code under maintenance, so this only hides an empty canvas. */
 body.maintenance .coinbtn{opacity:0;pointer-events:none;}
 body.maintenance .pills{opacity:0;pointer-events:none;}
-.maint-h{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
+/* A sentence, so the display face. */
+.maint-h{margin:0;font-size:19px;font-weight:340;letter-spacing:.02em;color:var(--salt-salt);}
 
-/* On the list, the account is still there and still named. Hiding it would be worse: you would
-   wonder where it went. It is dimmed, and the miniature is not drawn. */
+/* On the list a suspended account stays, named and dimmed; the state is a word, never a box. */
 .tile.down{opacity:.52;}
 .tile.down .tiledot{filter:grayscale(1);}
 .tile.down .tiletext::after{
   content:"Maintenance";
   display:block;
-  margin-top:2px;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.04em;
-  text-transform:uppercase;
-  color:var(--ink-3);
+  margin-top:3px;
+  font-size:9.5px;
+  letter-spacing:.14em;
+  color:var(--salt-mist);
 }
 
 .coinwrap{
@@ -431,15 +353,13 @@ body.maintenance .pills{opacity:0;pointer-events:none;}
   width:100%;
 }
 
-/* THE AFFORDANCE.
- *
- * There is no Save button, so the shape has to do the telling. The coin is drawn as a physical
- * token lying on the page rather than a picture printed on it: a tight contact shadow under it,
- * a wider ambient one beneath that, a lit rim along the top edge and a brand-coloured glow. It
- * reads as an object, and an object reads as something you can pick up. Pressing pushes it into
- * the page, which is the confirmation that it is the thing being acted on, and .tuck plays when
- * a save actually starts, so the motion explains the action the first time it happens. */
+/* THE AFFORDANCE. There is no Save button, so the coin has to read as an object: it lies on
+ * the page under the identity's shadow, presses in under a finger, and .tuck plays when a save
+ * starts. The shadow is drop-shadow from the alpha, never box-shadow: the coin is scalloped,
+ * and a circular box-shadow showed through the valleys as a hard ring. TRANSFORM ONLY, on its
+ * own layer, so a press never repaints the shadow. */
 .coinbtn{
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)) drop-shadow(0 16px 32px rgba(0,0,0,.45));
   appearance:none;-webkit-appearance:none;
   border:0;padding:0;margin:0;background:none;
   cursor:pointer;
@@ -449,38 +369,18 @@ body.maintenance .pills{opacity:0;pointer-events:none;}
   -webkit-touch-callout:none;
   user-select:none;-webkit-user-select:none;
   touch-action:pan-y;
-  /* TRANSFORM ONLY. The shadow below carries blur radii up to 88px over a 343px element, and
-   * a box-shadow transition is a full repaint of all of it on every frame, which landed
-   * precisely on the press. The press still reads, because the transform is doing the work.
-   * will-change puts the coin on its own layer so the transform never repaints anything. */
   transition:transform 150ms cubic-bezier(.4,0,.2,1);
   will-change:transform;
-  /* NO box-shadow here, and that is a fix rather than a simplification.
-   *
-   * The button is a circle. The coin drawn inside it is SCALLOPED, so between the valleys and
-   * the lobe tips the canvas is transparent: measured, more than a third of the samples around
-   * the rim. A circular box-shadow therefore showed straight through those gaps as a hard dark
-   * ring behind the coin, and it appeared at the end of the zoom because that is the moment the
-   * coin, and with it its shadow, was revealed. The shadow now lives on the canvas as a
-   * drop-shadow filter, which follows the alpha and so follows the scallops. */
 }
 .coinbtn:hover{transform:translateY(-2px);}
 .coinbtn:active{transform:translateY(3px) scale(.982);}
-.coinbtn:focus-visible{outline:3px solid var(--brand-soft);outline-offset:7px;}
+.coinbtn:focus-visible{outline:2px solid var(--salt-brass);outline-offset:7px;}
 .coinbtn:focus:not(:focus-visible){outline:none;}
 .coinbtn.plainmode{border-radius:18px;}
 /* The plain code IS a white square, so it wants its corners rounded. */
 .coinbtn.plainmode .coin{border-radius:14px;}
-
-/* ONE FACE. The coin used to turn over to a reverse carrying the account number, which needed
- * a preserve-3d wrapper, two absolutely positioned canvases and backface-visibility on both.
- * "Copy account number" puts the number on the clipboard without showing it, so there is
- * nothing on the other side any more and all of that went with it. */
-.coinbtn{
-  filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)) drop-shadow(0 0 18px var(--glow,rgba(0,0,0,.4)));
-}
 .flier{
-  filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)) drop-shadow(0 0 18px var(--glow,rgba(0,0,0,.4)));
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)) drop-shadow(0 16px 32px rgba(0,0,0,.45));
 }
 .coin{
   display:block;
@@ -503,57 +403,33 @@ body.maintenance .pills{opacity:0;pointer-events:none;}
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:7px;
+  gap:8px;
 }
-.pills{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;}
+.pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
 
+/* The status line: an eyebrow in mist. */
 .say{
   margin:0;
-  min-height:1.1em;
-  font-size:12px;
-  font-weight:600;
-  letter-spacing:1.2px;
+  min-height:1.2em;
+  font-family:var(--salt-font-mono);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.14em;
   text-transform:uppercase;
-  color:var(--ink-3);
+  color:var(--salt-mist);
 }
-
-.pill{
-  appearance:none;-webkit-appearance:none;
-  font:inherit;font-size:12.5px;font-weight:600;
-  cursor:pointer;
-  color:var(--ink-3);
-  background:rgba(255,255,255,0.04);
-  border:1px solid var(--brd);
-  border-radius:var(--pill);
-  padding:0 14px;
-  min-height:34px;
-  transition:background-color var(--t-fast),border-color var(--t-fast),color var(--t-fast);
-}
-.pill:hover:not(:disabled){background-color:rgba(255,255,255,0.10);color:var(--ink-2);}
-.pill:focus-visible{outline:2px solid var(--brand-soft);outline-offset:2px;}
-.pill:disabled{opacity:.4;cursor:not-allowed;}
-.pill[aria-pressed="true"]{color:var(--ink);background-color:rgba(255,255,255,0.16);border-color:var(--brd-2);}
 
 /* ====================================================================== motion */
 
-/* One curve for everything that arrives, cubic-bezier(.2,.8,.2,1): quick off the mark, long
- * settle. One shorter, sharper curve for everything that leaves. Nothing here moves layout;
- * every animation is transform and opacity only, so none of it can cost a reflow on a phone.
- *
- * All of it is switched off wholesale under prefers-reduced-motion below, which means no
- * animation may ever be load-bearing: the JavaScript drives its steps on timers that collapse
- * to zero rather than waiting on animationend, or a reduced-motion phone would sit for ever
- * waiting for an event that is never coming. */
-:root{
-  --out:150ms cubic-bezier(.4,0,1,1);
-}
-
+/* Every animation is transform and opacity only, so none of it can cost a reflow. All of it
+ * is switched off under prefers-reduced-motion, so no animation may be load-bearing: the
+ * script drives its steps on timers that collapse to zero rather than waiting on animationend. */
 @keyframes tile-in{
   from{opacity:0;transform:translateY(12px) scale(.97);}
   to{opacity:1;transform:none;}
 }
-/* The list deals itself out, top left to bottom right. Capped at the twelfth so a longer
- * account list can never turn the stagger into a wait. */
+/* The list deals itself out. Capped at the twelfth so a longer list can never turn the stagger
+ * into a wait. */
 body.view-list.fresh .tile{
   animation:tile-in 260ms var(--ease) backwards;
   animation-delay:calc(min(var(--i,0),12) * 22ms);
@@ -571,8 +447,8 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 }
 .coinbtn.enter{animation:coin-in 260ms var(--ease) backwards;}
 
-/* Stepping between accounts: the coin leaves the way the thumb went and the next one comes in
- * from the far side, so the direction of travel is legible rather than a straight cross-fade. */
+/* Stepping between accounts: the coin leaves the way the thumb went and the next comes in
+ * from the far side, so the direction of travel is legible. */
 @keyframes coin-out-left{ to{opacity:0;transform:translateX(-34px) scale(.94);} }
 @keyframes coin-out-right{ to{opacity:0;transform:translateX(34px) scale(.94);} }
 @keyframes coin-in-left{ from{opacity:0;transform:translateX(-34px) scale(.94);} to{opacity:1;transform:none;} }
@@ -582,9 +458,9 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 .coinbtn.in-left{animation:coin-in-left 220ms var(--ease) backwards;}
 .coinbtn.in-right{animation:coin-in-right 220ms var(--ease) backwards;}
 
-/* The flier: the coin itself, in transit between the tile and the code view. It carries the
- * full-size render and is only ever scaled DOWN, so it stays crisp at both ends. Transform
- * only, on its own layer, so the zoom is composited and cannot repaint anything. */
+/* The flier: the coin in transit between the tile and the code view. It carries the full-size
+ * render and is only ever scaled DOWN, so it is crisp at both ends; transform only, on its own
+ * layer. */
 .flier{
   position:fixed;
   z-index:6;
@@ -593,16 +469,16 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
   transform-origin:center;
 }
 
-/* The ring that leaves the coin when a save starts: confirmation you can see from the corner
- * of your eye, gone before it can become clutter. */
+/* The ring that leaves the coin when a save starts: a brass hairline, gone before it can
+ * become clutter. */
 @keyframes flash{
-  from{opacity:.34;transform:scale(1);}
+  from{opacity:.4;transform:scale(1);}
   to{opacity:0;transform:scale(1.12);}
 }
 .flash{
   position:fixed;
   border-radius:50%;
-  border:1px solid var(--brand-soft);
+  border:1px solid var(--salt-brass);
   pointer-events:none;
   z-index:5;
   animation:flash 380ms var(--ease) forwards;
@@ -612,14 +488,12 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 
 .noscript{
   position:relative;z-index:2;margin:0;padding:16px;text-align:center;
-  color:var(--ink-2);font-size:14px;
+  color:var(--salt-mist-light);font-size:14px;
 }
 
 @media (prefers-reduced-transparency:reduce){
-  .sky.on{opacity:.3;}
+  .sky{opacity:.5;}
 }
-/* Everything above goes, in one rule. app.js checks the same query before it starts any
- * animation of its own, so the morph and the flash never appear either. */
 @media (prefers-reduced-motion:reduce){
   *{animation:none !important;transition:none !important;scroll-behavior:auto !important;}
   .coinbtn.tuck,.flier,.flash{animation:none !important;}
@@ -627,12 +501,11 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 }
 @media (forced-colors:active){
   .sky{display:none;}
-  .tile,.pill,.back{border-color:CanvasText;}
+  .tile,.pill,.back,.railbtn,.signin{border-color:CanvasText;}
   .coinbtn{box-shadow:none;border:1px solid CanvasText;}
 }
 
-/* Landscape on a phone: the title would squeeze the coin to nothing, so everything else moves
- * beside it and the coin keeps its height. */
+/* Landscape on a phone: everything else moves beside the coin and the coin keeps its height. */
 @media (orientation:landscape) and (max-height:520px){
   .stage{flex-direction:row;gap:18px;padding:0 14px 8px;align-items:center;}
   .tools{position:absolute;right:14px;bottom:10px;}
@@ -647,8 +520,8 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 
 /* ====================================================================== manage */
 
-/* The edit surface, /admin/. The same material as the list, laid out as one scrolling column
- * because a row that can be dragged past the fold has to live in something that scrolls. */
+/* The edit surface, /admin/: one scrolling column, because a row that can be dragged past the
+ * fold has to live in something that scrolls. */
 body.admin{overflow:auto;}
 .manage{
   position:relative;z-index:1;
@@ -661,39 +534,56 @@ body.admin{overflow:auto;}
   padding-bottom:calc(env(safe-area-inset-bottom) + 96px);
 }
 .manage .bar{justify-content:space-between;padding-left:0;padding-right:0;}
-.who{font-size:13px;color:var(--ink-3);}
-.hint{margin:0;font-size:14px;color:var(--ink-3);}
+.who{font-family:var(--salt-font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--salt-mist);}
+/* The one sentence on the page, in the display face at the size mist can carry. */
+.hint{margin:0;font-size:13.5px;line-height:1.55;color:var(--salt-mist-light);}
 .rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
 .row{
   display:flex;align-items:center;gap:10px;
   min-height:var(--tap);
   padding:6px 8px 6px 4px;
-  border:1px solid var(--brd);
+  border:1px solid var(--salt-line-faint);
   border-radius:var(--r-sm);
-  background:rgba(255,255,255,0.05);
-  transition:background-color var(--t-fast),border-color var(--t-fast),opacity var(--t-fast);
+  background:var(--salt-glass);
+  transition:border-color var(--t-fast),opacity var(--t-fast);
 }
-.row.lift{background-color:rgba(255,255,255,0.14);border-color:var(--brd-2);}
+.row.lift{border-color:var(--salt-line-strong);}
 .row.off{opacity:.52;}
 .row.off .rowdot{filter:grayscale(1);}
 .handle{
   appearance:none;-webkit-appearance:none;
-  font:inherit;font-size:20px;line-height:1;
+  font-size:20px;line-height:1;
   width:var(--tap);min-height:var(--tap);
-  border:0;background:none;color:var(--ink-3);
+  border:0;background:none;color:var(--salt-mist);
   cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
 }
-.handle:focus-visible{outline:2px solid var(--brand-soft);outline-offset:-2px;border-radius:var(--pill);}
+.handle:focus-visible{outline:2px solid var(--salt-brass);outline-offset:-2px;border-radius:var(--pill);}
 .rowdot{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--dot);}
-.rowname{flex:1 1 auto;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.switch{flex:0 0 auto;min-width:88px;justify-content:center;}
+.rowname{
+  flex:1 1 auto;min-width:0;
+  font-family:var(--salt-font-mono);font-size:13px;font-weight:500;color:var(--salt-salt);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.switch{flex:0 0 auto;min-width:96px;}
+/* A veil over the content, with the identity's hairline along its top. */
 .savebar{
   position:fixed;left:0;right:0;bottom:0;z-index:2;
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:12px calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 12px)
           calc(env(safe-area-inset-left) + 16px);
-  background:rgba(10,13,24,0.82);
-  border-top:1px solid var(--brd);
+  background:var(--salt-veil);
+  border-top:1px solid var(--salt-line);
 }
 .manage .say{margin:0;flex:1 1 auto;min-height:0;}
-.save{min-width:96px;justify-content:center;}
+/* THE ONE FILLED BUTTON: brass to copper, obsidian type. It books the state; everything else
+ * on either page is a ghost. */
+.pill.save{
+  min-width:112px;
+  background:var(--salt-gradient);
+  border-color:transparent;
+  color:var(--salt-obsidian);
+  font-weight:700;letter-spacing:.1em;
+  box-shadow:0 8px 24px rgba(184,115,51,.3);
+}
+.pill.save:hover:not(:disabled){color:var(--salt-obsidian);transform:translateY(-1px);}
+.pill.save:disabled{box-shadow:none;}

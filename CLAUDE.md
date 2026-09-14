@@ -162,7 +162,7 @@ Every number here is re-asserted by `npm test`.
 | `tools/store.js` | The validator, one copy, imported by build and suite |
 | `src/app/index.html` | Markup only, no inline script or style |
 | `src/app/admin.html`, `admin.js` | The edit surface, shipped under `/admin/` |
-| `src/app/app.css` | Liquid Glass, presentation density; tuning from the brand colour |
+| `src/app/app.css` | The Salt identity (14 Sep 2026), applied by hand from `Code\salt-ds`: obsidian ground, one copper-and-brass aurora for every account, mono caps for every label and control, Fraunces for the two sentences, ghosts everywhere and one brass-to-copper pill (admin Save). No web fonts under the self-only CSP, so Georgia and a system mono stand in. The page no longer takes its light from the account; the coin alone carries the brand |
 | `src/app/app.js` | The app: rail, keyboard, swipe, hash, per-account tuning |
 | `src/app/qr-art.js` | The coin and `drawCard`. Read the note at the top first |
 | `src/app/sw.js` | Service worker template; `__BUILD__` and `__SHELL__` stamped by the build |

@@ -24,7 +24,6 @@
 
   var CODES = self.QR_CODES || [];
   var BUILD = self.QR_BUILD || "dev";
-  var C = self.QRArt.colour;
 
   var elCoin = document.getElementById("coin");
   var elBtn = document.getElementById("coinbtn");
@@ -35,8 +34,6 @@
   var elJom = document.getElementById("jompaybtn");
   var elRails = document.getElementById("rails");
   var elList = document.getElementById("accounts");
-  var skies = [document.getElementById("sky1"), document.getElementById("sky2")];
-  var skyOn = 0;
 
   // The miniature on a tile, in CSS pixels. Must match --thumb in app.css.
   var THUMB = 56;
@@ -102,50 +99,6 @@
   function indexOfKey(key) {
     for (var i = 0; i < CODES.length; i++) if (CODES[i].key === key) return i;
     return -1;
-  }
-
-  /* -------------------------------------------------------------------- tuning */
-
-  /* The page takes its light from the same brand colour the coin does. The name has to clear
-   * 4.5:1 on the base, so the brand is lifted to a pastel until it does; a dark navy or a deep
-   * red would otherwise be unreadable as text on a near-black page. */
-  function softOf(brand) {
-    var hsl = C.rgb2hsl(C.hex2rgb(brand));
-    for (var l = Math.max(hsl[2], 0.62); l <= 0.94; l += 0.02) {
-      var cand = C.hsl2rgb([hsl[0], Math.min(hsl[1], 0.82), l]);
-      if (C.contrast(cand, [20, 18, 31]) >= 4.5) return C.rgb2hex(cand);
-    }
-    return "#e8ecf5";
-  }
-
-  function tune(brand) {
-    var base = brand ? C.hex2rgb(brand) : [122, 132, 155];
-    var hsl = C.rgb2hsl(base);
-    function anchor(shift, l) {
-      return C.rgb2hex(C.hsl2rgb([(hsl[0] + shift + 1) % 1, Math.min(hsl[1], 0.6), l]));
-    }
-    var root = document.documentElement.style;
-    root.setProperty("--brand", C.rgb2hex(base));
-    root.setProperty("--brand-soft", brand ? softOf(brand) : "#c3cbdb");
-    // The coin's halo. A drop-shadow needs a colour with alpha rather than a spread, so it is
-    // built here where the brand is already in pieces.
-    root.setProperty("--glow", "rgba(" + base.map(Math.round).join(",") + ",0.42)");
-
-    /* The aurora cross-fades rather than transitioning its colours. The incoming washes are
-     * written to whichever layer is currently hidden, which paints it once, and then the two
-     * swap opacity, which the compositor handles without the main thread. Transitioning the
-     * colours instead meant repainting the whole background on every frame of the change. */
-    var next = skies[1 - skyOn], cur = skies[skyOn];
-    if (next && cur) {
-      next.style.setProperty("--s1", anchor(0, 0.26));
-      next.style.setProperty("--s2", anchor(-0.09, 0.20));
-      next.style.setProperty("--s3", anchor(0.30, 0.22));
-      next.classList.add("on");
-      cur.classList.remove("on");
-      skyOn = 1 - skyOn;
-    }
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", C.rgb2hex(C.mix([10, 13, 24], base, 0.10)));
   }
 
   /* --------------------------------------------------------------------- paint */
@@ -612,7 +565,6 @@
     if (document.body.className.indexOf("view-list") >= 0) return;
     document.body.className = "view-list" + (fresh ? " fresh" : "");
     idx = -1;
-    tune(null);
     document.title = "Pay";
   }
 
@@ -622,7 +574,6 @@
     var arriving = document.body.className.indexOf("view-code") < 0;
     document.body.className = "view-code";
     document.title = a.name;
-    tune(a.brand);
     for (var k = 0; k < tiles.length; k++) {
       tiles[k].setAttribute("aria-current", k === idx ? "true" : "false");
     }
@@ -886,7 +837,6 @@
        * text column, and a full-width one leaves about 250px. */
       b.className = classOf(a);
       b.style.setProperty("--dot", a.brand);
-      b.style.setProperty("--soft", softOf(a.brand));
       b.style.setProperty("--i", String(i));
       b.setAttribute("aria-current", "false");
       var sw = document.createElement("canvas");

@@ -522,8 +522,8 @@ write(path.join(PUB, "manifest.webmanifest"), JSON.stringify({
   scope: "./",
   display: "standalone",
   orientation: "portrait",
-  background_color: "#0a0d18",
-  theme_color: "#0a0d18",
+  background_color: "#05080a",
+  theme_color: "#05080a",
   icons: [
     { src: "./icon-192.png", sizes: "192x192", type: "image/png" },
     { src: "./icon-512.png", sizes: "512x512", type: "image/png" },
