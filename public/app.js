@@ -308,9 +308,29 @@
       if (idx >= 0) paint();
     };
     readState().then(apply);
+    followBuild();
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) readState().then(apply);
+      if (!document.hidden) { readState().then(apply); followBuild(); }
     });
+  }
+
+  /* THE PAGE FOLLOWS THE BUILD (owner, 15 Sep 2026). The service worker takes a new build over
+   * on the next open, but a page left open on the phone kept running the old script until it
+   * was closed. So on every return to the front the page reads /rev.json, which the Worker
+   * serves uncached and the service worker never touches, and reloads itself once when the id
+   * there is not its own. Offline the read fails and nothing happens. The id is remembered
+   * before reloading, so a bundle and its rev disagreeing could cost one reload, never a loop. */
+  function followBuild() {
+    if (!self.fetch || BUILD === "dev") return;
+    fetch("rev.json", { cache: "no-store", credentials: "omit" })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || typeof j.id !== "string" || j.id === BUILD) return;
+        if (recall("reloaded") === j.id) return;
+        remember("reloaded", j.id);
+        location.reload();
+      })
+      .catch(function () {});
   }
 
   /* THE TRANSFER AND JOMPAY VIEWS (owner, 14 Sep 2026). The number and the references are ON

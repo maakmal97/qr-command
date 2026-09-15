@@ -43,8 +43,11 @@ self.addEventListener("fetch", (e) => {
    *
    * Offline, the fetch simply fails and the app keeps the state it last stored. The admin page
    * and its routes sit behind Cloudflare Access, whose sign-in page is precisely the kind of
-   * response this file must never cache as the app. */
-  if (url.pathname === "/state.json" || url.pathname === "/admin" ||
+   * response this file must never cache as the app.
+   *
+   * /rev.json is left alone for the same reason: the page reads it to learn that a newer build
+   * exists, and a cached copy would tell it for ever that there is none. */
+  if (url.pathname === "/state.json" || url.pathname === "/rev.json" || url.pathname === "/admin" ||
       url.pathname.startsWith("/admin/") || url.pathname.startsWith("/api/")) return;
 
   // Navigations go to the network first so a deploy lands on the next open. Everything else

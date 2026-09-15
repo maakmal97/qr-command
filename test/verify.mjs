@@ -517,8 +517,17 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     /fetch\("state\.json", { cache: "no-store"/.test(appJsSrc) &&
     (function () {
       const sw = read(path.join(REPO, "src", "app", "sw.js"));
-      return /url\.pathname === "\/state\.json" \|\| url\.pathname === "\/admin" \|\|\s*url\.pathname\.startsWith\("\/admin\/"\) \|\| url\.pathname\.startsWith\("\/api\/"\)\) return;/.test(sw);
+      return /url\.pathname === "\/state\.json" \|\| url\.pathname === "\/rev\.json" \|\| url\.pathname === "\/admin" \|\|\s*url\.pathname\.startsWith\("\/admin\/"\) \|\| url\.pathname\.startsWith\("\/api\/"\)\) return;/.test(sw);
     })());
+  /* THE PAGE FOLLOWS THE BUILD (owner, 15 Sep 2026). A page left open kept the old script until
+   * it was closed; now it compares its build id with the served rev.json on every return to the
+   * front and reloads once when they differ. The id is remembered before the reload, so a
+   * disagreement can never loop. */
+  ok("an open page reloads itself once when a newer build is served",
+    /function followBuild\(\)/.test(appJsSrc) &&
+    /fetch\("rev\.json", \{ cache: "no-store"/.test(appJsSrc) &&
+    /if \(recall\("reloaded"\) === j\.id\) return;[\s\S]{0,80}?remember\("reloaded", j\.id\);[\s\S]{0,40}?location\.reload\(\);/.test(appJsSrc) &&
+    /if \(!document\.hidden\) \{ readState\(\)\.then\(apply\); followBuild\(\); \}/.test(appJsSrc));
   /* ONE WRITE, AND IT IS INSIDE THE GATE. The Worker puts to the namespace in exactly one place,
    * after identity() has answered, and reads it in exactly one. */
   ok("the Worker writes the namespace once, behind the token check, and answers {} when it cannot read",

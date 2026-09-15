@@ -125,7 +125,11 @@ Every number here is re-asserted by `npm test`.
   reads), the baked `maintenance` flag last (only a first-ever open). A failed fetch leaves
   the override untouched; only booleans on known keys are trusted, and only known keys in
   the order. `/state.json` is `no-store` and bypassed by the service worker, as are
-  `/admin/` and `/api/`. `drawThumbs` runs on every state change and must CLEAR a suspended
+  `/admin/`, `/api/` and `/rev.json`. **An open page follows the build (owner, 15 Sep
+  2026):** `followBuild()` reads `/rev.json` on load and on every return to the front and
+  reloads once when its id is not `QR_BUILD`; the id is remembered in `pay:reloaded` first,
+  so a disagreement costs one reload, never a loop. The service worker already
+  `skipWaiting`s and claims, so the reload lands on the new bundle. `drawThumbs` runs on every state change and must CLEAR a suspended
   tile's miniature (`el.width = 8`); it only skipped, and GX Bank showed a readable code on
   a suspended tile (3 Sep 2026).
 
