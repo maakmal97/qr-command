@@ -604,7 +604,7 @@
     if (document.body.className.indexOf("view-list") >= 0) return;
     document.body.className = "view-list" + (fresh ? " fresh" : "");
     idx = -1;
-    document.title = "Pay";
+    document.title = "QR Command";
   }
 
   function showCode(i, pre) {

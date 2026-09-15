@@ -1,6 +1,6 @@
 {
-  "name": "Pay",
-  "short_name": "Pay",
+  "name": "QR Command",
+  "short_name": "QR Command",
   "description": "Payment codes, drawn on the device.",
   "start_url": "./",
   "scope": "./",

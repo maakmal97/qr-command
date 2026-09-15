@@ -200,6 +200,7 @@ Every number here is re-asserted by `npm test`.
 | `src/vendor/qrcode.js` | The encoder, copied from the master unchanged |
 | `src/vendor/*-mark.js` | **Generated, do not edit.** Traced logos registering on `self.MARKS` |
 | `tools/vectorise.mjs` | Bitmap logo in, path data out; run by hand when a mark is added |
+| `tools/icons.mjs` | The app's own icon set, the Salt coin with a code's eye, written into `public/` by hand; the build does not touch the PNGs. Title and manifest name are "QR Command" (owner, 15 Sep 2026; was "Pay") |
 | `tools/build.mjs` | Master store in, `public/` out, with the leak check and the disclosure |
 | `public/marks.js` | Every traced mark in one file |
 | `test/verify.mjs` | The whole suite, no network, no browser |
