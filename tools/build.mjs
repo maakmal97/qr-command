@@ -194,7 +194,11 @@ function sanitise(doc, V) {
     /* Mark ids, normalised to real strings and checked against what was actually traced. An id
      * with no file behind it would draw nothing and say nothing, which is the quiet kind of
      * wrong; naming it here means a typo stops the build instead. */
-    rec.bankMark = rec.payload ? "" : String(a.bankMark || "").trim();
+    // bankMark ships for EVERY account since 15 Sep 2026: the list's badge wears it on the
+    // Transfer and JomPAY rails. It used to be blanked on code accounts, which silently left
+    // every badge on initials while the marks sat loaded and unused. holderMark stays with
+    // the plate, because a holder is only ever named on a code-less account.
+    rec.bankMark = String(a.bankMark || "").trim();
     rec.holderMark = rec.payload ? "" : String(a.holderMark || "").trim();
     for (const [f, id] of [["bankMark", rec.bankMark], ["holderMark", rec.holderMark]]) {
       if (id && markFiles.indexOf(id + "-mark.js") === -1) {

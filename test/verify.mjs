@@ -1296,6 +1296,12 @@ section("2. The bundle carries the codes and nothing else");
 
     // Every id a record names must be a mark that actually shipped, or the face draws a gap.
     const wanted = [...new Set(shipped.flatMap((c) => [c.bankMark, c.holderMark]).filter(Boolean))];
+    /* EVERY ACCOUNT SHIPS ITS MARK (15 Sep 2026). The build once blanked bankMark on code
+     * accounts, so every badge fell back to initials while fourteen marks sat loaded and unused,
+     * and nothing said so. A code account without a mark is now a failed build. */
+    ok("every shipped account names a bank mark that is actually loaded",
+      shipped.every((c) => c.bankMark && MARKS[c.bankMark]),
+      "missing: " + shipped.filter((c) => !c.bankMark || !MARKS[c.bankMark]).map((c) => c.key).join(", "));
     ok("every mark an account names is in the bundle (" + wanted.join(", ") + ")",
       wanted.length > 0 && wanted.every((id) => MARKS[id]),
       wanted.filter((id) => !MARKS[id]).join(", "));

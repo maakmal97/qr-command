@@ -104,7 +104,9 @@ Every number here is re-asserted by `npm test`.
   exists, else initials derived from `name` (`initialsOf()`: up to three words' initials, or
   the first two letters of one word); an account with no code keeps its plate and marks.
   `setRail()` redraws (owner, 14 Sep 2026). **Every account carries a `bankMark` since
-  14 Sep 2026**, traced from the logo on each institution's own website on the owner's
+  14 Sep 2026, and the build ships it for every account** (it blanked the field on code
+  accounts until 15 Sep 2026, so the live badges showed initials while the marks sat loaded;
+  the suite now fails a code account without one; `holderMark` stays plate-only), traced from the logo on each institution's own website on the owner's
   instruction (the tracer keeps one ink: a two-colour logo is flattened to black on white
   first, as Setel's and Instapay's were; Maybank's is the corporate tiger-and-wordmark SVG
   from maybank.com, whose yellow ground was dropped, reached through the browser pane because
