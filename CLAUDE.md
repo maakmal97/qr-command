@@ -106,8 +106,9 @@ Every number here is re-asserted by `npm test`.
   `setRail()` redraws (owner, 14 Sep 2026). **Every account carries a `bankMark` since
   14 Sep 2026**, traced from the logo on each institution's own website on the owner's
   instruction (the tracer keeps one ink: a two-colour logo is flattened to black on white
-  first, as Setel's was; Maybank's is the Maybank2u lockup with the MAE half cropped off,
-  because the Maybank corporate site refuses automated fetches). Both Touch 'n Go accounts
+  first, as Setel's and Instapay's were; Maybank's is the corporate tiger-and-wordmark SVG
+  from maybank.com, whose yellow ground was dropped, reached through the browser pane because
+  the site's bot protection refuses curl). Both Touch 'n Go accounts
   share `tng`. **Adding or replacing a logo:** artwork from the official site, never redrawn
   from memory, then `node tools/vectorise.mjs <image> <id> src/vendor/<id>-mark.js`,
   `"bankMark": "<id>"` on the record, rebuild. Steps and swipes walk `shownOrder`,
