@@ -983,11 +983,11 @@
         continue;
       }
       try {
-        /* THE CODES APPEAR ON THE QR RAIL ONLY (owner, 14 Sep 2026). On Transfer and JomPAY a
-         * row wears its badge instead: a code on a list that is not about codes is a code on
-         * screen for no reason. An account with no code keeps its plate, whose marks are its
-         * identity. */
-        if (rail === "qr" || plate(a)) {
+        /* THE CODES APPEAR ON THE QR RAIL ONLY (owner, 14 Sep 2026). On Transfer and JomPAY
+         * every row wears its badge instead, the code-less account included (owner, 15 Sep
+         * 2026): a code on a list that is not about codes is a code on screen for no reason,
+         * and one row on a paper plate among discs read as the odd one out. */
+        if (rail === "qr") {
           paintFace(el, a, {
             size: THUMB, pixelRatio: self.devicePixelRatio || 1,
             plain: false, decorative: true

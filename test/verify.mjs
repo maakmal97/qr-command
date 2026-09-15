@@ -814,7 +814,7 @@ section("2. The bundle carries the codes and nothing else");
     /document\.body\.setAttribute\("data-view", v\);/.test(appJs) &&
     !/id: "all"/.test(appJs));
   ok("the code miniatures appear on the QR rail only; elsewhere a row wears an initials badge",
-    /if \(rail === "qr" \|\| plate\(a\)\) \{[\s\S]{0,200}?paintFace\(el[\s\S]{0,300}?drawBadge\(el, a\);/.test(appJs) &&
+    /if \(rail === "qr"\) \{[\s\S]{0,200}?paintFace\(el[\s\S]{0,300}?drawBadge\(el, a\);/.test(appJs) &&
     /function initialsOf\(name\)/.test(appJs) && /function drawBadge\(el, a\)/.test(appJs) &&
     /remember\("rail", id\);[\s\S]{0,600}?orderTiles\(\);\s*drawThumbs\(\);/.test(appJs));
   ok("a step walks the visible order, never the build order",

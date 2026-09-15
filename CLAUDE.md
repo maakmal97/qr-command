@@ -102,7 +102,8 @@ Every number here is re-asserted by `npm test`.
   rail only: on any other rail `drawThumbs()` strikes the badge instead, `drawBadge()`, the
   brand disc carrying the institution's traced `bankMark` through `QRArt.drawMark` where one
   exists, else initials derived from `name` (`initialsOf()`: up to three words' initials, or
-  the first two letters of one word); an account with no code keeps its plate and marks.
+  the first two letters of one word); the code-less account wears the badge too since
+  15 Sep 2026, so `drawPlate` now paints only the suite's renders, never the list.
   `setRail()` redraws (owner, 14 Sep 2026). **Every account carries a `bankMark` since
   14 Sep 2026, and the build ships it for every account** (it blanked the field on code
   accounts until 15 Sep 2026, so the live badges showed initials while the marks sat loaded;
