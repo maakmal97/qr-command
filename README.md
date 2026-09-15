@@ -160,5 +160,6 @@ npm run dev        # http://localhost:8788
 npm test
 ```
 
-`CLAUDE.md` is the longer account: why the error correction is M rather than H, why module edges
-are snapped to whole pixels, and which rules are load-bearing.
+`CLAUDE.md` carries the load-bearing rules. `docs/NOTES.md` is the longer account (why the error
+correction is M rather than H, why module edges are snapped to whole pixels), and `docs/DETAIL.md`
+holds the measured numbers.

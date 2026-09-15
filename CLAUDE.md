@@ -8,206 +8,140 @@ Set 6 Sep 2026.
 
 The payment-QR consolidator on the phone: a Cloudflare Worker serving a static bundle built
 from `data/accounts.json` in this repo. Two screens: the accounts list, and one account shown
-the way the chosen rail pays it: on QR a code drawn on the device as a struck coin held in a
-gravitational lens (one side, a tap saves it), on Transfer the bank and the number, on JomPAY
-the biller code and the references, each value copying on a tap (owner, 14 Sep 2026). Since
-8 Sep 2026 there is one edit surface, `/admin/`, behind Cloudflare Access, for the two things
-that change: which accounts are shown and what order they stand in. The reasoning and the
-measurements behind every line below are in `docs/NOTES.md`.
+the way the chosen rail pays it: on QR a code drawn on the device as a coin (one side, a tap
+saves it), on Transfer the bank and the number, on JomPAY the biller code and the references,
+each value copying on a tap (owner, 14 Sep 2026). One edit surface since 8 Sep 2026,
+`/admin/`, behind Cloudflare Access, for which accounts are shown and their order. Mechanism
+and measured numbers: `docs/DETAIL.md`. Reasoning: `docs/NOTES.md`.
 
 ## Hard rules
 
-1. **`public/` is build output.** A hand edit there is overwritten by `npm run build` and
-   the suite fails meanwhile because the build id no longer hashes the files on disk.
-   **The store is `data/accounts.json`, committed** (owner, 8 Sep 2026; the laptop master
-   `Code\pay-afif-site` is retired and this private repo is the store's only home). Adding
-   or removing an account is an edit there, `npm run deploy`, nothing else.
-2. **Never rewrite a `payload` string.** The trailing four characters are a CRC, so a
-   tidied payload can still scan and pay somebody else. The build copies and checks;
-   it never repairs. A payload is never typed into a page: `/admin/` cannot add an account.
+Rule 4 is cited by number in `test/verify.mjs`; never renumber.
+
+1. **`public/` is build output.** A hand edit there is overwritten by `npm run build`, and the
+   suite fails meanwhile because the build id no longer hashes the files on disk. **The store
+   is `data/accounts.json`, committed** (owner, 8 Sep 2026): this private repo is its only
+   home. Adding or removing an account is an edit there, `npm run deploy`, nothing else.
+2. **Never rewrite a `payload` string.** The trailing four characters are a CRC, so a tidied
+   payload can still scan and pay somebody else. The build copies and checks; it never
+   repairs. A payload is never typed into a page: `/admin/` cannot add an account.
 3. **Payload validation is `tools/store.js`,** one copy, imported by build and suite, never
-   reimplemented: a third copy once rejected all thirteen live payloads over a guessed prefix.
+   reimplemented.
 4. **The bundle carries fourteen fields:** `key`, `name`, `brand`, `payload`, `acct`,
    `maintenance`, `bank`, `holder`, `bankMark`, `holderMark`, `tag`, `ring`, `biller`, `ref1`.
    Owner, group and DuitNow member number stay in the repo and never ship. Build and suite
    search `public/` for every dropped value, and assert every account number IS there. A new
    field is added in `SHIP` in `tools/build.mjs` and nowhere else.
-   - `acct` ships (owner, 11 Aug 2026): every account number is readable as text by
-     anyone with the address. The build prints that disclosure on every run.
-   - `holder` is the beneficiary, never the owner. The owner's name, by exact string or
-     by twelve-character stem, kills the build; the sanctioned name is pinned to exactly
-     once per entitled record in `data.js`. Keys are provider-named; a person-named slug
-     kills the build (a truncated slug of the payee got through once, 13 Aug 2026). A
-     `holder` on a code account kills the build too.
-5. **The name is inside the codes** (EMVCo tag 59, and tag 26 carries the account id in
-   the clear for six of them). Not this repo's to fix; the leak check strips payloads
-   before searching.
-6. **No dependency reaches the browser.** CSP `default-src 'none'`, `script-src 'self'`,
-   no `unsafe-inline`; an inline script or a `style=` attribute is a blank page and the
-   build refuses it. Logos are `Path2D` data, never rasters, because `img-src` refuses
-   `data:` and the suite asserts it still does.
+   - `acct` ships (owner, 11 Aug 2026): every account number is readable as text by anyone
+     with the address. The build prints that disclosure on every run.
+   - `holder` is the beneficiary, never the owner. The owner's name, by exact string or by
+     twelve-character stem, kills the build; the sanctioned name is pinned to exactly once per
+     entitled record in `data.js`. Keys are provider-named; a person-named slug kills the
+     build. A `holder` on a code account kills the build too.
+5. **The name is inside the codes** (EMVCo tag 59, and tag 26 carries the account id in the
+   clear for six of them). Not this repo's to fix; the leak check strips payloads before
+   searching.
+6. **No dependency reaches the browser.** CSP `default-src 'none'`, `script-src 'self'`, no
+   `unsafe-inline`; an inline script or a `style=` attribute is a blank page and the build
+   refuses it. Logos are `Path2D` data, never rasters, because `img-src` refuses `data:` and
+   the suite asserts it still does.
 
 ## The renderer, `src/app/qr-art.js`
 
-Every number here is re-asserted by `npm test`.
+Read the note at the top of the file first. Every number is re-asserted by `npm test`.
 
-- **Error correction M.** Higher adds modules and shrinks each; the worst code read down
-  to 370 px at M against 880 at H. Master, card and phone agree on M.
-- **Below `safePhysicalPx` (580 physical px) the plain code is drawn instead.** Measured
-  floor 380 with the lens, 440 without, plus half again. The suite downscales to the size
+- **Error correction M**; master, card and phone agree on it.
+- **Below `safePhysicalPx` the plain code is drawn instead.** The suite downscales to the size
   the glass would show before decoding; decoding the backing store passes vacuously.
-- Module edges snap to whole device pixels. The eyes depart from the matrix only at their
-  outer diagonal corners; the 1:1:3:1:1 finder ratio is measured from painted pixels;
-  the pupil is a rounded square at 1.68.
-- **The lens.** Disc at `lensScale` 0.78; arcs, ring and stars come from
-  `randOf(seedOf(key))`, `Math.random` appears nowhere; both faces share one diameter.
-  Nothing is painted over the light field (the rim glow is clipped out of it); the canvas
-  stays transparent outside the artwork and carries no `border-radius`; the shadow is
-  `filter: drop-shadow` from alpha; the field is flat (a gradient cost 1,244 KB against
-  45 KB); `draw()` reports `meta.grid` from the options it actually used.
-- `drawCard` renders 1,200 px for the gallery; the suite decodes every card and one
-  halved to 700 px.
-- **Encoding is cached in `plan()`**: 4.8 ms to encode against 2 ms to draw; a coin went
-  6.8 to 1.59 ms. Never batch modules into one `Path2D`: 25.8 ms against 1.84 ms for
-  individual fills, asserted.
-- **Code-less accounts** draw `drawPlate()`: a paper face in the code coin's field and
-  ink (luminance asserted), rows BANK and RECEIVER, marks traced by `tools/vectorise.mjs`
-  in place of names (owner, 26 Aug 2026), width-matched, flat, even-odd. `ring` strikes
-  the band in a second colour (JPMorgan brown `#5B2F12` measured from the artwork, Wise
-  green ring); the rim and face use separate palettes, asserted from pixels. `drawPlate`
-  never reads `acct` and never draws the DuitNow mark, asserted on its body. The suite
-  passes `Path2D` into the renderer scope, and proves a mark painted by diffing with and
-  without. Values wrap by rendered width, never shrink past legibility.
+- `Math.random` appears nowhere; the lens is seeded from the key. Nothing is painted over the
+  light field; the canvas stays transparent outside the artwork and carries no
+  `border-radius`; the field is flat.
+- **Encoding is cached in `plan()`. Never batch modules into one `Path2D`**, asserted.
+- `paintFace` is the one place assembling the coin's options, with the `acct`-is-absent note
+  attached.
+- **Code-less accounts** draw `drawPlate()`, which never reads `acct` and never draws the
+  DuitNow mark, asserted on its body. Values wrap by rendered width, never shrink past
+  legibility.
 - An empty payload decodes to `""` and passes; the suite walks `codes` only, `plates`
   separately. `filter(Boolean)` on the payload list is load-bearing in `build.mjs`,
   `verify.mjs` and `live.mjs`.
 
 ## The number, the rails, maintenance
 
-- **One face since 25 Aug 2026.** `drawBack`, `drawMark`, the flip and PayNet's artwork are
-  removed completely, asserted as complete. The coin never carries the number.
-- **The number is on screen again, on the Transfer view only (owner, 14 Sep 2026,
-  reversing 25 Aug).** `fillPlate()` writes a plate into `#plate` from the record: BANK and
-  ACCOUNT (spaced in fours, RECEIVER when `holder` is set) on Transfer; BILLER CODE, REF-1
-  and REF-2 `-` on JomPAY. Each value is a button that copies through the one
-  `copyValue(value, label)`; the toast names the label. Nothing hands the number to a
-  renderer, asserted. A suspended account empties the plate and refuses to copy.
-- **The rail is a mode (14 Sep 2026), not only a filter.** Three rails, DuitNow QR,
-  DuitNow Transfer, JomPAY, no "All". A rail is a property of an account, derived never
-  stored (`qr` = payload, `transfer` = bank and number, `jompay` = biller code and Ref-1).
-  The chosen rail filters the list and decides what an opened account shows (`viewOf()`;
-  an account reached by hash that is not on the rail shows the first rail it is on); it is
-  remembered in `localStorage` `pay:rail`, default QR. `body[data-view]` switches the coin
-  and the plate; only a coin flies, a plate fades in. The code miniatures appear on the QR
-  rail only: on any other rail `drawThumbs()` strikes the badge instead, `drawBadge()`, the
-  brand disc carrying the institution's traced `bankMark` through `QRArt.drawMark` where one
-  exists, else initials derived from `name` (`initialsOf()`: up to three words' initials, or
-  the first two letters of one word); the code-less account wears the badge too since
-  15 Sep 2026, so `drawPlate` now paints only the suite's renders, never the list.
-  `setRail()` redraws (owner, 14 Sep 2026). **Every account carries a `bankMark` since
-  14 Sep 2026, and the build ships it for every account** (it blanked the field on code
-  accounts until 15 Sep 2026, so the live badges showed initials while the marks sat loaded;
-  the suite now fails a code account without one; `holderMark` stays plate-only), traced from the logo on each institution's own website on the owner's
-  instruction (the tracer keeps one ink: a two-colour logo is flattened to black on white
-  first, as Setel's and Instapay's were; Maybank's is the corporate tiger-and-wordmark SVG
-  from maybank.com, whose yellow ground was dropped, reached through the browser pane because
-  the site's bot protection refuses curl). Both Touch 'n Go accounts
-  share `tng`. **Adding or replacing a logo:** artwork from the official site, never redrawn
-  from memory, then `node tools/vectorise.mjs <image> <id> src/vendor/<id>-mark.js`,
-  `"bankMark": "<id>"` on the record, rebuild. Steps and swipes walk `shownOrder`,
-  the visible tiles in display order, never the build order. Chips filter by hiding, never
-  rebuilding, so `tiles[i]` stays aligned with `CODES[i]`; the chip row wraps and
-  `overflow-x:auto` is asserted absent. `bank` ships for every account and is what the row
-  and the plate show: the institution's name as the DuitNow list has it (the member code
-  the store keeps as `mid`; Touch 'n Go and Touch 'n Go Business share 890053, told apart
-  by the `tag` sub-line).
-- **Suspended accounts draw no code at all:** canvases cleared to 8x8, `prerender()`
-  null, no miniature, copy and save refused. Three sources, in this precedence:
-  `/state.json` from KV first (seconds, no deploy), the state this phone last read from it
-  (`localStorage` `pay-state`, restored before the first frame, what an offline phone
-  reads), the baked `maintenance` flag last (only a first-ever open). A failed fetch leaves
-  the override untouched; only booleans on known keys are trusted, and only known keys in
-  the order. `/state.json` is `no-store` and bypassed by the service worker, as are
-  `/admin/`, `/api/` and `/rev.json`. **An open page follows the build (owner, 15 Sep
-  2026):** `followBuild()` reads `/rev.json` on load and on every return to the front and
-  reloads once when its id is not `QR_BUILD`; the id is remembered in `pay:reloaded` first,
-  so a disagreement costs one reload, never a loop. The service worker already
-  `skipWaiting`s and claims, so the reload lands on the new bundle. `drawThumbs` runs on every state change and must CLEAR a suspended
-  tile's miniature (`el.width = 8`); it only skipped, and GX Bank showed a readable code on
-  a suspended tile (3 Sep 2026).
+- **The coin never carries the number.** It is on screen on the **Transfer view only** (owner,
+  14 Sep 2026). Each plate value is a button that copies through the one `copyValue(value,
+  label)`. Nothing hands the number to a renderer, asserted. A suspended account empties the
+  plate and refuses to copy.
+- **The rail is a mode, not only a filter** (14 Sep 2026). Three rails, DuitNow QR, DuitNow
+  Transfer, JomPAY, no "All". A rail is a property of an account, derived never stored. The
+  chosen rail filters the list and decides what an opened account shows (`viewOf()`); it is
+  remembered in `localStorage` `pay:rail`, default QR. Code miniatures appear on the QR rail
+  only; any other rail strikes the badge.
+- **Every account carries a `bankMark`, and the build ships it for every account**; the suite
+  fails a code account without one. `holderMark` stays plate-only. **Adding or replacing a
+  logo:** artwork from the institution's official site, never redrawn from memory, then `node
+  tools/vectorise.mjs <image> <id> src/vendor/<id>-mark.js`, `"bankMark": "<id>"` on the
+  record, rebuild. `bank` ships for every account and is what the row and the plate show.
+- Steps and swipes walk `shownOrder`, the visible tiles in display order, never the build
+  order. Chips filter by hiding, never rebuilding, so `tiles[i]` stays aligned with
+  `CODES[i]`.
+- **Suspended accounts draw no code at all:** no miniature, copy and save refused.
+  `drawThumbs` runs on every state change and must CLEAR a suspended tile's miniature
+  (`el.width = 8`), never skip it. Three sources, in this precedence: `/state.json` from KV
+  (seconds, no deploy), the state this phone last read (`localStorage` `pay-state`), the baked
+  `maintenance` flag. A failed fetch leaves the override untouched; only booleans on known keys
+  are trusted, and only known keys in the order. `/state.json`, `/admin/`, `/api/` and
+  `/rev.json` are `no-store` and bypassed by the service worker.
+- **An open page follows the build** (owner, 15 Sep 2026): `followBuild()` reloads once when
+  `/rev.json`'s id is not `QR_BUILD`, remembering the id first, so a disagreement costs one
+  reload, never a loop.
 
 ## The edit surface, `/admin/` (8 Sep 2026)
 
 - **One value in KV, `state`:** `{maintenance: {key: bool}, order: [keys], at}`. Written by
-  `POST /api/state`, read by `/state.json`. The admin writes it COMPLETE: every account gets
-  a boolean and the order names every key, so after the first save the baked flag is moot.
+  `POST /api/state`, read by `/state.json`. The admin writes it COMPLETE: every account gets a
+  boolean and the order names every key, so after the first save the baked flag is moot.
 - **The gate is the token, not the header.** `identity()` in `src/worker.js` verifies the
-  Access JWT (RS256 against `https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`,
-  issuer, audience, expiry) from the `CF_Authorization` cookie or the
-  `Cf-Access-Jwt-Assertion` header, on `/admin`, `/admin/*` and `/api/*`. The suite mints
-  tokens with its own key pair and breaks them eight ways. **Fails closed:** `ACCESS_TEAM`
-  and `ACCESS_AUD` empty in `wrangler.jsonc` means every gated route is 401 and nothing
-  is written. Neither variable is a secret; there are no secrets in this Worker.
-- **The Access application** is Self-hosted, domain the workers.dev host, path `admin`,
-  policy Allow for the owner's address. `QR_STATE.put` appears exactly once, after the
-  identity check, asserted.
-- `src/app/admin.html` ships as `public/admin/index.html`; `admin.js` is stamped, never
-  precached. Rows drag by the handle or move with the arrow keys; Hidden/Shown per row;
-  one Save. The page reads `/state.json` and `/api/me` and writes `/api/state`, nothing
-  else, asserted. The public page's `Sign in` is a plain link to `/admin/`.
-- **Retired with the laptop master:** `maintenance.py`, `push_kv`, `deploy_runner.py`, the
-  design sync, `QR_MASTER`. Nothing deploys after a state change any more.
+  Access JWT. **Fails closed:** `ACCESS_TEAM` or `ACCESS_AUD` empty in `wrangler.jsonc` means
+  every gated route is 401 and nothing is written. Neither is a secret; there are no secrets in
+  this Worker. `QR_STATE.put` appears exactly once, after the identity check, asserted.
+- The page reads `/state.json` and `/api/me` and writes `/api/state`, nothing else, asserted.
+  Nothing deploys after a state change.
 
 ## Motion, zoom, layout
 
-- Two tiers: `--dur`/`--ease` 300 ms `cubic-bezier(.22,.8,.36,1)` for screens, zoom and
-  flip; `--dur-fast`/`--ease-fast` 140 ms `cubic-bezier(.22,1,.36,1)` for anything
-  answering a finger. `cssMs()` reads them once; the press-and-hold threshold is not
-  derived from them.
-- Both views are always laid out and cross-faded by opacity, `visibility` delayed by the
-  duration; never `display`. The hash is the only state; `depth` counts our own entries.
+- Two motion tiers, `--dur`/`--ease` and `--dur-fast`/`--ease-fast`, read once by `cssMs()`.
+- Both views are always laid out and cross-faded by opacity; never `display`. The hash is the
+  only state.
 - Nothing waits on `animationend` (reduced motion collapses `after()` to zero); one-shot
-  classes remove themselves via `oneShot()`; `morph()` and `fly()` take rects measured
-  while their view is visible; `goBack()` renders the list before measuring; thumbnails
-  are `decorative: true` exactly once and drawn together at startup.
-- The aurora is two gradient layers cross-faded, no filter; the coin transitions
-  `transform` only with `will-change`; a step pre-renders offscreen.
-- One column of rows, 72 px, coin left and the institution's name beside it in mono caps,
-  a `tag` sub-line under it (owner, 14 Sep 2026; the two-column tile grid and the featured
-  full-width JPMorgan row are gone, no account is featured); rows fixed so the list scrolls
-  (owner, 25 Aug 2026); store order until `/admin/` sets one; suspended accounts sink at run
-  time through `orderTiles()`,
-  which moves rather than rebuilds and renumbers `--i`; `classOf()` is the one place a
-  tile's classes are built; `--thumb` and `THUMB` are one number, 56 px; `.accounts` adds
-  the safe-area insets back with `calc()`; closing scrolls the tile into view with
-  `block:"nearest"`; `.tiledot` is `border-radius:50%` until `.drawn`. No pill, no title
-  above the coin, no Save button: press-and-hold saves and `.tuck` plays.
+  classes remove themselves via `oneShot()`; `morph()` and `fly()` take rects measured while
+  their view is visible; `goBack()` renders the list before measuring.
+- One column of rows, no account featured; store order until `/admin/` sets one; suspended
+  accounts sink at run time through `orderTiles()`, which moves rather than rebuilds.
+  `classOf()` is the one place a tile's classes are built; `--thumb` and `THUMB` are one
+  number, 56 px. No pill, no title above the coin, no Save button: press-and-hold saves and
+  `.tuck` plays.
 - `shipped[0]` is not necessarily a code; tests use `codes[0]`.
 
-## Files
+## iPhone standard (28 Aug 2026)
 
-| Path | What it is |
+`env(safe-area-inset-*)` read once into `--safetop`/`--safebot`; `viewport-fit=cover` with
+`black-translucent` makes the top inset mandatory; the Dynamic Island is centred, so pad the
+strip, never move sideways; 44 px minimum from `--tap`; no field under 16 px; `dvh` never
+`vh`.
+
+## Files that carry a rule
+
+| Path | Rule |
 |---|---|
-| `src/worker.js` | The Worker. Serves `public/` and sets every security header itself |
 | `data/accounts.json` | **The store.** Committed; every private field lives here and only here |
 | `tools/store.js` | The validator, one copy, imported by build and suite |
 | `src/app/index.html` | Markup only, no inline script or style |
-| `src/app/admin.html`, `admin.js` | The edit surface, shipped under `/admin/` |
-| `src/app/app.css` | The Salt identity (14 Sep 2026), applied by hand from `Code\salt-ds`: obsidian ground, one copper-and-brass aurora for every account, mono caps for every label and control, Fraunces for the two sentences, ghosts everywhere and one brass-to-copper pill (admin Save). No web fonts under the self-only CSP, so Georgia and a system mono stand in. The page no longer takes its light from the account; the coin alone carries the brand |
-| `src/app/app.js` | The app: rail, keyboard, swipe, hash, per-account tuning |
-| `src/app/qr-art.js` | The coin and `drawCard`. Read the note at the top first |
-| `src/app/sw.js` | Service worker template; `__BUILD__` and `__SHELL__` stamped by the build |
-| `src/vendor/qrcode.js` | The encoder, copied from the master unchanged |
 | `src/vendor/*-mark.js` | **Generated, do not edit.** Traced logos registering on `self.MARKS` |
-| `tools/vectorise.mjs` | Bitmap logo in, path data out; run by hand when a mark is added |
-| `tools/icons.mjs` | The app's own icon set, the Salt coin with a code's eye, written into `public/` by hand; the build does not touch the PNGs. Title and manifest name are "QR Command" (owner, 15 Sep 2026; was "Pay") |
-| `tools/build.mjs` | Master store in, `public/` out, with the leak check and the disclosure |
-| `public/marks.js` | Every traced mark in one file |
-| `test/verify.mjs` | The whole suite, no network, no browser |
 | `test/vendor/jsqr.js` | The decoder, **test only, never shipped** |
 | `public/` | Build output, committed so the deployed bytes are the reviewed bytes |
-| `wrangler.jsonc` | Worker, assets, one read-only KV namespace; no secrets, no vars |
-| `docs/NOTES.md` | The reasoning behind this file, verbatim |
+
+The rest: `docs/DETAIL.md`.
 
 ## Working on it
 
@@ -221,23 +155,23 @@ npm run deploy    # build, test, then wrangler deploy; the test is not optional
 
 Things that bite:
 
-- `compatibility_date` must not exceed the installed runtime: wrangler 4.120.0 tops out
-  at 2026-08-08.
-- **Never edit these files through a shell heredoc.** The Bash tool collapses one level
-  of backslash, so `"\x00"` arrives as a literal NUL and the file still parses. Twice
-  bitten; the suite sweeps every file for control bytes. Use the editing tools.
+- `compatibility_date` must not exceed the installed runtime: wrangler 4.120.0 tops out at
+  2026-08-08.
+- **Never edit these files through a shell heredoc.** The Bash tool collapses one level of
+  backslash, so `"\x00"` arrives as a literal NUL and the file still parses; the suite sweeps
+  every file for control bytes. Use the editing tools.
 - The suite decodes about a thousand renders per run. Do not trim the size sweep.
-- The saved image uses `toDataURL`, not `toBlob`: iOS allows `navigator.share` only
-  inside the gesture, and awaiting `toBlob` loses it silently. `cardOf()` is synchronous
-  and cached, asserted.
+- The saved image uses `toDataURL`, not `toBlob`: iOS allows `navigator.share` only inside the
+  gesture, and awaiting `toBlob` loses it silently. `cardOf()` is synchronous and cached,
+  asserted.
 
 ## Deploying
 
-**A green suite deploys and pushes, no ask (owner, 15 Sep 2026):** `npm run deploy`, commit
-the `rev.json` stamp it writes, `git push origin main`. This repo's standing exception to the
-root rule on public actions. `npm run deploy`; no setup beyond a Cloudflare login. After any user-facing change check
-the headers survived, since the Worker sets them itself and `X-Robots-Tag` is the only
-thing keeping the address out of a search index:
+**A green suite deploys and pushes, no ask (owner, 15 Sep 2026):** `npm run deploy`, commit the
+`rev.json` stamp it writes, `git push origin main`. This repo's standing exception to the root
+rule on public actions; no setup beyond a Cloudflare login. After any user-facing change check
+the headers survived, since the Worker sets them itself and `X-Robots-Tag` is the only thing
+keeping the address out of a search index:
 
 ```
 curl -sI https://<host>/ | grep -iE "x-robots-tag|content-security-policy"
@@ -245,24 +179,6 @@ curl -sI https://<host>/ | grep -iE "x-robots-tag|content-security-policy"
 
 ## Deliberately not here
 
-No edit path (`serve.py` on the laptop is the only writer); no Cloudflare Access (public
-by decision, a DuitNow code can only receive money; the repo stays private regardless);
-no `_headers` file; jsQR not shipped (130 KB; the runtime safety net is the plain-code
-fallback).
-
-## iPhone standard (28 Aug 2026)
-
-`env(safe-area-inset-*)` read once into `--safetop`/`--safebot` (bare `env()` is zero on
-desktop and cannot be measured; a probe forces 59 px and 34 px); `viewport-fit=cover` with
-`black-translucent` makes the top inset mandatory; the Dynamic Island is centred, so pad
-the strip, never move sideways; 44 px minimum from `--tap`; no field under 16 px; `dvh`
-never `vh`. This app already met all of it; the master's `edit.html` did not and was fixed
-2 Sep 2026.
-
-## Design sync (2 Sep 2026, retired 8 Sep 2026)
-
-This app was the reference design for the laptop master, and three files flowed out of it
-through the master's `sync-design.mjs`. With the master retired nothing flows anywhere:
-this repo is the only design. The lesson stands: shared tokens alone do not make one
-design, and drift reaches through call sites. `paintFace` is still the one place
-assembling the coin's options, with the `acct`-is-absent note attached.
+No Cloudflare Access on the public page (public by decision: a DuitNow code can only receive
+money; the repo stays private regardless); no `_headers` file, the Worker sets every header;
+jsQR not shipped (130 KB; the runtime safety net is the plain-code fallback).
