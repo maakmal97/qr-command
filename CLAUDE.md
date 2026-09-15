@@ -232,7 +232,9 @@ Things that bite:
 
 ## Deploying
 
-`npm run deploy`; no setup beyond a Cloudflare login. After any user-facing change check
+**A green suite deploys and pushes, no ask (owner, 15 Sep 2026):** `npm run deploy`, commit
+the `rev.json` stamp it writes, `git push origin main`. This repo's standing exception to the
+root rule on public actions. `npm run deploy`; no setup beyond a Cloudflare login. After any user-facing change check
 the headers survived, since the Worker sets them itself and `X-Robots-Tag` is the only
 thing keeping the address out of a search index:
 
