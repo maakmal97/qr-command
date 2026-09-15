@@ -4,7 +4,7 @@ Standing facts only. Root `CLAUDE.md` governs voice, structure, verification and
 precedence; this file adds what a session here would otherwise rediscover, and
 never repeats a root rule. British English, no em-dashes, in files, code and copy.
 Correct stale facts in place; the dated record is the project changelog / journal.
-Set 6 Sep 2026. Ceiling 15 KB.
+Set 6 Sep 2026.
 
 The payment-QR consolidator on the phone: a Cloudflare Worker serving a static bundle built
 from `data/accounts.json` in this repo. Two screens: the accounts list, and one account shown
