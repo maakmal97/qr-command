@@ -22,7 +22,7 @@ const APP_CSS = resolve(REPO, "src", "app", "app.css");
 const DS_ROOT = resolve(process.env.SALT_DS || resolve(REPO, "..", "salt-ds"));
 const DS_SRC = resolve(DS_ROOT, "src", "styles.css");
 const DS_FONTS_CSS = resolve(DS_ROOT, "src", "fonts-local.css");
-const DS_FONTS = resolve(DS_ROOT, "fonts");
+const DS_FONTS = resolve(DS_ROOT, "src", "fonts");   /* beside fonts-local.css since 22 Sep 2026 */
 /* The brand faces (22 Sep 2026): the design system's files, copied into src/app/fonts/ by --pull,
    built into public/fonts/, hashed into the build id and precached with the shell. */
 export const FONT_FILES = ["fraunces-latin.woff2", "jetbrains-mono-latin.woff2"];
