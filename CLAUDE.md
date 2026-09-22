@@ -49,7 +49,9 @@ Rule 4 is cited by number in `test/verify.mjs`; never renumber.
 7. **The identity's tokens in `src/app/app.css` are generated** (22 Sep 2026): the `:root` of
    `Code\salt-ds\src\styles.css`, written between the DESIGN markers by
    `node tools/designsync.mjs --pull`, and the build refuses to ship on drift. Everything else in
-   `app.css` is this app's own, and nothing in it restates a colour the identity has a word for.
+   `app.css` is this app's own, and nothing in it restates a colour the identity has a word for. The two
+   font files in `src/app/fonts/` are the design system's, pulled the same way (22 Sep 2026); the build
+   copies them, hashes them into the id, stamps their URLs in `app.css` and precaches them with the shell.
 
 ## The renderer, `src/app/qr-art.js`
 

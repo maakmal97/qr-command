@@ -39,6 +39,7 @@ const SECURITY = {
     "script-src 'self'",
     "style-src 'self'",
     "img-src 'self'",
+    "font-src 'self'",
     "connect-src 'self'",
     "manifest-src 'self'",
     "worker-src 'self'",
