@@ -46,6 +46,11 @@ Rule 4 is cited by number in `test/verify.mjs`; never renumber.
    refuses it. Logos are `Path2D` data, never rasters, because `img-src` refuses `data:` and
    the suite asserts it still does.
 
+7. **The identity's tokens in `src/app/app.css` are generated** (22 Sep 2026): the `:root` of
+   `Code\salt-ds\src\styles.css`, written between the DESIGN markers by
+   `node tools/designsync.mjs --pull`, and the build refuses to ship on drift. Everything else in
+   `app.css` is this app's own, and nothing in it restates a colour the identity has a word for.
+
 ## The renderer, `src/app/qr-art.js`
 
 Read the note at the top of the file first. Every number is re-asserted by `npm test`.

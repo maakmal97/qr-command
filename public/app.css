@@ -1,8 +1,11 @@
 /* Pay, in the Salt identity (14 Sep 2026).
  *
- * The tokens and recipes are salt-ds (Code\salt-ds, DESIGN.md is the ethos), applied by hand
- * because nothing here may load off another origin: the CSP is self-only, so Fraunces and
- * JetBrains Mono fall back to Georgia and a system mono, exactly as salt-command's desk does.
+ * The tokens are salt-ds's own (Code\salt-ds, DESIGN.md is the ethos): its :root block is written
+ * into this file between the DESIGN markers by tools/designsync.mjs --pull, and the build refuses
+ * to ship while the copy differs from the file (22 Sep 2026; until then eight of its colours were
+ * transcribed here and could drift). The recipes are applied by hand, because nothing here may
+ * load off another origin: the CSP is self-only, so Fraunces and JetBrains Mono fall back to
+ * Georgia and a system mono, exactly as salt-command's desk does.
  *
  * What the identity decides for this app, in one line each: the ground is obsidian and the
  * light is one copper-and-brass aurora, the same for every account, because the identity has
@@ -13,33 +16,106 @@
  * admin page, and every other button is a ghost.
  */
 
+/* ==== DESIGN tokens: generated from Code/salt-ds src/styles.css (:root) by tools/designsync.mjs --pull. Edit the design system, --pull; never this block. ==== */
+:root {
+  /* The six colours of the identity */
+  --salt-obsidian: #05080a;   /* the ground; every surface sits on it */
+  --salt-slate: #0b1215;      /* deep panels, and the QR ink */
+  --salt-brass: #c5a059;      /* the leading accent */
+  --salt-copper: #b87333;     /* the closing accent; gradients end on it */
+  --salt-salt: #f2f4f5;       /* text, and the field behind the QR */
+  --salt-mist: #7a8690;       /* muted labels and captions */
+  --salt-mist-light: #a6afb5; /* mist for running prose at 13px, where mist itself is too dark */
+  --salt-mist-bright: #b4bcc2; /* prose on a figure surface, one step under salt: a tile's note, a finding's body */
+
+  /* The desk's semantic colours, added 02 Sep 2026. Direction and risk need hues the six
+     brand colours do not carry, and each sits in the identity's temperature: verdigris is
+     copper's patina, ember is copper under heat, steel is slate lit. Copper stays the one
+     accent that marks the exception, so attention is copper and never a fourth hue. */
+  --salt-verdigris: #6fae97;  /* settled, owed to you, in cover */
+  --salt-ember: #d4694c;      /* owed by you, defaulted, breached */
+  --salt-steel: #8ea2b6;      /* pending, neutral, the cool second series */
+  --salt-brass-soft: #d8c79c; /* pale brass for a second tier */
+  /* THE FOURTH WORD, lifted from the desk on 22 Sep 2026 (it lived in salt-command's own layer from
+     v557, his instruction of 09 Sep 2026). Ember is copper under heat and sits dE 20.7 from it, so a
+     warning drawn in ember read as one more heading. This is a true alarm: breached, refused, a
+     figure that must not be missed. dE 32.5 from ember, 52.6 from copper, 5.6:1 on obsidian. */
+  --salt-alarm: #fa3c5a;
+
+  /* The books. Each is its own hue, and none of them is a SEMANTIC one: ember, verdigris,
+     steel and copper each mean something on the desk, so a product dot drawn in one would
+     read as a status rather than as a book. The violet and cyan families were retired at
+     v472 and are not used. Salt is the pale one and oil the golden one; oil is the same
+     value as --salt-brass, which is why its dot is hard to tell from ordinary chrome. */
+  --salt-product-salt: #e4e9ec;   /* near-white */
+  --salt-product-oil: #c5a059;    /* brass */
+  --salt-product-candy: #cf8fb4;  /* rose, hue 330 */
+  --salt-product-rice: #7b86cc;   /* indigo, hue 235 */
+  --salt-product-spare: #a8b06a;  /* olive, hue 68 */
+
+  /* Materials */
+  --salt-glass: rgba(255, 255, 255, 0.03);
+  --salt-glass-faint: rgba(255, 255, 255, 0.02);
+  --salt-line: rgba(197, 160, 89, 0.22);
+  --salt-line-faint: rgba(255, 255, 255, 0.06);
+  --salt-line-strong: rgba(197, 160, 89, 0.45); /* the hairline lifted: a chip's edge, a held or hovered control */
+  --salt-glass-hover: rgba(255, 255, 255, 0.06); /* a ghost, a row or a tab under the pointer */
+  --salt-highlight: rgba(255, 255, 255, 0.08);
+  --salt-shadow: 0 32px 64px rgba(0, 0, 0, 0.55);
+  --salt-shadow-desk: 0 18px 40px rgba(0, 0, 0, 0.42); /* lighter, for a page of many panes */
+  --salt-well: rgba(0, 0, 0, 0.28);      /* inset: fields and meter tracks */
+  --salt-veil: rgba(5, 8, 10, 0.86);     /* sticky and floating surfaces over content */
+  --salt-pane: rgba(11, 18, 21, 0.66);   /* the glass fill when there is no backdrop to blur */
+  --salt-panel: rgb(28, 20, 13);         /* OPAQUE and warm: a sticky table head or label column inside a card.
+                                             A veil at .86 passes 14% of whatever scrolls under it, and the
+                                             only fill that cannot ghost is 1 (the desk's v567; here 22 Sep 2026) */
+  --salt-tap: 44px;                      /* the least a control may measure, either way */
+
+  /* Gradients. Brass to copper for marks and fills; white to copper for titles. */
+  --salt-gradient: linear-gradient(135deg, var(--salt-brass), var(--salt-copper));
+  --salt-gradient-title: linear-gradient(135deg, #ffffff 30%, var(--salt-copper) 100%);
+
+  /* Semantic aliases */
+  --salt-surface: var(--salt-obsidian);
+  --salt-text: var(--salt-salt);
+  --salt-text-muted: var(--salt-mist);
+  --salt-text-label: var(--salt-copper);
+
+  /* Typography */
+  --salt-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --salt-font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+
+  --salt-text-xs: 11px;
+  --salt-text-sm: 13px;
+  --salt-text-md: 15px;
+  --salt-text-lg: 17px;
+  --salt-text-xl: 24px;
+  --salt-text-2xl: 34px;
+  --salt-text-3xl: 48px;
+  --salt-text-4xl: 64px;
+  --salt-text-5xl: 88px;
+
+  /* Space, radius */
+  --salt-space-1: 4px;
+  --salt-space-2: 8px;
+  --salt-space-3: 12px;
+  --salt-space-4: 16px;
+  --salt-space-5: 24px;
+  --salt-space-6: 32px;
+  --salt-space-7: 48px;
+
+  --salt-radius-sm: 12px;
+  --salt-radius-md: 16px;
+  --salt-radius-lg: 24px;
+  --salt-radius-xl: 36px;
+  --salt-radius-pill: 100px;
+}
+/* ==== END DESIGN tokens ==== */
+
+/* this app's own */
 :root{
   color-scheme:dark;
   font-synthesis:none;
-
-  /* the identity */
-  --salt-obsidian:#05080a;
-  --salt-slate:#0b1215;
-  --salt-brass:#c5a059;
-  --salt-copper:#b87333;
-  --salt-salt:#f2f4f5;
-  --salt-mist:#7a8690;
-  --salt-mist-light:#a6afb5;
-  --salt-ember:#d4694c;
-
-  /* materials */
-  --salt-glass:rgba(255,255,255,0.03);
-  --salt-line:rgba(197,160,89,0.22);
-  --salt-line-strong:rgba(197,160,89,0.45);
-  --salt-line-faint:rgba(255,255,255,0.06);
-  --salt-highlight:rgba(255,255,255,0.08);
-  --salt-well:rgba(0,0,0,0.28);
-  --salt-veil:rgba(5,8,10,0.86);
-  --salt-gradient:linear-gradient(135deg,var(--salt-brass),var(--salt-copper));
-
-  /* type */
-  --salt-font-display:"Fraunces",Georgia,"Times New Roman",serif;
-  --salt-font-mono:"JetBrains Mono","Cascadia Mono",Consolas,Menlo,monospace;
 
   /* geometry */
   --r:24px;

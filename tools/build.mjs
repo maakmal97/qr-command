@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { matches as designMatches } from "./designsync.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
@@ -451,6 +452,10 @@ function auditPublic(doc, codes, V) {
 }
 
 /* -------------------------------------------------------------------- the build */
+
+/* The identity's tokens in app.css are the design system's own (22 Sep 2026), never a copy typed
+ * here; the build stops on drift, as salt-command's gate does for its master. */
+if (!designMatches()) die("src/app/app.css carries tokens that are not the design system's :root; run: node tools/designsync.mjs --pull");
 
 const V = await masterValidator();
 const doc = loadStore();
