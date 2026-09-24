@@ -85,7 +85,8 @@ Every number here is re-asserted by `npm test`.
   precached. Rows drag by the handle or move with the arrow keys; Hidden/Shown per row; one
   Save. The public page's `Sign in` is a plain link to `/admin/`.
 - **Retired with the laptop master (8 Sep 2026):** `maintenance.py`, `push_kv`,
-  `deploy_runner.py`, the design sync, `QR_MASTER`. Nothing deploys after a state change.
+  `deploy_runner.py`, the laptop's design sync (not today's `tools/designsync.mjs`),
+  `QR_MASTER`. Nothing deploys after a state change.
 
 ## Motion and layout
 
@@ -102,6 +103,9 @@ Every number here is re-asserted by `npm test`.
   `orderTiles()` renumbers `--i`; `.accounts` adds the safe-area insets back with `calc()`;
   closing scrolls the tile into view with `block:"nearest"`; `.tiledot` is
   `border-radius:50%` until `.drawn`.
+- **Saving**: a dismissed share sheet rejects with `AbortError`, a cancel, not a failure; a
+  swipe and a long press each swallow the click that follows, or one gesture saves twice. A
+  FLIP element gets its starting transform before its first paint, or it flashes full size.
 
 ## The iPhone standard (28 Aug 2026)
 
@@ -114,13 +118,13 @@ The laptop master's `edit.html` missed the standard and was fixed 2 Sep 2026.
 |---|---|
 | `src/worker.js` | The Worker. Serves `public/` and sets every security header itself |
 | `src/app/admin.html`, `admin.js` | The edit surface, shipped under `/admin/` |
-| `src/app/app.css` | The Salt identity (14 Sep 2026), applied by hand from `Code\salt-ds`: obsidian ground, one copper-and-brass aurora for every account, mono caps for every label and control, Fraunces for the two sentences, ghosts everywhere and one brass-to-copper pill (admin Save). No web fonts under the self-only CSP, so Georgia and a system mono stand in. The page no longer takes its light from the account; the coin alone carries the brand |
+| `src/app/app.css` | The Salt identity from `Code\salt-ds`, tokens generated (`CLAUDE.md` rule 7), the rest this app's own: obsidian ground, one copper-and-brass aurora for every account, mono caps for every label and control, Fraunces for the two sentences, ghosts everywhere and one brass-to-copper pill (admin Save). Fraunces and JetBrains Mono ship from `src/app/fonts/` under `font-src 'self'`. The page no longer takes its light from the account; the coin alone carries the brand |
 | `src/app/app.js` | The app: rail, keyboard, swipe, hash, per-account tuning |
 | `src/app/sw.js` | Service worker template; `__BUILD__` and `__SHELL__` stamped by the build |
-| `src/vendor/qrcode.js` | The encoder, copied from the master unchanged |
+| `src/vendor/qrcode.js` | The encoder, copied from the retired laptop master unchanged |
 | `tools/vectorise.mjs` | Bitmap logo in, path data out; run by hand when a mark is added |
 | `tools/icons.mjs` | The app's own icon set, the Salt coin with a code's eye, written into `public/` by hand; the build does not touch the PNGs. Title and manifest name are "QR Command" (owner, 15 Sep 2026; was "Pay") |
-| `tools/build.mjs` | Master store in, `public/` out, with the leak check and the disclosure |
+| `tools/build.mjs` | `data/accounts.json` in, `public/` out, with the leak check and the disclosure |
 | `public/marks.js` | Every traced mark in one file |
 | `test/verify.mjs` | The whole suite, no network, no browser |
 | `wrangler.jsonc` | Worker, assets, one KV namespace (`QR_STATE`, written only by `/api/state`), vars `ACCESS_TEAM` and `ACCESS_AUD`; no secrets |
