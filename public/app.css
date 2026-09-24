@@ -21,12 +21,23 @@
   /* The six colours of the identity */
   --salt-obsidian: #05080a;   /* the ground; every surface sits on it */
   --salt-slate: #0b1215;      /* deep panels, and the QR ink */
+  --salt-slate-light: #16211f; /* the lit slate: a chosen option, a menu row under the pointer */
   --salt-brass: #c5a059;      /* the leading accent */
   --salt-copper: #b87333;     /* the closing accent; gradients end on it */
   --salt-salt: #f2f4f5;       /* text, and the field behind the QR */
   --salt-mist: #7a8690;       /* muted labels and captions */
   --salt-mist-light: #a6afb5; /* mist for running prose at 13px, where mist itself is too dark */
   --salt-mist-bright: #b4bcc2; /* prose on a figure surface, one step under salt: a tile's note, a finding's body */
+  /* Running prose, the sentences a person reads under a figure or a field (24 Sep 2026). Mist was
+     3.6:1 on a pane over the aurora at its brightest; mist-light is 6.0:1 there, 8.2:1 on the
+     panel and 9.0:1 on obsidian. A recipe's prose reads this and never mist. */
+  --salt-prose: var(--salt-mist-light);
+  /* THE EDGE OF A FIELD AND A GHOST (24 Sep 2026): brass at three quarters, so the hairline keeps the
+     identity's hue and still meets 3:1 (WCAG 1.4.11). The faint line it replaces was 1.1:1, so no box
+     was visible until it had focus. Measured: 3.2:1 on a pane over the aurora at its brightest (the
+     worst ground), 3.8:1 against the well it borders there, 4.4:1 on the panel, 4.8:1 on obsidian.
+     A state that lifts a control (hover, on, lit, focus) goes to full brass, above it. */
+  --salt-edge-field: #947843;
 
   /* The desk's semantic colours, added 02 Sep 2026. Direction and risk need hues the six
      brand colours do not carry, and each sits in the identity's temperature: verdigris is
@@ -64,12 +75,17 @@
   --salt-shadow: 0 32px 64px rgba(0, 0, 0, 0.55);
   --salt-shadow-desk: 0 18px 40px rgba(0, 0, 0, 0.42); /* lighter, for a page of many panes */
   --salt-well: rgba(0, 0, 0, 0.28);      /* inset: fields and meter tracks */
+  --salt-well-hover: rgba(0, 0, 0, 0.36); /* a well under the pointer */
   --salt-veil: rgba(5, 8, 10, 0.86);     /* sticky and floating surfaces over content */
+  --salt-scrim: rgba(5, 8, 10, 0.55);    /* the page behind an open drawer */
   --salt-pane: rgba(11, 18, 21, 0.66);   /* the glass fill when there is no backdrop to blur */
   --salt-panel: rgb(28, 20, 13);         /* OPAQUE and warm: a sticky table head or label column inside a card.
                                              A veil at .86 passes 14% of whatever scrolls under it, and the
                                              only fill that cannot ghost is 1 (the desk's v567; here 22 Sep 2026) */
   --salt-tap: 44px;                      /* the least a control may measure, either way */
+  --salt-bar-h: 4rem;                    /* the phone's bar of places, above the safe area: 64px at the
+                                            default text size, and in rem so it grows with the words in it */
+  --salt-sheet-radius: var(--salt-radius-lg); /* the top corners of a sheet, the inner corners of a drawer */
 
   /* Gradients. Brass to copper for marks and fills; white to copper for titles. */
   --salt-gradient: linear-gradient(135deg, var(--salt-brass), var(--salt-copper));
@@ -85,15 +101,23 @@
   --salt-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --salt-font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
 
-  --salt-text-xs: 11px;
-  --salt-text-sm: 13px;
-  --salt-text-md: 15px;
-  --salt-text-lg: 17px;
-  --salt-text-xl: 24px;
-  --salt-text-2xl: 34px;
-  --salt-text-3xl: 48px;
-  --salt-text-4xl: 64px;
-  --salt-text-5xl: 88px;
+  /* The type scale in rem since 24 Sep 2026: at the default 16px each is the pixel size it was
+     (11, 13, 15, 17, 24, 34, 48, 64, 88), and a browser's own default text size (a desktop browser's
+     setting) now reaches them. A PHONE'S DOES NOT, YET: an iPhone's Text Size reaches a page only through
+     the system font keywords (font: -apple-system-body, 17px at its default), and Android's only where
+     the page opts in (meta name="text-scale"). Nothing sets either: that is a decision still open.
+     Every screen recipe sets its type in rem the same day, a token where the size is one and its
+     exact rem where not (11.5px is 0.71875rem), so a control grows with the prose beside it. A slide,
+     the document page and the footnote keep px: they are frames of a fixed size. */
+  --salt-text-xs: 0.6875rem;
+  --salt-text-sm: 0.8125rem;
+  --salt-text-md: 0.9375rem;
+  --salt-text-lg: 1.0625rem;
+  --salt-text-xl: 1.5rem;
+  --salt-text-2xl: 2.125rem;
+  --salt-text-3xl: 3rem;
+  --salt-text-4xl: 4rem;
+  --salt-text-5xl: 5.5rem;
 
   /* Space, radius */
   --salt-space-1: 4px;
@@ -122,7 +146,7 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(./fonts/fraunces-latin.woff2?v=69e620733e5c) format('woff2');
+  src: url(./fonts/fraunces-latin.woff2?v=184272e6841e) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
@@ -130,7 +154,7 @@
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
-  src: url(./fonts/jetbrains-mono-latin.woff2?v=69e620733e5c) format('woff2');
+  src: url(./fonts/jetbrains-mono-latin.woff2?v=184272e6841e) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* ==== END DESIGN tokens ==== */
