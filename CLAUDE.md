@@ -84,6 +84,12 @@ Read the note at the top of the file first. Every number is re-asserted by `npm 
   chosen rail filters the list and decides what an opened account shows (`viewOf()`); it is
   remembered in `localStorage` `pay:rail`, default QR. Code miniatures appear on the QR rail
   only; any other rail strikes the badge.
+- **A payer's link is `#<key>/<rail>/<amount>/<reference>`** (the Salt Counter's pay sheet, 24
+  Sep 2026). `linkOf()` checks each part and DROPS, never repairs, one that fails; the rail
+  becomes the mode where the account is on it; the amount and reference show under the coin or
+  plate, each copying, on that account only. salt-command's `stmt/pay.js` `payHref` writes it and
+  its suite reads it back through this `linkOf`: a format change is both repos, this one shipped
+  first.
 - **Every account carries a `bankMark`, and the build ships it for every account**; the suite
   fails a code account without one. `holderMark` stays plate-only. **Adding or replacing a
   logo:** artwork from the institution's official site, never redrawn from memory, then `node

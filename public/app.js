@@ -31,6 +31,7 @@
   var elGrid = document.getElementById("grid");
   var elBack = document.getElementById("back");
   var elPlate = document.getElementById("plate");
+  var elDue = document.getElementById("due");
   var elRails = document.getElementById("rails");
   var elList = document.getElementById("accounts");
 
@@ -344,7 +345,13 @@
       ? [["Biller code", a.biller, "biller code"], ["Ref-1", a.ref1, "Ref-1"], ["Ref-2", "-"]]
       : [["Bank", a.bank], ["Account", spaced(a.acct), "account number"]]
           .concat(a.holder ? [["Receiver", a.holder]] : []);
-    elPlate.textContent = "";
+    fillRows(elPlate, rows);
+  }
+
+  /* A row is [label, value shown, what a copy is called, value copied where it is not the one
+   * shown]; one without a name for its copy is a plain line. */
+  function fillRows(box, rows) {
+    box.textContent = "";
     rows.forEach(function (r) {
       var el = document.createElement(r[2] ? "button" : "div");
       if (r[2]) el.type = "button";
@@ -357,9 +364,42 @@
       val.textContent = r[1];
       el.appendChild(l);
       el.appendChild(val);
-      if (r[2]) el.addEventListener("click", function () { copyValue(r[1], r[2]); });
-      elPlate.appendChild(el);
+      if (r[2]) el.addEventListener("click", function () { copyValue(r[3] || r[1], r[2]); });
+      box.appendChild(el);
     });
+  }
+
+  /* THE PAYER'S LINK (the Counter's pay sheet, owner's decision of 24 Sep 2026):
+   * #<key>/<rail>/<amount>/<reference>, every part after the key optional. The Counter names the
+   * account the customer chose, the way, the figure and their username as the reference; this
+   * page opens on that account at that rail with the amount and the reference to copy. Anyone can
+   * write a link, so each part is CHECKED AND DROPPED, NEVER REPAIRED: a rail must be one of
+   * RAILS, an amount a figure in ringgit to the sen, a reference a short run of letters, digits
+   * and hyphens. A crafted link can show only what a genuine one could, never a sentence. */
+  function linkOf(hash) {
+    var parts = String(hash || "").replace(/^#/, "").split("/");
+    var dec = function (s) { try { return decodeURIComponent(s || ""); } catch (e) { return ""; } };
+    var r = dec(parts[1]), amount = dec(parts[2]), ref = dec(parts[3]);
+    var known = false;
+    for (var i = 0; i < RAILS.length; i++) if (RAILS[i].id === r) known = true;
+    return {
+      key: dec(parts[0]),
+      rail: known ? r : "",
+      amount: /^\d{1,6}(\.\d{1,2})?$/.test(amount) && Number(amount) > 0 ? Number(amount).toFixed(2) : "",
+      ref: /^[A-Za-z0-9-]{1,20}$/.test(ref) ? ref : ""
+    };
+  }
+
+  /* What the link carried, on the account it named and on no other: a step or a tap on another
+   * account writes a bare key, and the figure goes with it. A suspended account shows none. */
+  function fillDue(a) {
+    var L = linkOf(location.hash), rows = [];
+    if (a && !down(a) && L.key === a.key) {
+      if (L.amount) rows.push(["Amount", "RM " + L.amount, "amount", L.amount]);
+      if (L.ref) rows.push(["Reference", L.ref, "reference"]);
+    }
+    fillRows(elDue, rows);
+    elDue.hidden = !rows.length;
   }
 
   function paint(pre) {
@@ -368,6 +408,7 @@
     var meta;
     var v = viewOf(a);
     document.body.setAttribute("data-view", v);
+    fillDue(a);
 
     if (down(a)) {
       /* NOTHING SCANNABLE OR COPIABLE IS DRAWN AT ALL. The canvas is cleared rather than
@@ -596,7 +637,10 @@
    * page session pushed, so Accounts either unwinds one of ours or rewrites the hash in place,
    * and can never walk off into somebody else's history. */
   function route(pre) {
-    var i = indexOfKey(decodeURIComponent((location.hash || "").slice(1)));
+    var L = linkOf(location.hash);
+    var i = indexOfKey(L.key);
+    // A link's rail becomes the mode when the account is on it; otherwise viewOf() decides.
+    if (i >= 0 && L.rail && onRail(CODES[i], L.rail)) setRail(L.rail);
     if (i >= 0) showCode(i, pre); else showList();
   }
 
@@ -1008,7 +1052,7 @@
 
     window.addEventListener("popstate", function () {
       // The phone's own back gesture. Nothing is trusted but the hash.
-      if (indexOfKey(decodeURIComponent((location.hash || "").slice(1))) < 0) depth = 0;
+      if (indexOfKey(linkOf(location.hash).key) < 0) depth = 0;
       route();
     });
 

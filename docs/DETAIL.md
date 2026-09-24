@@ -42,6 +42,10 @@ Every number here is re-asserted by `npm test`.
   and Ref-1. An account reached by hash that is not on the chosen rail shows the first rail it
   is on. `body[data-view]` switches the coin and the plate; only a coin flies, a plate fades in.
   `setRail()` redraws.
+- **A payer's link** (24 Sep 2026): `linkOf()` reads `#<key>/<rail>/<amount>/<reference>`;
+  `route()` makes a named rail the mode where the account is on it, and `fillDue()` writes AMOUNT
+  (`RM 70.00`, copying `70.00`) and REFERENCE into `#due` under the coin or the plate, through the
+  plate's own `fillRows()`, on the linked account only and never on a suspended one.
 - **The badge** (`drawBadge()`, struck by `drawThumbs()` on any rail but QR): the brand disc
   carrying the institution's traced `bankMark` through `QRArt.drawMark` where one exists, else
   initials derived from `name` (`initialsOf()`: up to three words' initials, or the first two

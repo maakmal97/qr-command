@@ -421,7 +421,7 @@ body.maintenance .coinbtn{opacity:0;pointer-events:none;}
  * an element out of layout reports no rect, and a missing rect means the view simply fades in. */
 body[data-view="qr"] .plate{display:none;}
 body:not([data-view="qr"]) .coinbtn{display:none;}
-.plate{
+.plate,.due{
   width:100%;
   max-width:420px;
   display:flex;
@@ -448,6 +448,11 @@ body:not([data-view="qr"]) .coinbtn{display:none;}
   cursor:default;
 }
 .prow:last-child{border-bottom:0;}
+/* A payer's link: the amount and the reference side by side, one row high, so the coin above
+ * gives up as little as it can. Shown on both rails; hidden when the link carried neither. */
+.due{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;column-gap:20px;}
+.due[hidden]{display:none;}
+.due .prow{border-bottom:0;}
 button.prow{cursor:pointer;transition:color var(--t-fast);}
 button.prow:hover .pvalue{color:var(--salt-brass);}
 button.prow:active{transform:scale(.99);}

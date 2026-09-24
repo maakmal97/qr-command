@@ -122,7 +122,7 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(./fonts/fraunces-latin.woff2?v=51b55e9ae44c) format('woff2');
+  src: url(./fonts/fraunces-latin.woff2?v=bab591e0efd2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
@@ -130,7 +130,7 @@
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
-  src: url(./fonts/jetbrains-mono-latin.woff2?v=51b55e9ae44c) format('woff2');
+  src: url(./fonts/jetbrains-mono-latin.woff2?v=bab591e0efd2) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* ==== END DESIGN tokens ==== */
@@ -421,7 +421,7 @@ body.maintenance .coinbtn{opacity:0;pointer-events:none;}
  * an element out of layout reports no rect, and a missing rect means the view simply fades in. */
 body[data-view="qr"] .plate{display:none;}
 body:not([data-view="qr"]) .coinbtn{display:none;}
-.plate{
+.plate,.due{
   width:100%;
   max-width:420px;
   display:flex;
@@ -448,6 +448,11 @@ body:not([data-view="qr"]) .coinbtn{display:none;}
   cursor:default;
 }
 .prow:last-child{border-bottom:0;}
+/* A payer's link: the amount and the reference side by side, one row high, so the coin above
+ * gives up as little as it can. Shown on both rails; hidden when the link carried neither. */
+.due{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;column-gap:20px;}
+.due[hidden]{display:none;}
+.due .prow{border-bottom:0;}
 button.prow{cursor:pointer;transition:color var(--t-fast);}
 button.prow:hover .pvalue{color:var(--salt-brass);}
 button.prow:active{transform:scale(.99);}

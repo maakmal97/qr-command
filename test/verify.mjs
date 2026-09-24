@@ -919,14 +919,15 @@ section("2. The bundle carries the codes and nothing else");
 
   /* THE NUMBER IS ON SCREEN, ON THE TRANSFER VIEW ONLY (owner, 14 Sep 2026, reversing 25 Aug).
    * A plate of the bank's name and the number, and on JomPAY the biller code, Ref-1 and a Ref-2
-   * shown as a dash; each value copies on a tap. The QR view shows the coin and nothing else. It is still
+   * shown as a dash; each value copies on a tap. The QR view shows the coin, and under it only what a
+   * payer's link carried (below). It is still
    * written to the DOM from the record, never drawn onto a canvas, so the renderer stays clean. */
   ok("the Transfer view shows the bank and the number, and JomPAY the biller code and both references",
     /id="plate"/.test(indexHtml) &&
     /function fillPlate\(a, v\)/.test(appJs) &&
     /\["Bank", a\.bank\], \["Account", spaced\(a\.acct\), "account number"\]/.test(appJs) &&
     /\["Biller code", a\.biller, "biller code"\], \["Ref-1", a\.ref1, "Ref-1"\], \["Ref-2", "-"\]/.test(appJs) &&
-    /copyValue\(r\[1\], r\[2\]\)/.test(appJs));
+    /copyValue\(r\[3\] \|\| r\[1\], r\[2\]\)/.test(appJs));
   ok("the QR view is the coin alone, and the other views have no coin",
     /body\[data-view="qr"\] \.plate\{display:none;\}/.test(cssCode) &&
     /body:not\(\[data-view="qr"\]\) \.coinbtn\{display:none;\}/.test(cssCode) &&
@@ -936,6 +937,70 @@ section("2. The bundle carries the codes and nothing else");
     /document\.body\.classList\.add\("maintenance"\);/.test(appJs) &&
     /if \(down\(a\)\) \{[\s\S]{0,600}?elPlate\.textContent = "";/.test(appJs) &&
     /if \(down\(a\)\) \{ say\("Under maintenance"\); return; }/.test(appJs));
+
+  /* THE PAYER'S LINK (24 Sep 2026, the Counter's pay sheet): #<key>/<rail>/<amount>/<reference>.
+   * Driven, not read: the shipped functions are lifted out of app.js by name and run against
+   * stubs, so a check can fail only if the behaviour does. */
+  {
+    const fnSrc = (name) => {
+      const i = appJs.indexOf("function " + name + "(");
+      if (i < 0) return "";
+      let d = 0, j = appJs.indexOf("{", i);
+      for (; j < appJs.length; j++) { if (appJs[j] === "{") d++; else if (appJs[j] === "}" && --d === 0) break; }
+      return appJs.slice(i, j + 1);
+    };
+    const railsSrc = (/var RAILS = \[[\s\S]*?\n  \];/.exec(appJs) || [""])[0];
+    const lift = (names, args, ret) => new Function(...args, railsSrc + "\n" + names.map(fnSrc).join("\n") + "\nreturn " + ret + ";");
+    const linkOf = lift(["linkOf"], [], "linkOf")();
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    ok("a link names the account, the rail, the amount to the sen and the reference",
+      same(linkOf("#maybank/transfer/70/k7m2-p9qr"), { key: "maybank", rail: "transfer", amount: "70.00", ref: "k7m2-p9qr" }) &&
+      same(linkOf("#gx/qr/215.5/0000-0000"), { key: "gx", rail: "qr", amount: "215.50", ref: "0000-0000" }) &&
+      same(linkOf("#maybank"), { key: "maybank", rail: "", amount: "", ref: "" }) && linkOf("").key === "");
+    ok("a part that fails its check is dropped, never repaired, so a crafted link shows only what a genuine one could",
+      same(linkOf("#maybank/all/70abc/Send%20it%20to%20another%20account"), { key: "maybank", rail: "", amount: "", ref: "" }) &&
+      linkOf("#maybank/qr/0/x").amount === "" && linkOf("#maybank/qr/1234567/x").amount === "" &&
+      linkOf("#maybank/qr/1.005/x").amount === "" && linkOf("#maybank/qr/-5/x").amount === "" &&
+      linkOf("#maybank/qr/5/" + "a".repeat(21)).ref === "" && linkOf("#maybank/qr/5/a%3Cb").ref === "" &&
+      linkOf("#%E0%A4%A/qr").key === "" && linkOf("#maybank/%E0/5/x").rail === "");
+
+    // fillDue against a stub page: what it would show, and what a tap copies.
+    const mk = () => ({ kids: [], hidden: true, appendChild(c) { this.kids.push(c); }, addEventListener(t, f) { this.tap = f; } });
+    const drive = (hash, a, isDown) => {
+      const elDue = mk(), copied = [];
+      Object.defineProperty(elDue, "textContent", { set() { this.kids = []; }, get() { return ""; } });
+      const fill = lift(["linkOf", "fillRows", "fillDue"], ["location", "document", "elDue", "down", "copyValue"], "fillDue")(
+        { hash }, { createElement: mk }, elDue, () => !!isDown, (v, what) => copied.push([v, what]));
+      fill(a);
+      elDue.kids.forEach((k) => k.tap && k.tap());
+      return { hidden: elDue.hidden, rows: elDue.kids.map((k) => k.kids.map((s) => s.textContent)), copied };
+    };
+    const on = drive("#maybank/transfer/70/k7m2-p9qr", { key: "maybank" });
+    ok("the amount and the reference show under the linked account, and a tap copies the figure bare",
+      !on.hidden && same(on.rows, [["Amount", "RM 70.00"], ["Reference", "k7m2-p9qr"]]) &&
+      same(on.copied, [["70.00", "amount"], ["k7m2-p9qr", "reference"]]), JSON.stringify(on));
+    const other = drive("#maybank/transfer/70/k7m2-p9qr", { key: "ambank" });
+    const sus = drive("#maybank/transfer/70/k7m2-p9qr", { key: "maybank" }, true);
+    const bare = drive("#maybank", { key: "maybank" });
+    ok("on any other account, on a suspended one, or from a bare key, nothing shows",
+      other.hidden && !other.rows.length && sus.hidden && !sus.rows.length && bare.hidden && !bare.rows.length);
+
+    // route against stubs: the link's rail becomes the mode only where the account is on it.
+    const routed = (hash) => {
+      const seen = [];
+      const CODES = [{ key: "maybank", payload: "x", bank: "M", acct: "1" }, { key: "wise", payload: "", bank: "W", acct: "2" }];
+      lift(["linkOf", "indexOfKey", "railOf", "onRail", "route"], ["location", "CODES", "setRail", "showCode", "showList"], "route")(
+        { hash }, CODES, (r) => seen.push("rail:" + r), (i) => seen.push("code:" + i), () => seen.push("list"))();
+      return seen.join(" ");
+    };
+    ok("a link opens its account at its rail, falls back where the account is not on it, and a bad key lands on the list",
+      routed("#maybank/transfer/70/k7m2-p9qr") === "rail:transfer code:0" &&
+      routed("#wise/qr/70/k7m2-p9qr") === "code:1" && routed("#maybank") === "code:0" &&
+      routed("#nobody/qr/70/x") === "list", [routed("#maybank/transfer/70/k7m2-p9qr"), routed("#wise/qr/70/k7m2-p9qr")].join(" | "));
+    ok("the figure is filled on every repaint of the code, and hidden by default in the markup",
+      /document\.body\.setAttribute\("data-view", v\);\s*fillDue\(a\);/.test(appJs) &&
+      /<div class="due" id="due"[^>]*hidden><\/div>/.test(indexHtml) && /\.due\[hidden\]\{display:none;\}/.test(cssCode));
+  }
 
   ok("the number is embossed rather than printed: a shadow, a highlight and a face",
     /function emboss\(/.test(read(path.join(PUB, "qr-art.js"))) &&

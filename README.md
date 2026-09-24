@@ -33,6 +33,7 @@ back gesture; whichever account you came from is scrolled back into view for you
 | Under maintenance | An account being changed on the laptop shows **Under maintenance** and no code at all. Flip it from the local page; the phone follows within seconds. |
 | Keyboard | Left and right arrows step through, `Enter` or `S` does whatever a tap would, `C` copies the account number, `Esc` goes back. |
 | One account, every time | The address ends in the account's key, so `.../#maybank` opens straight onto it. Point the home-screen icon there and the app skips the list. |
+| A payer's link | The address can go on to name the way, the amount and a reference: `.../#maybank/transfer/70.00/k7m2-p9qr` opens Maybank on Transfer with **RM 70.00** and the reference under the number, each copying on a tap. The Counter's pay sheet writes these. A part that is not a real rail, a figure or a short reference is left out, never shown. |
 
 There is no plain-code button any more. The renderer drops to an ordinary black-and-white
 code BY ITSELF when the coin would be too small to scan, which is a safety net rather than a
