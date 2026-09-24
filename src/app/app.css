@@ -557,6 +557,7 @@ button.prow:focus-visible{outline:2px solid var(--salt-brass);outline-offset:2px
   font-weight:500;
   letter-spacing:.14em;
   text-transform:uppercase;
+  text-wrap:balance;
   color:var(--salt-mist);
 }
 

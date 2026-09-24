@@ -858,7 +858,7 @@ section("2. The bundle carries the codes and nothing else");
    * other. The label is held open rather than timed out, because it describes what is on
    * screen rather than reporting something that just happened. */
   ok("the view says what a tap does, and the label does not time out",
-    /say\(viewOf\(CODES\[idx\]\) === "qr" \? "Tap to save" : "Tap a value to copy", false\);/.test(appJs) &&
+    /say\(viewOf\(a\) !== "qr" \? "Tap a value to copy" : dueRows\(a\)\.length \? "Tap the code to save, a value to copy" : "Tap to save", false\);/.test(appJs) &&
     /if \(msg && hold !== false\)/.test(appJs));
   ok("a hold does not then also fire the tap, so one press never saves twice",
     /if \(held\)/.test(appJs));
@@ -969,7 +969,7 @@ section("2. The bundle carries the codes and nothing else");
     const drive = (hash, a, isDown) => {
       const elDue = mk(), copied = [];
       Object.defineProperty(elDue, "textContent", { set() { this.kids = []; }, get() { return ""; } });
-      const fill = lift(["linkOf", "fillRows", "fillDue"], ["location", "document", "elDue", "down", "copyValue"], "fillDue")(
+      const fill = lift(["linkOf", "dueRows", "fillRows", "fillDue"], ["location", "document", "elDue", "down", "copyValue"], "fillDue")(
         { hash }, { createElement: mk }, elDue, () => !!isDown, (v, what) => copied.push([v, what]));
       fill(a);
       elDue.kids.forEach((k) => k.tap && k.tap());
@@ -984,6 +984,19 @@ section("2. The bundle carries the codes and nothing else");
     const bare = drive("#maybank", { key: "maybank" });
     ok("on any other account, on a suspended one, or from a bare key, nothing shows",
       other.hidden && !other.rows.length && sus.hidden && !sus.rows.length && bare.hidden && !bare.rows.length);
+
+    // sayTap against stubs: the label under the strip names its copy too, and only while the strip is there.
+    const said = (hash, key, view) => {
+      let got = null;
+      lift(["linkOf", "dueRows", "sayTap"], ["location", "CODES", "idx", "viewOf", "down", "say"], "sayTap")(
+        { hash }, [{ key }], 0, () => view, () => false, (m, hold) => { got = m + "|" + hold; })();
+      return got;
+    };
+    const saying = [said("#maybank/qr/70/k7m2-p9qr", "maybank", "qr"), said("#maybank", "maybank", "qr"),
+      said("#maybank/qr/70/k7m2-p9qr", "ambank", "qr"), said("#maybank/transfer/70/k7m2-p9qr", "maybank", "transfer")];
+    ok("on the code with a link's amount the label names both taps, the code's save and the strip's copy, and otherwise one",
+      same(saying, ["Tap the code to save, a value to copy|false", "Tap to save|false", "Tap to save|false", "Tap a value to copy|false"]),
+      JSON.stringify(saying));
 
     // route against stubs: the link's rail becomes the mode only where the account is on it.
     const routed = (hash) => {

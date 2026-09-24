@@ -392,12 +392,16 @@
 
   /* What the link carried, on the account it named and on no other: a step or a tap on another
    * account writes a bare key, and the figure goes with it. A suspended account shows none. */
-  function fillDue(a) {
+  function dueRows(a) {
     var L = linkOf(location.hash), rows = [];
     if (a && !down(a) && L.key === a.key) {
       if (L.amount) rows.push(["Amount", "RM " + L.amount, "amount", L.amount]);
       if (L.ref) rows.push(["Reference", L.ref, "reference"]);
     }
+    return rows;
+  }
+  function fillDue(a) {
+    var rows = dueRows(a);
     fillRows(elDue, rows);
     elDue.hidden = !rows.length;
   }
@@ -453,9 +457,11 @@
   }
 
   /* THE VIEW NAMES ITS OWN TAP, and the label is held open rather than timed out, because it
-   * describes what is on screen rather than reporting something that just happened. */
+   * describes what is on screen rather than reporting something that just happened. On the code
+   * a link's amount and reference sit just above the label and copy on a tap, so it names both. */
   function sayTap() {
-    say(viewOf(CODES[idx]) === "qr" ? "Tap to save" : "Tap a value to copy", false);
+    var a = CODES[idx];
+    say(viewOf(a) !== "qr" ? "Tap a value to copy" : dueRows(a).length ? "Tap the code to save, a value to copy" : "Tap to save", false);
   }
 
   /* Copy the digits, not the spacing: the spaced form is for reading, and what goes into a
