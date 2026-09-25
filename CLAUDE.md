@@ -84,7 +84,7 @@ Read the note at the top of the file first; `npm test` re-asserts every number.
   `linkOf`: a format change is both repos, this one shipped first. **That suite lifts
   `function linkOf(` and the `var RAILS = [` block by text from `public/app.js` in this
   checkout on disk**, not GitHub: keep both in their present shape, `linkOf` needing nothing
-  but `RAILS`, and fast-forward this checkout after any push from a worktree.
+  but `RAILS` (asserted), and fast-forward this checkout after any push from a worktree.
 - **Every account carries a `bankMark`, and the build ships it for every account**; the suite
   fails a code account without one. `holderMark` stays plate-only. `bank` ships for every
   account and is what the row and the plate show.

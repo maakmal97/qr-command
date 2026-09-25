@@ -938,6 +938,30 @@ section("2. The bundle carries the codes and nothing else");
     /if \(down\(a\)\) \{[\s\S]{0,600}?elPlate\.textContent = "";/.test(appJs) &&
     /if \(down\(a\)\) \{ say\("Under maintenance"\); return; }/.test(appJs));
 
+  /* SALT-COMMAND LIFTS THIS PARSER BY TEXT (26 Sep 2026; CLAUDE.md, the payer's link). Its suite
+   * reads public/app.js in this checkout, cuts out `function linkOf(` by brace count and the RAILS
+   * block by the pattern below, and runs the two alone to read back every link its payHref writes.
+   * Done here the same way, first and by name: the lifts further down throw rather than fail when
+   * that shape goes, and over there it would be a red suite in another repo. */
+  {
+    let back;
+    try {
+      const at = appJs.indexOf("function linkOf(");
+      const rails = (/var RAILS = \[[\s\S]*?\n  \];/.exec(appJs) || [""])[0];
+      if (at < 0 || !rails) throw new Error(at < 0 ? "no function linkOf(" : "no var RAILS block closing on its own '  ];' line");
+      let d = 0, j = appJs.indexOf("{", at);
+      for (; j >= 0 && j < appJs.length; j++) { if (appJs[j] === "{") d++; else if (appJs[j] === "}" && --d === 0) break; }
+      const lifted = new Function(rails + "\n" + appJs.slice(at, j + 1) + "\nreturn linkOf;")();
+      back = ["#m/transfer/70.00/k7m2-p9qr", "#m/qr/215.50/0000-0000", "#m/qr/999999.99/k7m2-p9qr"].map((h) => lifted(h));
+    } catch (e) { back = String(e && e.message); }
+    ok("salt-command can lift linkOf and RAILS out of public/app.js by text and read back what its payHref writes",
+      JSON.stringify(back) === JSON.stringify([
+        { key: "m", rail: "transfer", amount: "70.00", ref: "k7m2-p9qr" },
+        { key: "m", rail: "qr", amount: "215.50", ref: "0000-0000" },
+        { key: "m", rail: "qr", amount: "999999.99", ref: "k7m2-p9qr" }]),
+      "keep both in their present shape, linkOf needing nothing but RAILS: " + JSON.stringify(back));
+  }
+
   /* THE PAYER'S LINK (24 Sep 2026, the Counter's pay sheet): #<key>/<rail>/<amount>/<reference>.
    * Driven, not read: the shipped functions are lifted out of app.js by name and run against
    * stubs, so a check can fail only if the behaviour does. */
