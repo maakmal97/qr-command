@@ -1,6 +1,6 @@
 # QR Command
 
-British English and no em or en dashes hold in files, code and copy too. Mechanism and
+No en dashes in files, code and copy either. Mechanism and
 measured numbers: `docs/DETAIL.md`.
 
 ## Hard rules
