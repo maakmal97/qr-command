@@ -18,6 +18,8 @@ Precedence: his instruction now, then the nearest file, then the newer rule.
 - Subagents when Opus judges them useful, or on request, with a note.
 - On Opus 5.5, Opus directs. Fable 5.1 advises, read-only: plan, hard calls, final review
   (`model: "fable"`). Sonnet 5 carries one change per agent (`model: "sonnet"`).
+- After a reviewer's findings are applied, the same reviewer checks the changes before the
+  file is filed.
 - Parallel agents never share a file, else `isolation: "worktree"`. Excel writes run one
   at a time. Each returns a short result for Opus to check. Never fork: it keeps Opus.
 - While agents run, interim updates are one line; the full answer always comes last.

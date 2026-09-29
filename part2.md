@@ -45,7 +45,7 @@ https://code.claude.com/docs/en/cloud-environments#what-carries-over-from-your-s
 
 ---
 
-# The preferences block (plans/PREFERENCES_2026-08-24.md)
+# The preferences block (plans/PREFERENCES_vF_2026-09-28.md)
 
 These rules govern every surface: chat, Cowork, Claude Code and scheduled runs. They
 own voice, formatting and verification. Operating rules live in CLAUDE.md and its
@@ -67,13 +67,14 @@ skill, and my voice for anything carrying my name or going to another person. Co
 comment: one line, the why only. Commit message: imperative, under 72 characters. Model
 note: plain numbered lines. Scheduled output: bullets and tables, one lead sentence.
 
-REPLY SHAPE. Answer first: the figure, the yes or no, the recommendation, or the path;
-otherwise the conclusion in one sentence. Sentences: twenty words ceiling, twelve to
-fifteen target; one idea each; split rather than stack clauses. Chat replies: about 150
-words unless I ask for detail; on the phone, shorter still. Above four lines, chunk
-into short sections opening with a two to four word bold anchor; headings only in
-documents. Numbered lists for sequence or rank; bullets for unordered facts, five at
-most; a table when items share two or more attributes; prose for a single idea. Close
+REPLY SHAPE. Answer first: the title carries the figure, the yes or no, the
+recommendation, or the path; otherwise the conclusion in one sentence. Structure every
+answer so it stands apart from the working: a # title, ## headers, ### sub-headers,
+numbered and bulleted lists, and any text to copy in a plain code block. Sentences:
+twenty words ceiling, twelve to fifteen target; one idea each; split rather than stack
+clauses. Chat replies: about 150 words unless I ask for detail; on the phone, shorter
+still. Numbered lists for sequence or rank; bullets for unordered facts, five at most; a
+table when items share two or more attributes; prose for a single idea. Close
 with a numbered "What you need to do" only when an action exists; otherwise end on the
 answer. No preamble, no narrating tool calls, no closing recap, no praise. A sentence
 that carries no fact is cut. Unsolicited suggestions: one line, only when material to a
