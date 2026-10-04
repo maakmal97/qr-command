@@ -139,8 +139,33 @@ function cleanState(raw) {
   return { maintenance, order, at: new Date().toISOString() };
 }
 
+/* The self-lifting maintenance guard. MAINTENANCE_UNTIL is an ISO timestamp; while now is before
+ * it, everything answers 503, assets included. Absent, empty or unparseable does nothing. */
+const MAINT_TEXT = "The store is currently under maintenance. We are open for business again at 00:01 midnight of October 5.";
+const MAINT_PAGE = '<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8">' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Maintenance</title>' +
+  '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
+  'padding:16px;box-sizing:border-box;font:18px/1.5 system-ui,sans-serif;text-align:center}' +
+  'p{max-width:28em}</style></head><body><p>' + MAINT_TEXT + '</p></body></html>';
+
+function maintenance(request, env) {
+  const until = Date.parse((env && env.MAINTENANCE_UNTIL) || "");
+  if (!(Date.now() < until)) return null;
+  const base = { "cache-control": "no-store", "retry-after": String(Math.ceil((until - Date.now()) / 1000)) };
+  if ((request.headers.get("accept") || "").includes("text/html")) {
+    return new Response(MAINT_PAGE, { status: 503, headers: { ...base,
+      "content-type": "text/html; charset=utf-8", "x-robots-tag": SECURITY["x-robots-tag"],
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'" } });
+  }
+  return new Response(JSON.stringify({ ok: false, error: "maintenance" }), { status: 503,
+    headers: { ...base, "content-type": "application/json; charset=utf-8", ...SECURITY } });
+}
+
 export default {
   async fetch(request, env) {
+    const held = maintenance(request, env);
+    if (held) return held;
+
     if (!env || !env.ASSETS) {
       // Fail closed and say why. A silent fallthrough here would serve nothing and look like
       // a platform outage.

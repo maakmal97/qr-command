@@ -1620,8 +1620,9 @@ if (wrangler) {
   /* THE GATE'S TWO VARIABLES AND NOTHING ELSE. Neither is a secret: the team domain is in every
    * Access login URL and the audience tag only names an application. What matters is that
    * nothing that IS a secret is declared here, and that the Worker reads exactly these. */
-  ok("the config declares exactly ACCESS_TEAM and ACCESS_AUD, both strings, and no secret",
-    wrangler.vars && Object.keys(wrangler.vars).sort().join() === "ACCESS_AUD,ACCESS_TEAM" &&
+  ok("the config declares ACCESS_TEAM, ACCESS_AUD and an empty MAINTENANCE_UNTIL, all strings, and no secret",
+    wrangler.vars && Object.keys(wrangler.vars).sort().join() === "ACCESS_AUD,ACCESS_TEAM,MAINTENANCE_UNTIL" &&
+    wrangler.vars.MAINTENANCE_UNTIL === "" &&
     typeof wrangler.vars.ACCESS_TEAM === "string" && typeof wrangler.vars.ACCESS_AUD === "string" &&
     !/KEY|SECRET|TOKEN|PASS/i.test(Object.keys(wrangler.vars).join()));
   ok("the public surface is still read only: the only writes are behind identity()",
@@ -1683,6 +1684,30 @@ const hit = (url, init) => worker.fetch(new Request("https://pay.example" + url,
     { ASSETS: { fetch: async () => new Response("not found", { status: 404 }) } });
   ok("a missing asset stays a 404 and is not rewritten into the app", r.status === 404);
   ok("the 404 still carries the security headers", !!r.headers.get("x-robots-tag"));
+}
+
+/* THE MAINTENANCE GUARD: 503 for everything, assets included, until the stamp passes. */
+{
+  const at = (iso, url = "/", accept = "text/html") => worker.fetch(
+    new Request("https://pay.example" + url, { headers: { accept } }),
+    { ...mockEnv(), MAINTENANCE_UNTIL: iso });
+  const soon = new Date(Date.now() + 3600e3).toISOString();
+  const r = await at(soon);
+  const page = await r.text();
+  ok("inside the window an HTML request gets the 503 page with Retry-After and no-store",
+    r.status === 503 && /^[1-9]\d*$/.test(r.headers.get("retry-after") || "") &&
+    r.headers.get("cache-control") === "no-store" && /<title>Maintenance<\/title>/.test(page) &&
+    page.includes("The store is currently under maintenance. We are open for business again at 00:01 midnight of October 5.") &&
+    r.headers.get("content-security-policy") === "default-src 'none'; style-src 'unsafe-inline'" &&
+    !/<script|https?:/i.test(page));
+  ok("inside the window an asset path is held too", (await at(soon, "/app.js", "*/*")).status === 503);
+  const j = await at(soon, "/state.json", "application/json");
+  ok("inside the window a non-HTML request gets the JSON refusal",
+    j.status === 503 && (await j.json()).error === "maintenance");
+  ok("after the window the Worker serves as normal",
+    (await at(new Date(Date.now() - 1000).toISOString())).status === 200);
+  ok("an empty value does nothing", (await at("")).status === 200);
+  ok("an unparseable value does nothing", (await at("tomorrow-ish")).status === 200);
 }
 
 /* THE GATE, with a real key pair. A token is minted here and signed RS256 with a key the test
