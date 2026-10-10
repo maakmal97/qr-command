@@ -34,7 +34,8 @@ Numbers are fixed: `test/verify.mjs` cites rule 4; `docs/DETAIL.md` cites rule 7
    refuses it. Logos are `Path2D` data, never rasters; `img-src` refuses `data:`, asserted.
 7. **The identity's tokens in `src/app/app.css` are generated** from another repo's
    design-token root (source path: `MEMORY.md`) by `node tools/designsync.mjs --pull`, between
-   the DESIGN markers; the build refuses to ship on drift. The rest of `app.css` is this app's
+   the DESIGN markers; the build refuses to ship on drift. **Pull only from salt-ds `master`:**
+   `designsync` and the build read whatever branch that checkout has out. The rest of `app.css` is this app's
    own and restates no colour the identity names. The two fonts in `src/app/fonts/` are pulled
    the same way; the build copies, hashes, stamps and precaches them.
 
