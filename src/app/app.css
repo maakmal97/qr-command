@@ -52,6 +52,10 @@
      warning drawn in ember read as one more heading. This is a true alarm: breached, refused, a
      figure that must not be missed. dE 32.5 from ember, 52.6 from copper, 5.6:1 on obsidian. */
   --salt-alarm: #fa3c5a;
+  /* THE WARNING, added 05 Oct 2026 for the Counter's restock light (yellow, between verdigris and ember). Brass is the
+     mark's own colour and the focus colour, so it cannot say "watch this"; amber is a bright yellow, 12.0:1 on obsidian and
+     11.3:1 on the panel, far more saturated than brass and clear of ember and alarm. */
+  --salt-amber: #f2c230;
 
   /* The books. Each is its own hue, and none of them is a SEMANTIC one: ember, verdigris,
      steel and copper each mean something on the desk, so a product dot drawn in one would
@@ -90,6 +94,10 @@
   /* Gradients. Brass to copper for marks and fills; white to copper for titles. */
   --salt-gradient: linear-gradient(135deg, var(--salt-brass), var(--salt-copper));
   --salt-gradient-title: linear-gradient(135deg, #ffffff 30%, var(--salt-copper) 100%);
+  /* the desk bar's material: a sheen over a near-opaque fill, and the fill alone where glass is not drawn */
+  --salt-deskbar-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  --salt-deskbar-fill: rgba(13, 11, 9, 0.9);
+  --salt-deskbar-solid: rgb(18, 15, 12);
 
   /* Semantic aliases */
   --salt-surface: var(--salt-obsidian);
@@ -133,6 +141,14 @@
   --salt-radius-lg: 24px;
   --salt-radius-xl: 36px;
   --salt-radius-pill: 100px;
+
+  /* One theme (his word of 09 Oct 2026): the identity as drawn, obsidian ground and salt text. The four
+     times of day of 05 Oct 2026 are retired. Three tokens name a fixed use: the ink on a filled control
+     (dark on the brass pill) and the QR's field and ink, light and dark so a code always scans. */
+  --salt-ink-on-accent: var(--salt-obsidian);
+  --salt-qr-field: #f2f4f5;
+  --salt-qr-ink: #0b1215;
+  color-scheme: dark;
 }
 /* THE BRAND FACES, SELF-HOSTED, AND THE ONLY WAY THEY LOAD (his instruction of 22 Sep 2026: no Google
    Fonts). The files are Google's own latin subsets, fetched once and kept in src/fonts/ beside this
