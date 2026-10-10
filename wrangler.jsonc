@@ -16,6 +16,10 @@
 	// Do not raise this past what the installed workers runtime supports: wrangler 4.120.0
 	// tops out at 2026-08-08 and refuses to start on anything later, locally and on deploy.
 	"compatibility_date": "2026-08-08",
+	// NO PREVIEW URLS (10 Oct 2026). A version's own workers.dev address would sit outside the
+	// Access application, which covers /admin by hostname, so /admin there would skip the first
+	// lock. Nothing reads one. Takes effect on the next `wrangler deploy`.
+	"preview_urls": false,
 
 	// A Worker with static assets. public/ is the entire shipping surface and it is a build
 	// output: tools/build.mjs writes it and refuses to finish if anything from the master's
