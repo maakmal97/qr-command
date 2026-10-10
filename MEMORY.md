@@ -25,7 +25,7 @@ The payer's-link format is also implemented by salt-command's `stmt/pay.js` (`pa
 whose suite reads it back through this repo's `linkOf`. This repo shipped the format first.
 
 ## Tooling
-wrangler 4.147.0 (workerd 2026-10-01); `compatibility_date` set to 2026-08-08.
+wrangler 4.149.0 (workerd 1.20261006.1, 10 Oct 2026); `compatibility_date` set to 2026-08-08.
 
 ## Testing
 `test/verify.mjs`: 262 assertions (10 Oct 2026), no network; decodes about a thousand renders per run.
