@@ -10,7 +10,7 @@ Numbers are fixed: `test/verify.mjs` cites rule 4; `docs/DETAIL.md` cites rule 7
 1. **`public/` is build output**, committed so the deployed bytes are the reviewed bytes. A hand
    edit there is overwritten by `npm run build`, and the suite fails meanwhile because the build
    id no longer hashes the files on disk. **The store is `data/accounts.json`, committed**; this
-   private repo is its only home. Adding or removing an account is an edit there, then `npm run
+   repo is its only home (public since 14 Oct 2026, his decision, every account suspended first). Adding or removing an account is an edit there, then `npm run
    deploy`.
 2. **Never rewrite a `payload` string.** The trailing four characters are a CRC, so a tidied
    payload can still scan and pay somebody else. The build copies and checks; it never repairs.
@@ -180,7 +180,7 @@ curl -sI https://<host>/ | grep -iE "x-robots-tag|content-security-policy"
 ## Deliberately not here
 
 No Cloudflare Access on the public page: a DuitNow code can only receive money, and the repo
-stays private regardless. No `_headers` file: the Worker sets every header. jsQR is not
+is public since 14 Oct 2026 (his decision, for free Actions minutes). No `_headers` file: the Worker sets every header. jsQR is not
 shipped (130 KB); the runtime safety net is the plain-code fallback.
 
 Read @MEMORY.md beside this file (current facts) before the first action; correct it in place. History: docs/NOTES.md and git log.
