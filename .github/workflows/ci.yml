@@ -1,0 +1,35 @@
+# CI, added 14 Oct 2026.
+#
+# The suite on GitHub's machine for every push to main and every pull request, so a push that
+# skipped `npm run deploy` (a worktree, a docs change, a hand push) is still tested and shows a
+# tick or a cross. It does not build (the build reads the salt-ds checkout beside this one) and
+# it never deploys: `npm run deploy` on the laptop stays the only road to the live Worker.
+# `npm test` is test/verify.mjs: no network, about 15 s.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test

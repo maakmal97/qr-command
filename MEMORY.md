@@ -8,6 +8,9 @@ saves it. On Transfer, the bank and the number; on JomPAY, the biller code and r
 each value copies on a tap. One edit surface, `/admin/`, behind Cloudflare Access, sets which
 accounts show and their order.
 
+## Visibility
+Public since 14 Oct 2026, his decision, so CI runs on free Actions minutes. Before the switch every account was set under maintenance in KV `state` (14 of 14, read back live); the accounts stay suspended until he lifts them in `/admin/`.
+
 ## Bundle fields (CLAUDE.md rule 4)
 14 fields ship: `key`, `name`, `brand`, `payload`, `acct`, `maintenance`, `bank`, `holder`,
 `bankMark`, `holderMark`, `tag`, `ring`, `biller`, `ref1`.
