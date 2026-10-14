@@ -142,12 +142,41 @@
   --salt-radius-xl: 36px;
   --salt-radius-pill: 100px;
 
-  /* One theme (his word of 09 Oct 2026): the identity as drawn, obsidian ground and salt text. The four
-     times of day of 05 Oct 2026 are retired. Three tokens name a fixed use: the ink on a filled control
+  /* Two themes (11 Oct 2026): Night is this :root as drawn, obsidian ground and salt text; Tide is
+     :root[data-theme="tide"] below, chosen per device by the page (Tide until chosen). The four times of day,
+     the cross-fade and the clock's picker stay retired. Three tokens name a fixed use: the ink on a filled control
      (dark on the brass pill) and the QR's field and ink, light and dark so a code always scans. */
   --salt-ink-on-accent: var(--salt-obsidian);
   --salt-qr-field: #f2f4f5;
   --salt-qr-ink: #0b1215;
+
+  /* THE LOOK SWATCHES (12 Oct 2026, the Counter's choice Sheet). A tile that offers a theme must show THAT theme's ground and
+     accent while the other is on, which no token that follows the theme can: so each is its own token, the same under both
+     themes (Tide does not restate them). They repeat obsidian and brass at Night and at Tide, and are held equal to them. */
+  --salt-swatch-night-ground: #05080a;
+  --salt-swatch-night-accent: #c5a059;
+  --salt-swatch-tide-ground: #03141a;
+  --salt-swatch-tide-accent: #7fd1c0;
+
+  /* PAPER (12 Oct 2026). A statement is printed and photographed as often as it is read, and a dark page prints as a black
+     rectangle, so its print block is drawn in ink on paper. These are those inks: the same in both themes (a sheet of paper
+     is not a theme, so Tide does not restate them), each text ink holding 4.5:1 on the paper and the panels on it
+     (npm run contrast). The three hues are the desk's words as ink: copper the label, verdigris what is settled or owed to
+     the customer, ember what they owe, steel what is pending. */
+  --salt-paper: #ffffff;           /* the sheet */
+  --salt-paper-card: #fbfaf7;      /* a figure panel on it */
+  --salt-paper-warn: #fdf4f1;      /* a warning panel on it */
+  --salt-paper-ink: #111111;       /* text, and the figures */
+  --salt-paper-ink-soft: #333333;  /* running lines */
+  --salt-paper-ink-muted: #555555; /* captions and notes */
+  --salt-paper-copper: #8a5a20;
+  --salt-paper-verdigris: #1d6b52;
+  --salt-paper-ember: #a8442c;
+  --salt-paper-steel: #41586e;
+  --salt-paper-rule: #dddddd;      /* a table's hairline */
+  --salt-paper-brass: #c9ad74;     /* the brass rule */
+  --salt-paper-edge: #d8c79c;      /* a panel's edge */
+  --salt-paper-edge-ember: #e0a894; /* a warning panel's edge */
   color-scheme: dark;
 }
 /* THE BRAND FACES, SELF-HOSTED, AND THE ONLY WAY THEY LOAD (his instruction of 22 Sep 2026: no Google
@@ -162,7 +191,7 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(./fonts/fraunces-latin.woff2?v=289fe5224877) format('woff2');
+  src: url(./fonts/fraunces-latin.woff2?v=400d28e78acb) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
@@ -170,7 +199,7 @@
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
-  src: url(./fonts/jetbrains-mono-latin.woff2?v=289fe5224877) format('woff2');
+  src: url(./fonts/jetbrains-mono-latin.woff2?v=400d28e78acb) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* ==== END DESIGN tokens ==== */
