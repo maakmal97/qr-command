@@ -521,6 +521,9 @@ body:not([data-view="qr"]) .coinbtn{display:none;}
  * gives up as little as it can. Shown on both rails; hidden when the link carried neither. */
 .due{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;column-gap:20px;}
 .due[hidden]{display:none;}
+/* The two ways back from a payer's link, side by side, wrapping on a narrow phone. */
+.goback{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
+.goback[hidden]{display:none;}
 .due .prow{border-bottom:0;}
 button.prow{cursor:pointer;transition:color var(--t-fast);}
 button.prow:hover .pvalue{color:var(--salt-brass);}

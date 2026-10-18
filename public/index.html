@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<link rel="stylesheet" href="./app.css?v=6d49228255ea">
+<link rel="stylesheet" href="./app.css?v=e43bd74062d6">
 </head>
 <body class="view-list">
 
@@ -82,6 +82,14 @@
     <div class="due" id="due" aria-label="Amount and reference" hidden></div>
 
     <div class="tools">
+      <!-- THE WAY BACK FROM A PAYER'S LINK (18 Oct 2026, a customer could not find it): the page
+           was opened from their account to pay, and Accounts above leads further in, never back.
+           Shown with the link's amount and reference, on that account only, with Return to order page
+           for one who is not paying now (his words of 18 Oct 2026). Both close the page. -->
+      <div class="goback" id="goback" hidden>
+        <button type="button" id="unpaid" class="pill">Return to order page</button>
+        <button type="button" id="paid" class="pill save">Paid? Go back</button>
+      </div>
       <p id="say" class="say" role="status" aria-live="polite"></p>
     </div>
   </main>
@@ -91,12 +99,12 @@
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>
 </noscript>
 
-<script src="./qrcode.js?v=6d49228255ea"></script>
+<script src="./qrcode.js?v=e43bd74062d6"></script>
 <!-- The traced marks, registering themselves on self.MARKS. Path data, so no image is fetched
      and the Content-Security-Policy stays `default-src 'none'` with no img-src at all. -->
-<script src="./marks.js?v=6d49228255ea"></script>
-<script src="./qr-art.js?v=6d49228255ea"></script>
-<script src="./data.js?v=6d49228255ea"></script>
-<script src="./app.js?v=6d49228255ea"></script>
+<script src="./marks.js?v=e43bd74062d6"></script>
+<script src="./qr-art.js?v=e43bd74062d6"></script>
+<script src="./data.js?v=e43bd74062d6"></script>
+<script src="./app.js?v=e43bd74062d6"></script>
 </body>
 </html>
