@@ -987,7 +987,7 @@
     var text = initialsOf(a.name);
     g.fillStyle = ink;
     g.font = "700 " + Math.round(px * (text.length > 2 ? 0.28 : 0.34)) +
-      "px 'JetBrains Mono','Cascadia Mono',Consolas,Menlo,monospace";
+      "px 'Geist Mono','Cascadia Mono',Consolas,Menlo,monospace";
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.fillText(text, px / 2, px / 2 + px * 0.02);

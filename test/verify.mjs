@@ -1843,11 +1843,11 @@ section("5. The service worker's guards");
 
   /* THE BRAND FACES (22 Sep 2026): the design system's two files, beside the page, named by the
      stylesheet with this build's stamp, precached, and admitted by the policy from self alone. */
-  const FONT_FILES = ["fraunces-latin.woff2", "jetbrains-mono-latin.woff2"];
+  const FONT_FILES = ["newsreader-latin.woff2", "geist-mono-latin.woff2"];
   ok("the brand faces ship beside the page", FONT_FILES.every((f) => fs.existsSync(path.join(PUB, "fonts", f))));
   const cssF = read(path.join(PUB, "app.css"));
   ok("app.css declares both faces from ./fonts/, stamped with this build",
-    FONT_FILES.every((f) => cssF.includes("url(./fonts/" + f + "?v=" + rev.id + ")")) && /font-family: 'Fraunces'/.test(cssF));
+    FONT_FILES.every((f) => cssF.includes("url(./fonts/" + f + "?v=" + rev.id + ")")) && /font-family: 'Newsreader'/.test(cssF));
   ok("the shell precaches both faces", FONT_FILES.every((f) => shell.includes("./fonts/" + f + "?v=" + rev.id)));
   const workerF = read(path.join(PUB, "..", "src", "worker.js"));
   ok("the policy admits the page's own fonts and nothing else's", /font-src 'self'/.test(workerF) && !/font-src[^",]*(data:|http)/.test(workerF));
@@ -1917,7 +1917,7 @@ section("6. One build id, everywhere");
   for (const p of parts) h.update(p);
   h.update(dataBody);
   // the faces move the id too (22 Sep 2026), in the order the build hashes them
-  for (const f of ["fraunces-latin.woff2", "jetbrains-mono-latin.woff2"]) h.update(fs.readFileSync(path.join(PUB, "fonts", f)));
+  for (const f of ["newsreader-latin.woff2", "geist-mono-latin.woff2"]) h.update(fs.readFileSync(path.join(PUB, "fonts", f)));
   ok("the build id still hashes the files that are on disk", h.digest("hex").slice(0, 12) === rev.id,
     "run npm run build; something in public/ was changed by hand");
 }

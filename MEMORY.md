@@ -20,8 +20,9 @@ Generated from the `:root` of `Code\salt-ds\src\styles.css`: the owner's own "Sa
 Commodities" design system, not JPMorgan's Salt. `designsync` and the build read whatever
 branch that checkout has out, so it must be on an up-to-date `master` (a feature branch there
 fails the build). From a worktree `..\salt-ds` does not exist: set `SALT_DS`. Last pulled
-14 Oct 2026 from salt-ds `master` 1b14ed5 (PR #8; adds Tide swatches and paper inks, unused
-here; Night unchanged); `color-scheme: dark` arrives in the block as well as this app's own `:root`.
+18 Oct 2026 from salt-ds `master` 1e23e44 (1.6.0, PR #10): the faces are Newsreader over Geist
+Mono (`newsreader-latin.woff2`, `geist-mono-latin.woff2`; Fraunces and JetBrains Mono before);
+`color-scheme: dark` arrives in the block as well as this app's own `:root`.
 
 ## Access
 `/admin` sits in the shared "Salt / QR" Access application (also covers salt-command), aud

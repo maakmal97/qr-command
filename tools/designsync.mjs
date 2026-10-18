@@ -25,7 +25,7 @@ const DS_FONTS_CSS = resolve(DS_ROOT, "src", "fonts-local.css");
 const DS_FONTS = resolve(DS_ROOT, "src", "fonts");   /* beside fonts-local.css since 22 Sep 2026 */
 /* The brand faces (22 Sep 2026): the design system's files, copied into src/app/fonts/ by --pull,
    built into public/fonts/, hashed into the build id and precached with the shell. */
-export const FONT_FILES = ["fraunces-latin.woff2", "jetbrains-mono-latin.woff2"];
+export const FONT_FILES = ["newsreader-latin.woff2", "geist-mono-latin.woff2"];
 const APP_FONTS = resolve(REPO, "src", "app", "fonts");
 export const BEGIN = "/* ==== DESIGN tokens: generated from Code/salt-ds src/styles.css (:root) by tools/designsync.mjs --pull. Edit the design system, --pull; never this block. ==== */";
 export const END = "/* ==== END DESIGN tokens ==== */";
