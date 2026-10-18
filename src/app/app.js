@@ -407,7 +407,7 @@
     elDue.hidden = !rows.length;
     elGoBack.hidden = !rows.length;
   }
-  /* Paid? Go back, and Not paying, go back: the page was opened in a tab or the saved app's
+  /* Paid? Go back, and Return to order page: the page was opened in a tab or the saved app's
    * browser sheet, so closing it returns them to their account, which asks whether they sent it
    * (Not yet answers it for one not paying). Where the browser keeps the page open, it says how
    * to go back by hand, and holds the line. */

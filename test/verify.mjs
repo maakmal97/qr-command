@@ -1008,9 +1008,9 @@ section("2. The bundle carries the codes and nothing else");
     const bare = drive("#maybank", { key: "maybank" });
     ok("on any other account, on a suspended one, or from a bare key, nothing shows",
       other.hidden && !other.rows.length && sus.hidden && !sus.rows.length && bare.hidden && !bare.rows.length);
-    ok("Paid? Go back and Not paying, go back show with a link's amount and reference, on that account only, so a payer is never left with Accounts as the one way out",
+    ok("Paid? Go back and Return to order page show with a link's amount and reference, on that account only, so a payer is never left with Accounts as the one way out",
       on.paid === false && other.paid && sus.paid && bare.paid &&
-      /<div class="goback" id="goback" hidden>\s*<button type="button" id="unpaid" class="pill">Not paying, go back<\/button>\s*<button type="button" id="paid" class="pill save">Paid\? Go back<\/button>\s*<\/div>/.test(indexHtml) &&
+      /<div class="goback" id="goback" hidden>\s*<button type="button" id="unpaid" class="pill">Return to order page<\/button>\s*<button type="button" id="paid" class="pill save">Paid\? Go back<\/button>\s*<\/div>/.test(indexHtml) &&
       /\.goback\[hidden\]\{display:none;\}/.test(cssCode), JSON.stringify([on.paid, other.paid, sus.paid, bare.paid]));
     // each tap closes the page, and where the browser keeps it open says how to go back and holds the line
     {
