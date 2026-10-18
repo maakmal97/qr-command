@@ -37,7 +37,9 @@ Numbers are fixed: `test/verify.mjs` cites rule 4; `docs/DETAIL.md` cites rule 7
    the DESIGN markers; the build refuses to ship on drift. **Pull only from salt-ds `master`:**
    `designsync` and the build read whatever branch that checkout has out. The rest of `app.css` is this app's
    own and restates no colour the identity names. The two fonts in `src/app/fonts/` are pulled
-   the same way; the build copies, hashes, stamps and precaches them.
+   the same way; the build copies, hashes, stamps and precaches them. **A design change he gives is made in salt-ds
+   first and reaches this app in the same piece of work, unasked** (his word of 18 Oct 2026): salt-ds's
+   `npm run propagate` runs the pull and build here; never type the change into `app.css`.
 
 ## The renderer, `src/app/qr-art.js`
 
