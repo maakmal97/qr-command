@@ -32,6 +32,7 @@
   var elBack = document.getElementById("back");
   var elPlate = document.getElementById("plate");
   var elDue = document.getElementById("due");
+  var elGoBack = document.getElementById("goback");
   var elRails = document.getElementById("rails");
   var elList = document.getElementById("accounts");
 
@@ -404,7 +405,22 @@
     var rows = dueRows(a);
     fillRows(elDue, rows);
     elDue.hidden = !rows.length;
+    elGoBack.hidden = !rows.length;
   }
+  /* Paid? Go back, and Not paying, go back: the page was opened in a tab or the saved app's
+   * browser sheet, so closing it returns them to their account, which asks whether they sent it
+   * (Not yet answers it for one not paying). Where the browser keeps the page open, it says how
+   * to go back by hand, and holds the line. */
+  function goBack(line) {
+    try { window.close(); } catch (e) {}
+    setTimeout(function () { if (!document.hidden) say(line, false); }, 400);
+  }
+  document.getElementById("paid").addEventListener("click", function () {
+    goBack("Tap Done or close this tab, then tell us on your account");
+  });
+  document.getElementById("unpaid").addEventListener("click", function () {
+    goBack("Tap Done or close this tab to go back");
+  });
 
   function paint(pre) {
     var a = CODES[idx];

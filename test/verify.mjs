@@ -991,13 +991,13 @@ section("2. The bundle carries the codes and nothing else");
     // fillDue against a stub page: what it would show, and what a tap copies.
     const mk = () => ({ kids: [], hidden: true, appendChild(c) { this.kids.push(c); }, addEventListener(t, f) { this.tap = f; } });
     const drive = (hash, a, isDown) => {
-      const elDue = mk(), copied = [];
+      const elDue = mk(), elGoBack = mk(), copied = [];
       Object.defineProperty(elDue, "textContent", { set() { this.kids = []; }, get() { return ""; } });
-      const fill = lift(["linkOf", "dueRows", "fillRows", "fillDue"], ["location", "document", "elDue", "down", "copyValue"], "fillDue")(
-        { hash }, { createElement: mk }, elDue, () => !!isDown, (v, what) => copied.push([v, what]));
+      const fill = lift(["linkOf", "dueRows", "fillRows", "fillDue"], ["location", "document", "elDue", "elGoBack", "down", "copyValue"], "fillDue")(
+        { hash }, { createElement: mk }, elDue, elGoBack, () => !!isDown, (v, what) => copied.push([v, what]));
       fill(a);
       elDue.kids.forEach((k) => k.tap && k.tap());
-      return { hidden: elDue.hidden, rows: elDue.kids.map((k) => k.kids.map((s) => s.textContent)), copied };
+      return { hidden: elDue.hidden, paid: elGoBack.hidden, rows: elDue.kids.map((k) => k.kids.map((s) => s.textContent)), copied };
     };
     const on = drive("#maybank/transfer/70/k7m2-p9qr", { key: "maybank" });
     ok("the amount and the reference show under the linked account, and a tap copies the figure bare",
@@ -1008,6 +1008,25 @@ section("2. The bundle carries the codes and nothing else");
     const bare = drive("#maybank", { key: "maybank" });
     ok("on any other account, on a suspended one, or from a bare key, nothing shows",
       other.hidden && !other.rows.length && sus.hidden && !sus.rows.length && bare.hidden && !bare.rows.length);
+    ok("Paid? Go back and Not paying, go back show with a link's amount and reference, on that account only, so a payer is never left with Accounts as the one way out",
+      on.paid === false && other.paid && sus.paid && bare.paid &&
+      /<div class="goback" id="goback" hidden>\s*<button type="button" id="unpaid" class="pill">Not paying, go back<\/button>\s*<button type="button" id="paid" class="pill save">Paid\? Go back<\/button>\s*<\/div>/.test(indexHtml) &&
+      /\.goback\[hidden\]\{display:none;\}/.test(cssCode), JSON.stringify([on.paid, other.paid, sus.paid, bare.paid]));
+    // each tap closes the page, and where the browser keeps it open says how to go back and holds the line
+    {
+      const src = (/function goBack\(line\) \{[\s\S]*?\n  \}\n  document\.getElementById\("paid"\)[\s\S]*?\n  \}\);\n  document\.getElementById\("unpaid"\)[\s\S]*?\n  \}\);/.exec(appJs) || [""])[0];
+      const taps = {}, out = [];
+      for (const id of ["paid", "unpaid"]) {
+        let closed = 0, line = null, later = null;
+        new Function("document", "window", "setTimeout", "say", src)(
+          { hidden: false, getElementById: (k) => ({ addEventListener: (t, f) => { taps[k] = f; } }) },
+          { close() { closed++; } }, (f) => { later = f; }, (m, h) => { line = m + "|" + h; });
+        if (taps[id]) taps[id](); if (later) later();
+        out.push(closed + " " + line);
+      }
+      ok("each way back closes the page, and if it stays open says how to go back, held",
+        out[0] === "1 Tap Done or close this tab, then tell us on your account|false" && out[1] === "1 Tap Done or close this tab to go back|false", JSON.stringify(out));
+    }
 
     // sayTap against stubs: the label under the strip names its copy too, and only while the strip is there.
     const said = (hash, key, view) => {
