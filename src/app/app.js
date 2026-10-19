@@ -196,11 +196,65 @@
     if (down(CODES[i]) || viewOf(CODES[i]) !== "qr") return null;
     var a = CODES[i];
     if (!a) return null;
+    return faceOf(i);
+  }
+
+  /* THE KEPT CODE (owner, 19 Oct 2026). A tap on an account used to draw its coin then, about
+   * 230 ms on a phone. Each live account's coin is now drawn once, in idle time after the app
+   * opens (warm()), and kept; a tap shows the kept drawing, which is a drawImage.
+   *
+   * THE KEY IS EVERYTHING THAT DECIDES THE DRAWING: the account key, its payload, the rail, the
+   * size and pixel ratio it is drawn at, the brand and the name that ride on it, and whether the
+   * faces have loaded (the coin carries lettering, so one drawn before them is not the one drawn
+   * after). Look-up compares the whole key, so a payload that changed, a rail that changed or a
+   * window that resized finds nothing and draws afresh.
+   *
+   * A SUSPENDED ACCOUNT NEVER SHOWS A KEPT CODE. faceOf() refuses it and deletes the entry, and
+   * a change of state empties the whole store before anything repaints (see watchState: a tile
+   * that kept a painted coin under a dimmed tile is the failure that comment records). Nothing
+   * kept is ever handed to the clipboard or the gallery: the saved image is cardOf(), its own. */
+  var kept = {};        // account key -> { sig, canvas, meta }
+  var warmGen = 0;      // bumped by every warm(), so a queued warm-up of an older state stands down
+  var fontEpoch = 0;    // bumped when the faces load; part of the key
+  function faceOf(i) {
+    var a = CODES[i];
+    if (!a) return null;
+    if (down(a)) { delete kept[a.key]; return null; }
+    if (plate(a) || viewOf(a) !== "qr") return null;
+    var size = fit(), ratio = self.devicePixelRatio || 1;
+    var sig = JSON.stringify([a.key, a.payload, viewOf(a), size, ratio, a.brand, a.name, fontEpoch]);
+    var k = kept[a.key];
+    if (k && k.sig === sig) return k;
     var off = document.createElement("canvas");
-    var meta = paintFace(off, a, {
-      size: fit(), pixelRatio: self.devicePixelRatio || 1
-    });
-    return { canvas: off, meta: meta };
+    var meta = paintFace(off, a, { size: size, pixelRatio: ratio });
+    return (kept[a.key] = { sig: sig, canvas: off, meta: meta });
+  }
+
+  /* THE APP GETS ITS FIRST SECOND TO ITSELF. Drawn straight away, thirteen coins at once took the
+   * main thread from the opening list (measured on the throttled phone profile: cold open 1.25 s
+   * to 2.5 s), so the first warm-up waits WARM_FIRST_MS and then goes one account to an idle
+   * callback, the list's own order first because those are the ones a thumb reaches. Run again
+   * after anything that could change the key; what is already kept is found and skipped. */
+  var WARM_FIRST_MS = 1000;
+  function warm(delay) {
+    var gen = ++warmGen, queue = null;
+    function step() {
+      if (gen !== warmGen) return;
+      if (!queue) {
+        queue = shownOrder.filter(function (i) {
+          var a = CODES[i];
+          return !plate(a) && !down(a) && viewOf(a) === "qr";
+        });
+      }
+      if (!queue.length) return;
+      var i = queue.shift();
+      idle(function () {
+        if (gen !== warmGen) return;
+        try { faceOf(i); } catch (e) { /* a tap will draw it and say so */ }
+        setTimeout(step, 30);   // a gap for a frame or a touch between two drawings
+      });
+    }
+    setTimeout(step, delay == null ? 250 : delay);
   }
 
   /* THE COIN HAS ONE SIDE. There was a reverse: struck metal carrying the account number, which
@@ -309,6 +363,10 @@
   function watchState() {
     var apply = function (changed) {
       if (!changed) return;
+      /* THE KEPT CODES GO FIRST, before anything repaints, so no path below can draw from one.
+       * A suspension, a restored account and a new order are all a change; the store is emptied
+       * whole and warm() draws again what is live. */
+      kept = {};
       for (var i = 0; i < tiles.length; i++) tiles[i].className = classOf(CODES[i]);
       // Suspension can arrive from KV without a deploy, so the order is recomputed here too.
       orderTiles();
@@ -319,6 +377,7 @@
        * paints, so this one call settles both directions. */
       drawThumbs();
       if (idx >= 0) paint();
+      warm();
     };
     var timer = null, reading = false;
     var poll = function () {
@@ -462,6 +521,7 @@
       elCoin.width = 8; elCoin.height = 8;
       elCoin.getContext("2d").clearRect(0, 0, 8, 8);
       elPlate.textContent = "";
+      delete kept[a.key];   // and no kept drawing of it either
       document.body.classList.add("maintenance");
       elCoin.setAttribute("aria-label", a.name + " is under maintenance and its code is not shown");
       elBtn.setAttribute("aria-label", a.name + " is under maintenance");
@@ -478,6 +538,7 @@
       return { plain: false, fellBack: false, view: v };
     }
     elPlate.textContent = "";
+    if (!(pre && pre.canvas)) pre = faceOf(idx);   // the kept drawing, or one drawn now and kept
     if (pre && pre.canvas) {
       elCoin.width = pre.canvas.width;
       elCoin.height = pre.canvas.height;
@@ -955,6 +1016,7 @@
     });
     orderTiles();
     drawThumbs();   // the miniatures follow the rail: coins on QR, brand discs elsewhere
+    warm();         // and the kept coins follow it too
   }
 
   function buildGrid() {
@@ -1166,7 +1228,7 @@
     var t = null;
     var redraw = function () {
       clearTimeout(t);
-      t = setTimeout(function () { killFlier(); paint(); }, 140);
+      t = setTimeout(function () { killFlier(); paint(); warm(); }, 140);
     };
     window.addEventListener("resize", redraw);
     if (window.visualViewport) window.visualViewport.addEventListener("resize", redraw);
@@ -1196,8 +1258,12 @@
     // something that was already there, not like the app starting again.
     setTimeout(function () { fresh = false; document.body.classList.remove("fresh"); }, 900);
 
-    requestAnimationFrame(function () { requestAnimationFrame(function () { paint(); }); });
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { paint(); });
+    requestAnimationFrame(function () { requestAnimationFrame(function () { paint(); warm(WARM_FIRST_MS); }); });
+    /* The coin carries lettering, so a drawing made before the faces load is not the one made
+     * after: the epoch is part of every kept code's key, and the store is drawn again. */
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { fontEpoch++; kept = {}; paint(); warm(WARM_FIRST_MS); });
+    }
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {

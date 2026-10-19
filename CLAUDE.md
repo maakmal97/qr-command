@@ -52,6 +52,10 @@ Read the note at the top of the file first; `npm test` re-asserts every number.
   the canvas stays transparent outside the artwork, carries no `border-radius`, and the field
   is flat.
 - **Encoding is cached in `plan()`. Never batch modules into one `Path2D`**, asserted.
+- **Each live coin is drawn once in idle time and kept** (`faceOf`, `warm`; his decision of 19 Oct
+  2026), keyed by account, payload, rail, size, pixel ratio, brand, name and whether the faces have
+  loaded. A change of state empties the store; a suspended account is never drawn or kept; the
+  saved image is `cardOf()`, never the kept coin.
 - `paintFace` is the one place assembling the coin's options, with the `acct`-is-absent note.
 - **Code-less accounts** draw `drawPlate()`, which never reads `acct` or draws the DuitNow
   mark, asserted on its body. Values wrap by rendered width, never shrink past legibility.
@@ -94,6 +98,9 @@ Read the note at the top of the file first; `npm test` re-asserts every number.
 - `/state.json`, `/admin/`, `/api/` and `/rev.json` are `no-store` and bypassed by the service
   worker. **An open page follows the build:** `followBuild()` reloads once when `/rev.json`'s id
   is not `QR_BUILD`, remembering the id first, so a mismatch costs one reload, never a loop.
+  **State is re-read on open, on return to the front and every 15 s while the page shows** (his
+  decision of 19 Oct 2026; never while hidden); `followBuild()` stays on open and return only, so a
+  code on screen to a payer never reloads under them.
 
 ## The edit surface, `/admin/`
 

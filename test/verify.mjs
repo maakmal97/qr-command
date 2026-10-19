@@ -1973,7 +1973,7 @@ section("6. One build id, everywhere");
 
 /* ============================================================ 7. an open page follows the state, and a tap shows a kept code */
 
-section("7. An open page re-reads the state");
+section("7. An open page re-reads the state, and a tap shows a code drawn already");
 
 /* THE SHIPPED app.js, RUN, against a stub page. Nothing here reads the source for a shape: the
  * script is loaded from public/ as the phone loads it, its timers and idle callbacks are driven
@@ -2077,7 +2077,12 @@ async function runApp(opts) {
       }
       now = end; await flush();
     },
-    async idle() { while (idles.length) { idles.shift()(); await flush(); } },
+    // the warm-up: its first second, then an account to an idle callback with a gap between
+    async drain() { while (idles.length) { idles.shift()(); await flush(); } },
+    async idle() {
+      await api.advance(1100);
+      for (let k = 0; k < codes.length * 2 + 4; k++) { while (idles.length) { idles.shift()(); await flush(); } await api.advance(40); }
+    },
     fullDraws: (key) => calls.draws.filter((k) => !key || k === key).length,
     async openKey(key) { loc.hash = "#" + key; listeners.win.popstate(); await flush(); },
     show(hidden) { document_.hidden = hidden; listeners.doc.visibilitychange(); },
@@ -2138,6 +2143,84 @@ async function runApp(opts) {
     app.served(live);
     await app.advance(15000);
     ok("and lifting it brings the code back, the same drawing", !app.blank() && app.pixels().equals(before));
+  }
+
+  /* Q1 (owner, 19 Oct 2026): each live code is drawn once in idle time and kept. */
+  {
+    const app = await runApp({ remembered: true });
+    const n0 = app.fullDraws();
+    await app.advance(800); await app.drain();
+    ok("nothing is drawn full size in the app's first second: the opening list has it to itself", n0 === 0 && app.fullDraws() === 0,
+      "drawn " + app.fullDraws());
+    await app.idle();
+    const warmed = app.fullDraws();
+    ok("in idle time every live code is drawn once (" + codes.length + " accounts)", warmed === codes.length && app.fullDraws(A) === 1,
+      "drawn " + warmed);
+    await app.openKey(A);
+    ok("a tap on an account draws nothing: it shows the kept drawing", app.fullDraws() === warmed && !app.blank(),
+      "drawn " + (app.fullDraws() - warmed) + " more");
+    const fresh = createCanvas(8, 8);
+    QRArt.draw(fresh, codes[0].payload, { brand: codes[0].brand, label: codes[0].name, seed: codes[0].key, size: 390, pixelRatio: 3 });
+    ok("the kept code is the fresh drawing byte for byte, and it is a coin at the phone's pixel ratio, not the plain fallback",
+      app.coin.width >= 1000 && app.pixels().equals(fresh.toBuffer("image/png")));
+
+    // press and hold still saves the same image: the card is drawn on its own, never from the kept coin
+    const held = app.document.getElementById("coinbtn");
+    held.on.pointerdown({ clientX: 0, clientY: 0 });
+    await app.advance(500);
+    const card = createCanvas(8, 8);
+    QRArt.drawCard(card, codes[0].payload, { brand: codes[0].brand, label: codes[0].name, seed: codes[0].key, plain: false });
+    const saved = app.nav.shared && app.nav.shared.files && app.nav.shared.files[0];
+    ok("press and hold saves the card image, the same bytes as a fresh draw of it",
+      !!saved && Buffer.from(await saved.arrayBuffer()).equals(card.toBuffer("image/png")));
+
+    // a suspension drops what is kept, on the account that is not open as well as the one that is
+    await app.openKey(B);
+    const keyB = app.fullDraws(B);
+    app.served(suspend(B));
+    await app.advance(15000);
+    await app.idle();
+    ok("a suspended account is drawn nowhere: nothing is kept for it and the warm-up skips it",
+      app.fullDraws(B) === keyB && app.blank(), "drawn " + (app.fullDraws(B) - keyB));
+    app.served(live);
+    await app.advance(15000);
+    const afterLift = app.fullDraws(B);
+    ok("a restored account's code is drawn afresh, the kept one having been dropped with the suspension",
+      afterLift > keyB, "draws " + keyB + " then " + afterLift);
+
+    // the same for an account that is not on screen: suspended and lifted, its old drawing is not shown
+    {
+      const C = codes[2].key;
+      await app.openKey(A);
+      await app.idle();
+      const c0 = app.fullDraws(C);
+      app.served(suspend(C));
+      await app.advance(15000);
+      app.served(live);
+      await app.advance(15000);
+      await app.openKey(C);
+      ok("an account suspended and lifted while it was off screen is drawn afresh when opened, not from what was kept before",
+        app.fullDraws(C) === c0 + 1 && !app.blank(), "draws " + c0 + " then " + app.fullDraws(C));
+    }
+
+    // a changed payload finds nothing kept
+    await app.idle();
+    const kept = app.fullDraws(A);
+    app.accounts.find((c) => c.key === A).payload = codes[1].payload;
+    await app.openKey(B);
+    await app.openKey(A);
+    const swapped = createCanvas(8, 8);
+    QRArt.draw(swapped, codes[1].payload, { brand: codes[0].brand, label: codes[0].name, seed: codes[0].key, size: 390, pixelRatio: 3 });
+    ok("a changed payload is drawn afresh, never taken from the kept code",
+      app.fullDraws(A) === kept + 1 && app.pixels().equals(swapped.toBuffer("image/png")) && !app.pixels().equals(fresh.toBuffer("image/png")),
+      "draws " + kept + " then " + app.fullDraws(A));
+
+    // a different size finds nothing kept
+    app.box.clientWidth = 420; app.box.clientHeight = 420;
+    const sized = app.fullDraws(B);
+    await app.openKey(B);
+    ok("a different size is drawn afresh", app.fullDraws(B) === sized + 1 && app.coin.width > 0,
+      "draws " + sized + " then " + app.fullDraws(B));
   }
 }
 

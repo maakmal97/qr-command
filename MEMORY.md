@@ -37,4 +37,4 @@ whose suite reads it back through this repo's `linkOf`. This repo shipped the fo
 wrangler 4.149.0 (workerd 1.20261006.1, 10 Oct 2026); `compatibility_date` set to 2026-08-08.
 
 ## Testing
-`test/verify.mjs`: 262 assertions (10 Oct 2026), no network; decodes about a thousand renders per run.
+`test/verify.mjs`: 282 assertions (19 Oct 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).
