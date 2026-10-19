@@ -292,9 +292,20 @@
       .catch(function () { return false; });   // offline: the remembered state stands
   }
 
-  /* Re-read on open and whenever the app comes back to the front, which is the moment somebody
-   * is about to show a code to somebody else. Nothing polls: a timer would spend battery to
-   * answer a question that only matters when the screen is being looked at. */
+  /* HOW LONG A SUSPENSION TAKES TO REACH AN OPEN PHONE. Two decisions of the owner, both kept.
+   *
+   * 15 Sep 2026: re-read on open and whenever the app comes back to the front, the moment
+   * somebody is about to show a code to somebody else. Nothing polled, because a timer spends
+   * battery to answer a question that only matters when the screen is being looked at.
+   *
+   * 19 Oct 2026, which adds to that and does not replace it: while the page is SHOWING, re-read
+   * every STATE_POLL_MS (15 s), so a suspension made on /admin/ reaches a phone left open on a
+   * code within 15 seconds instead of waiting for it to be put down and picked up. The timer
+   * runs only while the page is visible: it stops the moment it is hidden, and starts again on
+   * the return, so a pocket costs nothing. It reads STATE ONLY. followBuild() stays on open and
+   * on return, never on the timer: a page showing a code to a payer must not reload under them.
+   * A read still in flight is not stacked on, so a slow network cannot queue reads behind it. */
+  var STATE_POLL_MS = 15000;
   function watchState() {
     var apply = function (changed) {
       if (!changed) return;
@@ -309,10 +320,23 @@
       drawThumbs();
       if (idx >= 0) paint();
     };
+    var timer = null, reading = false;
+    var poll = function () {
+      if (document.hidden) { stop(); return; }
+      if (reading) return;
+      reading = true;
+      readState().then(function (changed) { reading = false; apply(changed); }, function () { reading = false; });
+    };
+    var stop = function () { if (timer) { clearInterval(timer); timer = null; } };
+    var go = function () { if (!timer && !document.hidden) timer = setInterval(poll, STATE_POLL_MS); };
     readState().then(apply);
     followBuild();
+    go();
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) { readState().then(apply); followBuild(); }
+      if (document.hidden) { stop(); return; }
+      readState().then(apply);
+      followBuild();
+      go();
     });
   }
 

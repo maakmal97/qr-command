@@ -527,7 +527,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     /function followBuild\(\)/.test(appJsSrc) &&
     /fetch\("rev\.json", \{ cache: "no-store"/.test(appJsSrc) &&
     /if \(recall\("reloaded"\) === j\.id\) return;[\s\S]{0,80}?remember\("reloaded", j\.id\);[\s\S]{0,40}?location\.reload\(\);/.test(appJsSrc) &&
-    /if \(!document\.hidden\) \{ readState\(\)\.then\(apply\); followBuild\(\); \}/.test(appJsSrc));
+    /document\.addEventListener\("visibilitychange", function \(\) \{[\s\S]{0,160}?readState\(\)\.then\(apply\);\s*followBuild\(\);/.test(appJsSrc));
   /* ONE WRITE, AND IT IS INSIDE THE GATE. The Worker puts to the namespace in exactly one place,
    * after identity() has answered, and reads it in exactly one. */
   ok("the Worker writes the namespace once, behind the token check, and answers {} when it cannot read",
@@ -1969,6 +1969,176 @@ section("6. One build id, everywhere");
     .map((f) => path.relative(REPO, f));
   ok("no stray control bytes in any source or shipped file", dirty.length === 0, dirty.join(", "));
   ok("the sweep actually looked at the files it claims to", files.length >= 20, files.length + " files");
+}
+
+/* ============================================================ 7. an open page follows the state, and a tap shows a kept code */
+
+section("7. An open page re-reads the state");
+
+/* THE SHIPPED app.js, RUN, against a stub page. Nothing here reads the source for a shape: the
+ * script is loaded from public/ as the phone loads it, its timers and idle callbacks are driven
+ * by hand, and the renderer is the one that ships on a headless canvas. A check can fail only
+ * if the behaviour does. */
+async function runApp(opts) {
+  opts = opts || {};
+  const accounts = shipped.map((c) => Object.assign({}, c, { maintenance: false }));
+  const box = { clientWidth: 390, clientHeight: 700 };
+  const calls = { state: 0, rev: 0, draws: [], reloads: 0 };
+  let served = { maintenance: {}, order: [] };
+  let now = 0, nextId = 1;
+  const timers = new Map(), idles = [];
+  const listeners = { doc: {}, win: {} };
+  const store = new Map();
+  if (opts.remembered) store.set("pay-state", JSON.stringify({ maintenance: {}, order: [] }));   // a phone that has opened before
+
+  const cls = (el) => (el.className || "").split(/\s+/).filter(Boolean);
+  function stub(tag) {
+    const el = tag === "canvas" ? createCanvas(300, 150) : {};
+    const attrs = {};
+    Object.assign(el, {
+      tagName: String(tag).toUpperCase(), children: [], parentNode: null, className: "", hidden: false, textContent: "",
+      style: { setProperty() {}, removeProperty() {} }, clientWidth: 0, clientHeight: 0, offsetWidth: 0,
+      classList: {
+        add: (c) => { if (!cls(el).includes(c)) el.className = cls(el).concat(c).join(" "); },
+        remove: (c) => { el.className = cls(el).filter((x) => x !== c).join(" "); },
+        toggle: (c, on) => { (on === undefined ? !cls(el).includes(c) : on) ? el.classList.add(c) : el.classList.remove(c); },
+        contains: (c) => cls(el).includes(c)
+      },
+      setAttribute(k, v) { attrs[k] = String(v); }, getAttribute(k) { return k in attrs ? attrs[k] : null; },
+      appendChild(c) {
+        if (c.isFragment) { c.children.splice(0).forEach((k) => el.appendChild(k)); return c; }
+        if (c.parentNode) c.parentNode.removeChild(c);
+        c.parentNode = el; el.children.push(c); return c;
+      },
+      removeChild(c) { el.children = el.children.filter((k) => k !== c); c.parentNode = null; return c; },
+      addEventListener(t, f) { (el.on = el.on || {})[t] = f; },
+      querySelector(sel) { return el.querySelectorAll(sel)[0] || null; },
+      querySelectorAll(sel) {
+        const want = sel.replace(/^\./, ""), out = [];
+        (function walk(n) { for (const k of n.children || []) { if (cls(k).includes(want)) out.push(k); walk(k); } })(el);
+        return out;
+      },
+      getBoundingClientRect: () => ({ width: 0, height: 0, left: 0, top: 0 }), scrollIntoView() {}
+    });
+    return el;
+  }
+  const byId = {};
+  for (const id of ["coin", "say", "grid", "back", "plate", "due", "goback", "rails", "accounts", "paid", "unpaid"])
+    byId[id] = stub(id === "coin" ? "canvas" : "div");
+  byId.coinbtn = stub("button"); byId.coinbtn.parentNode = box;
+  const stage = stub("div");
+
+  const document_ = {
+    readyState: "complete", hidden: false, title: "", body: stub("body"), fonts: undefined,
+    getElementById: (id) => byId[id], querySelector: (s) => (s === ".stage" ? stage : stub("div")),
+    createElement: stub, createDocumentFragment: () => Object.assign(stub("div"), { isFragment: true }),
+    addEventListener(t, f) { listeners.doc[t] = f; }
+  };
+  const plainDraw = QRArt.draw;
+  const art = Object.assign({}, QRArt, {
+    draw(canvas, payload, o) { if (!o.decorative) calls.draws.push(o.seed); return plainDraw(canvas, payload, o); }
+  });
+  const sched = (fn, ms, every) => { const id = nextId++; timers.set(id, { at: now + (ms || 0), fn, every: every ? ms : 0 }); return id; };
+  const self_ = {
+    QR_CODES: accounts, QR_BUILD: "testbuild", QRArt: art, MARKS: {}, devicePixelRatio: 3,   // a phone: a coin, not the plain code a small store falls back to
+    matchMedia: () => ({ matches: true }),     // motion off: nothing waits on an animation
+    requestIdleCallback: (fn) => { idles.push(fn); return idles.length; },
+    fetch: async (url) => {
+      if (/^state\.json/.test(url)) { calls.state++; return { ok: true, json: async () => JSON.parse(JSON.stringify(served)) }; }
+      if (/^rev\.json/.test(url)) { calls.rev++; return { ok: true, json: async () => ({ id: opts.newBuild || "testbuild" }) }; }
+      return { ok: false, json: async () => null };
+    },
+    addEventListener(t, f) { listeners.win[t] = f; }
+  };
+  const nav = { share: async (d) => { nav.shared = d; }, canShare: () => true };
+  const loc = { hash: "", reload() { calls.reloads++; } };
+  const ls = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)) };
+  new Function("self", "window", "document", "localStorage", "history", "location", "navigator", "fetch",
+    "setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "getComputedStyle",
+    read(path.join(PUB, "app.js")))(
+    self_, self_, document_, ls, { pushState() {}, replaceState() {}, back() {}, state: null }, loc, nav, self_.fetch,
+    (f, ms) => sched(f, ms, false), (id) => timers.delete(id), (f, ms) => sched(f, ms, true), (id) => timers.delete(id),
+    (f) => sched(f, 16, false), () => ({ getPropertyValue: () => "" }));
+
+  const flush = () => new Promise((r) => setImmediate(r));
+  const api = {
+    calls, accounts, box, document: document_, coin: byId.coin, body: document_.body, nav, loc, served: (s) => { served = s; },
+    reads: () => calls.state,
+    async advance(ms) {
+      const end = now + ms;
+      for (;;) {
+        let pick = null;
+        for (const [id, t] of timers) if (t.at <= end && (!pick || t.at < pick[1].at)) pick = [id, t];
+        if (!pick) break;
+        now = pick[1].at;
+        if (pick[1].every) pick[1].at = now + pick[1].every; else timers.delete(pick[0]);
+        pick[1].fn();
+        await flush();
+      }
+      now = end; await flush();
+    },
+    async idle() { while (idles.length) { idles.shift()(); await flush(); } },
+    fullDraws: (key) => calls.draws.filter((k) => !key || k === key).length,
+    async openKey(key) { loc.hash = "#" + key; listeners.win.popstate(); await flush(); },
+    show(hidden) { document_.hidden = hidden; listeners.doc.visibilitychange(); },
+    pixels: () => byId.coin.toBuffer("image/png"),
+    blank: () => byId.coin.width === 8 && byId.coin.getContext("2d").getImageData(0, 0, 8, 8).data.every((v) => v === 0)
+  };
+  await api.advance(100);   // the two animation frames that paint and warm
+  return api;
+}
+
+{
+  const A = codes[0].key, B = codes[1].key;
+  const live = {};
+  const suspend = (...keys) => ({ maintenance: Object.fromEntries(keys.map((k) => [k, true])), order: [] });
+
+  /* R3 (owner, 19 Oct 2026): while the page is showing, state is re-read every 15 seconds. */
+  {
+    const app = await runApp();
+    const r0 = app.reads(), v0 = app.calls.rev;
+    await app.advance(14800);
+    const early = app.reads() - r0;
+    await app.advance(200);
+    const first = app.reads() - r0;
+    await app.advance(30000);
+    const later = app.reads() - r0;
+    ok("an open, visible page re-reads the state every 15 seconds, and not before",
+      early === 0 && first === 1 && later === 3, [early, first, later].join(" "));
+    ok("the timer reads state only: the page is not asked whether it is the newest build, so a code shown to a payer never reloads under them",
+      app.calls.rev === v0 && app.calls.reloads === 0, "rev reads " + (app.calls.rev - v0));
+
+    app.show(true);
+    const h0 = app.reads(), hv0 = app.calls.rev;
+    await app.advance(120000);
+    ok("while the page is hidden nothing is read at all",
+      app.reads() === h0 && app.calls.rev === hv0, "reads " + (app.reads() - h0));
+    app.show(false);
+    await app.advance(0);
+    const back0 = app.reads();
+    ok("coming back to the front reads state and the build at once, as before",
+      back0 === h0 + 1 && app.calls.rev === hv0 + 1, [back0 - h0, app.calls.rev - hv0].join(" "));
+    await app.advance(15000);
+    ok("and the timer starts again from the return", app.reads() === back0 + 1, "reads " + (app.reads() - back0));
+  }
+
+  /* A suspension reaches an open code view within 15 seconds, and takes the code off. */
+  {
+    const app = await runApp();
+    await app.openKey(A);
+    const before = app.pixels();
+    ok("the open account shows its code", app.coin.width > 8 && app.body.className.includes("view-code") && !app.blank());
+    app.served(suspend(A));
+    await app.advance(14000);
+    const stillUp = !app.blank();
+    await app.advance(1100);
+    ok("a suspension made while the code is open takes the code off the screen within 15 seconds, and not earlier",
+      stillUp && app.blank() && app.body.className.includes("maintenance"),
+      JSON.stringify({ stillUp, blank: app.blank(), cls: app.body.className }));
+    app.served(live);
+    await app.advance(15000);
+    ok("and lifting it brings the code back, the same drawing", !app.blank() && app.pixels().equals(before));
+  }
 }
 
 /* --------------------------------------------------------------------- verdict */
