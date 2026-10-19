@@ -224,6 +224,14 @@
   var kept = {};        // account key -> { sig, canvas, meta, used }
   var warmGen = 0;      // bumped by every warm(), so a queued warm-up of an older state stands down
   var fontEpoch = 0;    // bumped when the faces load; part of the key
+  /* A canvas let go is shrunk to nothing first, so its backing store is returned now and not when
+   * the collector gets to it: a coin is about 3 MB, and a flier copies the image at once, so no
+   * drawing in flight is cut short. */
+  function shrink(entry) { entry.canvas.width = 0; entry.canvas.height = 0; }
+  function emptyStore() {
+    for (var key in kept) shrink(kept[key]);
+    kept = {};
+  }
   function faceOf(i) {
     var a = CODES[i];
     if (!a) return null;
@@ -233,6 +241,7 @@
     var sig = JSON.stringify([a.key, a.payload, viewOf(a), size, ratio, a.brand, a.name, fontEpoch]);
     var k = kept[a.key];
     if (k && k.sig === sig) { k.used = ++useClock; return k; }
+    if (k) shrink(k);   // drawn for another key, so it is of no use
     var off = document.createElement("canvas");
     var meta = paintFace(off, a, { size: size, pixelRatio: ratio });
     var made = (kept[a.key] = { sig: sig, canvas: off, meta: meta, used: ++useClock });
@@ -242,7 +251,7 @@
       for (var n = 0; n < held.length; n++) {
         if (kept[held[n]] !== made && (oldest === null || kept[held[n]].used < kept[oldest].used)) oldest = held[n];
       }
-      kept[oldest].canvas.width = 0; kept[oldest].canvas.height = 0;
+      shrink(kept[oldest]);
       delete kept[oldest];
     }
     return made;
@@ -377,7 +386,8 @@
    * runs only while the page is visible: it stops the moment it is hidden, and starts again on
    * the return, so a pocket costs nothing. It reads STATE ONLY. followBuild() stays on open and
    * on return, never on the timer: a page showing a code to a payer must not reload under them.
-   * A read still in flight is not stacked on, so a slow network cannot queue reads behind it. */
+   * A read still in flight is not stacked on, by the timer or by the return alike, so a slow
+   * network cannot queue reads behind it. */
   var STATE_POLL_MS = 15000;
   function watchState() {
     var apply = function (changed) {
@@ -385,7 +395,7 @@
       /* THE KEPT CODES GO FIRST, before anything repaints, so no path below can draw from one.
        * A suspension, a restored account and a new order are all a change; the store is emptied
        * whole and warm() draws again what is live. */
-      kept = {};
+      emptyStore();
       for (var i = 0; i < tiles.length; i++) tiles[i].className = classOf(CODES[i]);
       // Suspension can arrive from KV without a deploy, so the order is recomputed here too.
       orderTiles();
@@ -399,20 +409,24 @@
       warm();
     };
     var timer = null, reading = false;
-    var poll = function () {
-      if (document.hidden) { stop(); return; }
+    // ONE READ AT A TIME, whoever asks: the open, the timer and the return to the front all come here.
+    var read = function () {
       if (reading) return;
       reading = true;
       readState().then(function (changed) { reading = false; apply(changed); }, function () { reading = false; });
     };
+    var poll = function () {
+      if (document.hidden) { stop(); return; }
+      read();
+    };
     var stop = function () { if (timer) { clearInterval(timer); timer = null; } };
     var go = function () { if (!timer && !document.hidden) timer = setInterval(poll, STATE_POLL_MS); };
-    readState().then(apply);
+    read();
     followBuild();
     go();
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) { stop(); return; }
-      readState().then(apply);
+      read();
       followBuild();
       go();
     });
@@ -1281,7 +1295,7 @@
     /* The coin carries lettering, so a drawing made before the faces load is not the one made
      * after: the epoch is part of every kept code's key, and the store is drawn again. */
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { fontEpoch++; kept = {}; paint(); warm(WARM_FIRST_MS); });
+      document.fonts.ready.then(function () { fontEpoch++; emptyStore(); paint(); warm(WARM_FIRST_MS); });
     }
 
     if ("serviceWorker" in navigator) {

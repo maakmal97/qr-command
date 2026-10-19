@@ -527,7 +527,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     /function followBuild\(\)/.test(appJsSrc) &&
     /fetch\("rev\.json", \{ cache: "no-store"/.test(appJsSrc) &&
     /if \(recall\("reloaded"\) === j\.id\) return;[\s\S]{0,80}?remember\("reloaded", j\.id\);[\s\S]{0,40}?location\.reload\(\);/.test(appJsSrc) &&
-    /document\.addEventListener\("visibilitychange", function \(\) \{[\s\S]{0,160}?readState\(\)\.then\(apply\);\s*followBuild\(\);/.test(appJsSrc));
+    /document\.addEventListener\("visibilitychange", function \(\) \{[\s\S]{0,160}?read\(\);\s*followBuild\(\);/.test(appJsSrc));
   /* ONE WRITE, AND IT IS INSIDE THE GATE. The Worker puts to the namespace in exactly one place,
    * after identity() has answered, and reads it in exactly one. */
   ok("the Worker writes the namespace once, behind the token check, and answers {} when it cannot read",
@@ -1985,6 +1985,7 @@ async function runApp(opts) {
   const box = { clientWidth: 390, clientHeight: 700 };
   const calls = { state: 0, rev: 0, draws: [], reloads: 0 };
   let served = { maintenance: {}, order: [] };
+  let gate = null, fontsDone = null;
   let now = 0, nextId = 1;
   const timers = new Map(), idles = [];
   const listeners = { doc: {}, win: {} };
@@ -2042,7 +2043,8 @@ async function runApp(opts) {
   const stage = stub("div");
 
   const document_ = {
-    readyState: "complete", hidden: false, title: "", body: stub("body"), fonts: undefined,
+    readyState: "complete", hidden: false, title: "", body: stub("body"),
+    fonts: opts.fonts ? { ready: new Promise((r) => { fontsDone = r; }) } : undefined,
     getElementById: (id) => byId[id], querySelector: (s) => (s === ".stage" ? stage : stub("div")),
     createElement: stub, createDocumentFragment: () => Object.assign(stub("div"), { isFragment: true }),
     addEventListener(t, f) { listeners.doc[t] = f; }
@@ -2057,7 +2059,7 @@ async function runApp(opts) {
     matchMedia: () => ({ matches: true }),     // motion off: nothing waits on an animation
     requestIdleCallback: (fn) => { idles.push(fn); return idles.length; },
     fetch: async (url) => {
-      if (/^state\.json/.test(url)) { calls.state++; return { ok: true, json: async () => JSON.parse(JSON.stringify(served)) }; }
+      if (/^state\.json/.test(url)) { calls.state++; if (gate) await gate; return { ok: true, json: async () => JSON.parse(JSON.stringify(served)) }; }
       if (/^rev\.json/.test(url)) { calls.rev++; return { ok: true, json: async () => ({ id: opts.newBuild || "testbuild" }) }; }
       return { ok: false, json: async () => null };
     },
@@ -2091,6 +2093,9 @@ async function runApp(opts) {
       now = end; await flush();
     },
     // the warm-up: its first second, then an account to an idle callback with a gap between
+    // a state read that hangs until released, as on a slow network
+    hold() { let rel; gate = new Promise((r) => { rel = r; }); return async () => { gate = null; rel(); await flush(); }; },
+    async fontsLoaded() { fontsDone(); await flush(); },
     async drain() { while (idles.length) { idles.shift()(); await flush(); } },
     async idle() {
       await api.advance(1100);
@@ -2140,6 +2145,21 @@ async function runApp(opts) {
       back0 === h0 + 1 && app.calls.rev === hv0 + 1, [back0 - h0, app.calls.rev - hv0].join(" "));
     await app.advance(15000);
     ok("and the timer starts again from the return", app.reads() === back0 + 1, "reads " + (app.reads() - back0));
+  }
+
+  // reads never overlap: a return to the front while one is still in flight starts no second
+  {
+    const app = await runApp();
+    const release = app.hold();
+    const r0 = app.reads();
+    await app.advance(15000);                 // the timer starts a read, which hangs
+    app.show(true); app.show(false);          // the phone is put down and picked up
+    await app.advance(0);
+    ok("a return to the front while a read is still in flight starts no second read", app.reads() === r0 + 1, "reads " + (app.reads() - r0));
+    await release();
+    app.show(true); app.show(false);
+    await app.advance(0);
+    ok("and once it has answered, the next return reads again", app.reads() === r0 + 2, "reads " + (app.reads() - r0));
   }
 
   /* A suspension reaches an open code view within 15 seconds, and takes the code off. */
@@ -2276,6 +2296,24 @@ async function runApp(opts) {
     let hits = 0;
     for (const key of lastSix.slice().reverse()) { const d = app.fullDraws(); await app.openKey(key); if (app.fullDraws() === d) hits++; }
     ok("and what it holds is the six shown most recently", hits === 6, hits + " of 6 kept");
+
+    // a canvas let go is shrunk to nothing first: a drawing replaced for a new size, and the whole store on a change of state
+    app.box.clientWidth = 420; app.box.clientHeight = 420;
+    await app.openKey(k(0));
+    ok("a coin replaced because its size changed is shrunk, so six are still held and not seven", app.held() === 6, "holds " + app.held());
+    await app.openKey("");   // back to the list, so nothing repaints a coin
+    app.served(suspend(k(12)));
+    await app.advance(15000);
+    ok("after a change of state every coin that was kept is shrunk to nothing", app.held() === 0, "holds " + app.held());
+  }
+
+  // and when the faces load, which draws everything again
+  {
+    const app = await runApp({ remembered: true, fonts: true });
+    await app.idle();
+    const before = app.held();
+    await app.fontsLoaded();
+    ok("when the faces load every coin kept before them is shrunk to nothing", before === 6 && app.held() === 0, before + " then " + app.held());
   }
 }
 
