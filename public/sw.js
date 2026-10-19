@@ -3,17 +3,17 @@
  * activate. There is no version constant to remember to bump, because a constant someone has
  * to remember is a constant that eventually goes stale.
  */
-const CACHE = "pay-8de137aa586e";
+const CACHE = "pay-40c2628c5aa6";
 const SHELL = [
   "./",
-  "./app.css?v=8de137aa586e",
-  "./app.js?v=8de137aa586e",
-  "./qr-art.js?v=8de137aa586e",
-  "./qrcode.js?v=8de137aa586e",
-  "./marks.js?v=8de137aa586e",
-  "./data.js?v=8de137aa586e",
-  "./fonts/newsreader-latin.woff2?v=8de137aa586e",
-  "./fonts/geist-mono-latin.woff2?v=8de137aa586e"
+  "./app.css?v=40c2628c5aa6",
+  "./app.js?v=40c2628c5aa6",
+  "./qr-art.js?v=40c2628c5aa6",
+  "./qrcode.js?v=40c2628c5aa6",
+  "./marks.js?v=40c2628c5aa6",
+  "./data.js?v=40c2628c5aa6",
+  "./fonts/newsreader-latin.woff2?v=40c2628c5aa6",
+  "./fonts/geist-mono-latin.woff2?v=40c2628c5aa6"
 ];
 
 self.addEventListener("install", (e) => {

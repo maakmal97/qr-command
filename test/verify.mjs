@@ -501,7 +501,7 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
     /return a\.maintenance === true;/.test(appJsSrc) &&
     /override\.maintenance\[a\.key\] === true/.test(appJsSrc));
   ok("a failed or malformed state read leaves the previous state alone",
-    /\.catch\(function \(\) { return false; \}\);/.test(appJsSrc) &&
+    /\.then\(done, function \(\) { return done\(false\); \}\);/.test(appJsSrc) &&
     /if \(!j \|\| typeof j !== "object"\) return null;/.test(appJsSrc) &&
     /if \(!next\) return false;/.test(appJsSrc));
   ok("only booleans against known account keys are trusted from the wire, and only known keys in the order",
@@ -1983,7 +1983,7 @@ async function runApp(opts) {
   opts = opts || {};
   const accounts = shipped.map((c) => Object.assign({}, c, { maintenance: false }));
   const box = { clientWidth: 390, clientHeight: 700 };
-  const calls = { state: 0, rev: 0, draws: [], reloads: 0 };
+  const calls = { aborted: 0, state: 0, rev: 0, draws: [], reloads: 0 };
   let served = { maintenance: {}, order: [] };
   let gate = null, fontsDone = null;
   let now = 0, nextId = 1;
@@ -2055,11 +2055,13 @@ async function runApp(opts) {
   });
   const sched = (fn, ms, every) => { const id = nextId++; timers.set(id, { at: now + (ms || 0), fn, every: every ? ms : 0 }); return id; };
   const self_ = {
-    QR_CODES: accounts, QR_BUILD: "testbuild", QRArt: art, MARKS: {}, devicePixelRatio: 3,   // a phone: a coin, not the plain code a small store falls back to
+    AbortController, QR_CODES: accounts, QR_BUILD: "testbuild", QRArt: art, MARKS: {}, devicePixelRatio: 3,   // a phone: a coin, not the plain code a small store falls back to
     matchMedia: () => ({ matches: true }),     // motion off: nothing waits on an animation
     requestIdleCallback: (fn) => { idles.push(fn); return idles.length; },
-    fetch: async (url) => {
-      if (/^state\.json/.test(url)) { calls.state++; if (gate) await gate; return { ok: true, json: async () => JSON.parse(JSON.stringify(served)) }; }
+    fetch: async (url, init) => {
+      if (/^state\.json/.test(url)) { calls.state++;
+        if (gate) await Promise.race([gate, new Promise((_, no) => { if (init && init.signal) init.signal.addEventListener("abort", () => { calls.aborted++; no(new Error("aborted")); }); })]);
+        return { ok: true, json: async () => JSON.parse(JSON.stringify(served)) }; }
       if (/^rev\.json/.test(url)) { calls.rev++; return { ok: true, json: async () => ({ id: opts.newBuild || "testbuild" }) }; }
       return { ok: false, json: async () => null };
     },
@@ -2160,6 +2162,29 @@ async function runApp(opts) {
     app.show(true); app.show(false);
     await app.advance(0);
     ok("and once it has answered, the next return reads again", app.reads() === r0 + 2, "reads " + (app.reads() - r0));
+  }
+
+  // a read that never answers is abandoned at 10 s, so it cannot hold up the reads after it
+  {
+    const app = await runApp();
+    await app.openKey(A);
+    app.served(suspend(A));
+    const release = app.hold();
+    const r0 = app.reads();
+    await app.advance(15000);                 // the timer starts a read, which hangs
+    await app.advance(9000);
+    app.show(true); app.show(false);
+    const early = app.reads() - r0;
+    ok("a read still hanging at 9 s is not yet abandoned: the return starts no second one", early === 1 && app.calls.aborted === 0,
+      "reads " + early + ", aborted " + app.calls.aborted);
+    await app.advance(1500);
+    ok("at 10 s the hanging read is aborted, and changes nothing: the code on screen stands", app.calls.aborted === 1 && !app.blank(),
+      "aborted " + app.calls.aborted);
+    await release();   // the network is back
+    app.show(true); app.show(false);
+    await app.advance(0);
+    ok("and the next return's read goes out and applies what it finds, here a suspension", app.reads() === r0 + 2 && app.blank(),
+      "reads " + (app.reads() - r0) + ", blank " + app.blank());
   }
 
   /* A suspension reaches an open code view within 15 seconds, and takes the code off. */

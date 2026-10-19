@@ -366,12 +366,21 @@
     try { takeState(JSON.parse(localStorage.getItem(STORE_KEY))); } catch (e) {}
   }
 
+  /* A READ THAT NEVER ANSWERS IS ABANDONED after STATE_READ_MS. iOS can stall one fetch across a
+   * pocket cycle, and reads go one at a time (watchState), so a hung one would hold every later
+   * read, the return to the front included, and no suspension could reach the phone. Aborted, it
+   * counts as a failed read: nothing changes and the remembered state stands. Where there is no
+   * AbortController the read is as it always was. */
+  var STATE_READ_MS = 10000;
   function readState() {
     if (!self.fetch) return Promise.resolve(false);
-    return fetch("state.json", { cache: "no-store", credentials: "omit" })
+    var ctl = self.AbortController ? new self.AbortController() : null;
+    var cut = ctl ? setTimeout(function () { ctl.abort(); }, STATE_READ_MS) : null;
+    var done = function (v) { clearTimeout(cut); return v; };
+    return fetch("state.json", { cache: "no-store", credentials: "omit", signal: ctl ? ctl.signal : undefined })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(takeState)
-      .catch(function () { return false; });   // offline: the remembered state stands
+      .then(done, function () { return done(false); });   // offline or abandoned: the remembered state stands
   }
 
   /* HOW LONG A SUSPENSION TAKES TO REACH AN OPEN PHONE. Two decisions of the owner, both kept.
