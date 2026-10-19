@@ -1991,6 +1991,7 @@ async function runApp(opts) {
   const store = new Map();
   if (opts.remembered) store.set("pay-state", JSON.stringify({ maintenance: {}, order: [] }));   // a phone that has opened before
 
+  const made = [];   // every canvas the page made for itself
   const cls = (el) => (el.className || "").split(/\s+/).filter(Boolean);
   function stub(tag) {
     const el = tag === "canvas" ? createCanvas(300, 150) : {};
@@ -2020,11 +2021,23 @@ async function runApp(opts) {
       },
       getBoundingClientRect: () => ({ width: 0, height: 0, left: 0, top: 0 }), scrollIntoView() {}
     });
+    if (tag === "canvas") {
+      /* The headless canvas ignores a width of 0, which a browser honours by freeing the backing
+       * store. Report it the browser's way, so a canvas the page shrinks to nothing reads as 0. */
+      let p = Object.getPrototypeOf(el);
+      while (p && !Object.getOwnPropertyDescriptor(p, "width")) p = Object.getPrototypeOf(p);
+      const d = Object.getOwnPropertyDescriptor(p, "width");
+      let freed = false;
+      Object.defineProperty(el, "width", { configurable: true, enumerable: true,
+        get() { return freed ? 0 : d.get.call(el); }, set(v) { freed = Number(v) === 0; if (!freed) d.set.call(el, v); } });
+      made.push(el);
+    }
     return el;
   }
   const byId = {};
   for (const id of ["coin", "say", "grid", "back", "plate", "due", "goback", "rails", "accounts", "paid", "unpaid"])
     byId[id] = stub(id === "coin" ? "canvas" : "div");
+  made.length = 0;   // the page's own coin canvas is not a kept one
   byId.coinbtn = stub("button"); byId.coinbtn.parentNode = box;
   const stage = stub("div");
 
@@ -2083,6 +2096,8 @@ async function runApp(opts) {
       await api.advance(1100);
       for (let k = 0; k < codes.length * 2 + 4; k++) { while (idles.length) { idles.shift()(); await flush(); } await api.advance(40); }
     },
+    // the coins held: full-size canvases the page made and has not shrunk away
+    held: () => made.filter((c) => c.width >= 1000).length,
     fullDraws: (key) => calls.draws.filter((k) => !key || k === key).length,
     async openKey(key) { loc.hash = "#" + key; listeners.win.popstate(); await flush(); },
     show(hidden) { document_.hidden = hidden; listeners.doc.visibilitychange(); },
@@ -2154,8 +2169,8 @@ async function runApp(opts) {
       "drawn " + app.fullDraws());
     await app.idle();
     const warmed = app.fullDraws();
-    ok("in idle time every live code is drawn once (" + codes.length + " accounts)", warmed === codes.length && app.fullDraws(A) === 1,
-      "drawn " + warmed);
+    ok("in idle time the first six live codes in list order are drawn once, and no more (" + codes.length + " accounts)",
+      warmed === 6 && codes.slice(0, 6).every((c) => app.fullDraws(c.key) === 1) && app.held() === 6, "drawn " + warmed);
     await app.openKey(A);
     ok("a tap on an account draws nothing: it shows the kept drawing", app.fullDraws() === warmed && !app.blank(),
       "drawn " + (app.fullDraws() - warmed) + " more");
@@ -2177,11 +2192,15 @@ async function runApp(opts) {
     // a suspension drops what is kept, on the account that is not open as well as the one that is
     await app.openKey(B);
     const keyB = app.fullDraws(B);
-    app.served(suspend(B));
+    // all but four are suspended, so the warm-up's six would reach the suspended ones if it did not skip them
+    const gone = [B].concat(codes.slice(5).map((c) => c.key));
+    const goneBefore = gone.map((g) => app.fullDraws(g));
+    app.served(suspend(...gone));
     await app.advance(15000);
     await app.idle();
     ok("a suspended account is drawn nowhere: nothing is kept for it and the warm-up skips it",
-      app.fullDraws(B) === keyB && app.blank(), "drawn " + (app.fullDraws(B) - keyB));
+      gone.every((g, n) => app.fullDraws(g) === goneBefore[n]) && app.blank(),
+      "drawn " + gone.map((g, n) => app.fullDraws(g) - goneBefore[n]).join(","));
     app.served(live);
     await app.advance(15000);
     const afterLift = app.fullDraws(B);
@@ -2221,6 +2240,42 @@ async function runApp(opts) {
     await app.openKey(B);
     ok("a different size is drawn afresh", app.fullDraws(B) === sized + 1 && app.coin.width > 0,
       "draws " + sized + " then " + app.fullDraws(B));
+  }
+
+  /* THE STORE IS CAPPED AT SIX (owner, 19 Oct 2026): about 3 MB a coin at a ratio of 3. */
+  {
+    const app = await runApp({ remembered: true });
+    await app.idle();
+    const k = (n) => codes[n].key;
+    const freshOf = (n) => {
+      const c = createCanvas(8, 8);
+      QRArt.draw(c, codes[n].payload, { brand: codes[n].brand, label: codes[n].name, seed: codes[n].key, size: 390, pixelRatio: 3 });
+      return c.toBuffer("image/png");
+    };
+    const shows = async (n) => { const d = app.fullDraws(); await app.openKey(k(n)); return app.fullDraws() - d; };
+
+    // five are shown again and the sixth is left longest unshown; the seventh account is then tapped
+    for (const n of [1, 2, 3, 4, 5, 0]) await shows(n);   // account 1 is now the one shown longest ago
+    let peak = app.held();
+    const seventh = await shows(6);
+    peak = Math.max(peak, app.held());
+    ok("a tap on a seventh account draws it, and the store still holds six", seventh === 1 && app.held() === 6, "drew " + seventh + ", holds " + app.held());
+    const again = [];
+    for (const n of [6, 0, 5, 4, 3, 2]) again.push(await shows(n));
+    ok("the one shown longest ago was dropped, and the other five and the seventh are still kept",
+      again.every((d) => d === 0), "redrawn: " + again.join(","));
+    const evicted = await shows(1);
+    ok("the evicted account's next tap draws it afresh, and the drawing is the fresh one byte for byte",
+      evicted === 1 && app.pixels().equals(freshOf(1)), "drew " + evicted);
+
+    // however many are visited, the store never passes six
+    for (let n = 0; n < codes.length; n++) { await app.openKey(k(n)); peak = Math.max(peak, app.held()); }
+    for (let n = codes.length - 1; n >= 0; n--) { await app.openKey(k(n)); peak = Math.max(peak, app.held()); }
+    ok("opening every account, forwards and back, never leaves more than six coins held", peak === 6 && app.held() === 6, "peak " + peak);
+    const lastSix = codes.slice(0, 6).map((c) => c.key);   // the backward walk ended on these
+    let hits = 0;
+    for (const key of lastSix.slice().reverse()) { const d = app.fullDraws(); await app.openKey(key); if (app.fullDraws() === d) hits++; }
+    ok("and what it holds is the six shown most recently", hits === 6, hits + " of 6 kept");
   }
 }
 

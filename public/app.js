@@ -212,8 +212,16 @@
    * A SUSPENDED ACCOUNT NEVER SHOWS A KEPT CODE. faceOf() refuses it and deletes the entry, and
    * a change of state empties the whole store before anything repaints (see watchState: a tile
    * that kept a painted coin under a dimmed tile is the failure that comment records). Nothing
-   * kept is ever handed to the clipboard or the gallery: the saved image is cardOf(), its own. */
-  var kept = {};        // account key -> { sig, canvas, meta }
+   * kept is ever handed to the clipboard or the gallery: the saved image is cardOf(), its own.
+   *
+   * AT MOST KEEP_MAX ARE HELD (6, owner, 19 Oct 2026). A coin is about 3 MB at a pixel ratio of 3,
+   * and thirteen of them sit too close to what iOS kills a saved app for. The warm-up draws the
+   * first six in list order; a tap on any other account draws it and keeps it, and the one shown
+   * longest ago goes: its canvas is shrunk to nothing so the memory is returned at once, and its
+   * next tap draws afresh. */
+  var KEEP_MAX = 6;
+  var useClock = 0;     // ticks on every showing; the smallest `used` is the one shown longest ago
+  var kept = {};        // account key -> { sig, canvas, meta, used }
   var warmGen = 0;      // bumped by every warm(), so a queued warm-up of an older state stands down
   var fontEpoch = 0;    // bumped when the faces load; part of the key
   function faceOf(i) {
@@ -224,16 +232,27 @@
     var size = fit(), ratio = self.devicePixelRatio || 1;
     var sig = JSON.stringify([a.key, a.payload, viewOf(a), size, ratio, a.brand, a.name, fontEpoch]);
     var k = kept[a.key];
-    if (k && k.sig === sig) return k;
+    if (k && k.sig === sig) { k.used = ++useClock; return k; }
     var off = document.createElement("canvas");
     var meta = paintFace(off, a, { size: size, pixelRatio: ratio });
-    return (kept[a.key] = { sig: sig, canvas: off, meta: meta });
+    var made = (kept[a.key] = { sig: sig, canvas: off, meta: meta, used: ++useClock });
+    for (;;) {
+      var held = Object.keys(kept), oldest = null;
+      if (held.length <= KEEP_MAX) break;
+      for (var n = 0; n < held.length; n++) {
+        if (kept[held[n]] !== made && (oldest === null || kept[held[n]].used < kept[oldest].used)) oldest = held[n];
+      }
+      kept[oldest].canvas.width = 0; kept[oldest].canvas.height = 0;
+      delete kept[oldest];
+    }
+    return made;
   }
 
   /* THE APP GETS ITS FIRST SECOND TO ITSELF. Drawn straight away, thirteen coins at once took the
    * main thread from the opening list (measured on the throttled phone profile: cold open 1.25 s
    * to 2.5 s), so the first warm-up waits WARM_FIRST_MS and then goes one account to an idle
-   * callback, the list's own order first because those are the ones a thumb reaches. Run again
+   * callback, the list's own order first because those are the ones a thumb reaches, and no more
+   * than KEEP_MAX of them. Run again
    * after anything that could change the key; what is already kept is found and skipped. */
   var WARM_FIRST_MS = 1000;
   function warm(delay) {
@@ -244,7 +263,7 @@
         queue = shownOrder.filter(function (i) {
           var a = CODES[i];
           return !plate(a) && !down(a) && viewOf(a) === "qr";
-        });
+        }).slice(0, KEEP_MAX);
       }
       if (!queue.length) return;
       var i = queue.shift();
@@ -538,7 +557,7 @@
       return { plain: false, fellBack: false, view: v };
     }
     elPlate.textContent = "";
-    if (!(pre && pre.canvas)) pre = faceOf(idx);   // the kept drawing, or one drawn now and kept
+    if (!(pre && pre.canvas && pre.canvas.width)) pre = faceOf(idx);   // the kept drawing, or one drawn now and kept
     if (pre && pre.canvas) {
       elCoin.width = pre.canvas.width;
       elCoin.height = pre.canvas.height;

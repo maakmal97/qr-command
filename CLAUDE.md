@@ -54,7 +54,9 @@ Read the note at the top of the file first; `npm test` re-asserts every number.
 - **Encoding is cached in `plan()`. Never batch modules into one `Path2D`**, asserted.
 - **Each live coin is drawn once in idle time and kept** (`faceOf`, `warm`; his decision of 19 Oct
   2026), keyed by account, payload, rail, size, pixel ratio, brand, name and whether the faces have
-  loaded. A change of state empties the store; a suspended account is never drawn or kept; the
+  loaded. At most `KEEP_MAX` (6) are held, about 3 MB each at a ratio of 3: the warm-up draws the
+  first six in list order, a tap on another draws and keeps it, and the one shown longest ago is
+  dropped (canvas shrunk to 0). A change of state empties the store; a suspended account is never drawn or kept; the
   saved image is `cardOf()`, never the kept coin.
 - `paintFace` is the one place assembling the coin's options, with the `acct`-is-absent note.
 - **Code-less accounts** draw `drawPlate()`, which never reads `acct` or draws the DuitNow
