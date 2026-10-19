@@ -314,7 +314,7 @@ body.view-code .codeview{
   margin:0;
   flex:0 0 auto;
   font-family:var(--salt-font-mono);
-  font-size:12px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;
+  font-size:12px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;
   color:var(--salt-copper);
 }
 
@@ -531,7 +531,7 @@ button.prow:active{transform:scale(.99);}
 button.prow:focus-visible{outline:2px solid var(--salt-brass);outline-offset:2px;border-radius:var(--r-sm);}
 .plabel{
   font-family:var(--salt-font-mono);
-  font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;
+  font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
   color:var(--salt-copper);
 }
 /* The value is the figure, and the figure is the light: the brightest thing on the screen. */

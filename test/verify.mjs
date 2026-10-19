@@ -2342,6 +2342,13 @@ async function runApp(opts) {
   }
 }
 
+/* Counter Batch C (20 Oct 2026, his item 20): section and field labels at 600, as salt-ds 1.9.0 raised its eyebrow and label */
+{
+  const css = read(path.join(PUB, "app.css")).replace(/\/\*[\s\S]*?\*\//g, "");
+  const weight = (sel) => { const m = new RegExp("(^|\\})\\s*" + sel.replace(".", "\\.") + "\\s*\\{([^}]*)\\}").exec(css); const f = m && /font-weight:\s*(\d+)/.exec(m[2]); return f ? +f[1] : 0; };
+  ok("the eyebrow and the plate's labels weigh 600", weight(".atitle") === 600 && weight(".plabel") === 600, weight(".atitle") + " and " + weight(".plabel"));
+}
+
 /* --------------------------------------------------------------------- verdict */
 
 console.log("\n" + (fail ? "FAILED: " : "ok: ") + pass + " passed, " + fail + " failed\n");
