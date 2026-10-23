@@ -26,7 +26,7 @@ self.QR_CODES = [
     "name": "Maybank",
     "brand": "#F5B400",
     "payload": "00020201021126690014A000000615000101065887340220MAEPP111221028565487031317927301111445204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY6304B137",
-    "acct": "1571 5788 9482",
+    "acct": "3649 4000 3217",
     "maintenance": false,
     "bank": "Maybank",
     "holder": "",
@@ -230,4 +230,4 @@ self.QR_CODES = [
     "ref1": "6011111809738"
   }
 ];
-self.QR_BUILD = "45e194234484";
+self.QR_BUILD = "f7a193b6af03";
