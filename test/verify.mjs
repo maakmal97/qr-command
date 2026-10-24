@@ -21,7 +21,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { createCanvas, Path2D } from "@napi-rs/canvas";
+import { createCanvas, loadImage, Path2D } from "@napi-rs/canvas";
 
 /* The DuitNow mark is drawn from the official SVG path data, which needs Path2D. Browsers have
  * it as a global; Node does not, so the headless canvas's implementation goes where the shipped
@@ -1902,6 +1902,23 @@ section("6. One build id, everywhere");
     [...new Set(inHtml)].join(", ") + " vs " + rev.id);
   ok("index.html has no unstamped local script or stylesheet",
     !/(?:src|href)="\.\/(?!favicon|apple-touch|manifest)[^"?]+\.(?:js|css)"/.test(indexHtml));
+  /* his word of 24 Oct 2026: the tab is titled QR and its icon has no black ground */
+  const adminHtml = read(path.join(PUB, "admin", "index.html"));
+  ok("the tab is titled QR, and the list sets the same title when it returns to it",
+    /<title>QR<\/title>/.test(indexHtml) && !/<title>QR Command<\/title>/.test(indexHtml) && /document\.title = "QR";/.test(read(path.join(PUB, "app.js"))) && !/document\.title = "QR Command"/.test(read(path.join(PUB, "app.js"))));
+  ok("both pages link the clear-ground tab icon, and neither links the opaque 32px tile",
+    indexHtml.includes('<link rel="icon" href="./favicon-tab.png" sizes="64x64">') && adminHtml.includes('<link rel="icon" href="../favicon-tab.png" sizes="64x64">')
+    && !indexHtml.includes("favicon-32") && !adminHtml.includes("favicon-32"));
+  {
+    const tab = await loadImage(fs.readFileSync(path.join(PUB, "favicon-tab.png")));
+    const cv = createCanvas(64, 64), g = cv.getContext("2d");
+    g.drawImage(tab, 0, 0);
+    const at = (x, y) => [...g.getImageData(x, y, 1, 1).data];
+    ok("the tab icon is 64px and its ground is clear: every corner and edge midpoint outside the coin is fully transparent",
+      tab.width === 64 && tab.height === 64 && [[0, 0], [63, 0], [0, 63], [63, 63], [0, 32], [63, 32], [3, 3]].every(([x, y]) => at(x, y)[3] === 0), JSON.stringify([at(0, 0), at(3, 3)]));
+    ok("and the coin is solid on it: the rim at the top is opaque brass and the eye's salt is opaque at the centre, not the obsidian 5,8,10 ground",
+      at(32, 3)[3] === 255 && at(32, 3)[0] > 150 && at(32, 32)[3] === 255 && at(32, 32).slice(0, 3).join() !== "5,8,10", JSON.stringify([at(32, 3), at(32, 32)]));
+  }
   ok("data.js records the same build id", new RegExp('QR_BUILD = "' + rev.id + '"').test(dataSrc));
   ok("rev.json counts the codes it actually shipped", rev.codes === shipped.length);
 }
