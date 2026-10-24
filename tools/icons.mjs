@@ -1,6 +1,7 @@
 /* icons.mjs - the app's own icon set, drawn in the Salt identity (15 Sep 2026).
  *
- *   node tools/icons.mjs
+ *   node tools/icons.mjs          the five icons below
+ *   node tools/icons.mjs --tab    favicon-tab.png alone, the coin on a clear ground
  *
  * Writes favicon-32, apple-touch-icon (180), icon-192, icon-512 and icon-maskable-512 into
  * public/. Run by hand when the icon changes, like vectorise.mjs; the build does not touch
@@ -19,14 +20,18 @@ const PUB = path.resolve(HERE, "..", "public");
 
 const OBSIDIAN = "#05080a", SLATE = "#0b1215", BRASS = "#c5a059", COPPER = "#b87333", SALT = "#f2f4f5";
 
-function draw(size, maskable) {
+function draw(size, maskable, tab) {
   const cv = createCanvas(size, size);
   const g = cv.getContext("2d");
-  g.fillStyle = OBSIDIAN;
-  g.fillRect(0, 0, size, size);
+  /* the browser tab's icon (24 Oct 2026, his word: no black background) is the same coin on a CLEAR ground, drawn larger
+     in its canvas so it reads at sixteen pixels; the others keep their obsidian ground, which a home screen would fill black anyway */
+  if (!tab) {
+    g.fillStyle = OBSIDIAN;
+    g.fillRect(0, 0, size, size);
+  }
 
   const c = size / 2;
-  const R = size * (maskable ? 0.36 : 0.42);   // the coin's outer radius
+  const R = size * (tab ? 0.48 : maskable ? 0.36 : 0.42);   // the coin's outer radius
   const rim = R * 0.14;
 
   // The rim: brass at the top left falling to copper at the bottom right, as every mark does.
@@ -64,7 +69,13 @@ const out = [
   ["icon-512.png", 512, false],
   ["icon-maskable-512.png", 512, true],
 ];
-for (const [name, size, maskable] of out) {
-  fs.writeFileSync(path.join(PUB, name), draw(size, maskable));
-  console.log("  wrote " + name);
+/* `--tab` writes the tab icon alone: redrawing the others could move bytes the shell cache and the manifest already hold */
+if (process.argv.includes("--tab")) {
+  fs.writeFileSync(path.join(PUB, "favicon-tab.png"), draw(64, false, true));
+  console.log("  wrote favicon-tab.png");
+} else {
+  for (const [name, size, maskable] of out) {
+    fs.writeFileSync(path.join(PUB, name), draw(size, maskable));
+    console.log("  wrote " + name);
+  }
 }
