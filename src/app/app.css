@@ -66,7 +66,8 @@
   --salt-product-oil: #c5a059;    /* brass */
   --salt-product-candy: #cf8fb4;  /* rose, hue 330 */
   --salt-product-rice: #7b86cc;   /* indigo, hue 235 */
-  --salt-product-spare: #a8b06a;  /* olive, hue 68 */
+  --salt-product-gas: #e8794d;    /* flame, hue 30 */
+  --salt-product-prep: #c77ae0;   /* magenta, hue 295 */
 
   /* Materials */
   --salt-glass: rgba(255, 255, 255, 0.03);
