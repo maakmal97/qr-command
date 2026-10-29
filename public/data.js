@@ -230,4 +230,4 @@ self.QR_CODES = [
     "ref1": "6011111809738"
   }
 ];
-self.QR_BUILD = "72aeef25c144";
+self.QR_BUILD = "b085a40c4dd2";

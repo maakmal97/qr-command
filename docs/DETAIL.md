@@ -1,4 +1,4 @@
-# QR Command: how the rules are built
+# Salt QR: how the rules are built
 
 `CLAUDE.md` carries the rules; this file carries the mechanism and the measured numbers behind
 them, moved out on 16 Sep 2026 under the root token test. Read on demand. `docs/NOTES.md`
@@ -123,7 +123,7 @@ The laptop master's `edit.html` missed the standard and was fixed 2 Sep 2026.
 | `src/app/sw.js` | Service worker template; `__BUILD__` and `__SHELL__` stamped by the build |
 | `src/vendor/qrcode.js` | The encoder, copied from the retired laptop master unchanged |
 | `tools/vectorise.mjs` | Bitmap logo in, path data out; run by hand when a mark is added |
-| `tools/icons.mjs` | The app's own icon set, the Salt coin with a code's eye, written into `public/` by hand; the build does not touch the PNGs. Title and manifest name are "QR Command" (owner, 15 Sep 2026; was "Pay") |
+| `tools/icons.mjs` | The app's own icon set, the Salt coin with a code's eye, written into `public/` by hand; the build does not touch the PNGs. Home screen and manifest name are "Salt QR" (owner, 30 Oct 2026; was "QR Command" from 15 Sep 2026, "Pay" before), the tab "QR" (24 Oct 2026) |
 | `tools/build.mjs` | `data/accounts.json` in, `public/` out, with the leak check and the disclosure |
 | `public/marks.js` | Every traced mark in one file |
 | `test/verify.mjs` | The whole suite, no network, no browser |

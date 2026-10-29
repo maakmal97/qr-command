@@ -1,6 +1,6 @@
 {
-  "name": "QR Command",
-  "short_name": "QR Command",
+  "name": "Salt QR",
+  "short_name": "Salt QR",
   "description": "Payment codes, drawn on the device.",
   "start_url": "./",
   "scope": "./",

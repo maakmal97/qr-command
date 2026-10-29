@@ -1,4 +1,4 @@
-# QR Command
+# Salt QR
 
 No en dashes in files, code and copy either. Mechanism and
 measured numbers: `docs/DETAIL.md`.
