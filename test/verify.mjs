@@ -1906,6 +1906,13 @@ section("6. One build id, everywhere");
   const adminHtml = read(path.join(PUB, "admin", "index.html"));
   ok("the tab is titled QR, and the list sets the same title when it returns to it",
     /<title>QR<\/title>/.test(indexHtml) && !/<title>QR Command<\/title>/.test(indexHtml) && /document\.title = "QR";/.test(read(path.join(PUB, "app.js"))) && !/document\.title = "QR Command"/.test(read(path.join(PUB, "app.js"))));
+  /* his word of 30 Oct 2026: the app is Salt QR on the home screen and in the manifest; the tab stays QR */
+  {
+    const man = JSON.parse(read(path.join(PUB, "manifest.webmanifest")));
+    ok("the home screen and the manifest name the app Salt QR, never QR Command",
+      indexHtml.includes('<meta name="apple-mobile-web-app-title" content="Salt QR">') && man.name === "Salt QR" && man.short_name === "Salt QR"
+      && !/QR Command/.test(indexHtml) && !/QR Command/.test(JSON.stringify(man)));
+  }
   ok("both pages link the clear-ground tab icon, and neither links the opaque 32px tile",
     indexHtml.includes('<link rel="icon" href="./favicon-tab.png" sizes="64x64">') && adminHtml.includes('<link rel="icon" href="../favicon-tab.png" sizes="64x64">')
     && !indexHtml.includes("favicon-32") && !adminHtml.includes("favicon-32"));

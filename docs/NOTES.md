@@ -1,4 +1,4 @@
-# QR Command: the reasoning behind the rules
+# Salt QR: the reasoning behind the rules
 
 The former body of `CLAUDE.md`, moved here verbatim on 6 Sep 2026 when that file was cut to a fact sheet. Every measurement, decision and its date is kept. Nothing here has been edited since; correct facts in `CLAUDE.md`, not here.
 

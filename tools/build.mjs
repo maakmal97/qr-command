@@ -530,8 +530,8 @@ write(path.join(PUB, "sw.js"),
     .replace("__SHELL__", JSON.stringify(SHELL, null, 2)));
 
 write(path.join(PUB, "manifest.webmanifest"), JSON.stringify({
-  name: "QR Command",
-  short_name: "QR Command",
+  name: "Salt QR",
+  short_name: "Salt QR",
   description: "Payment codes, drawn on the device.",
   start_url: "./",
   scope: "./",

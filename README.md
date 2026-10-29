@@ -1,4 +1,4 @@
-# QR Command
+# Salt QR
 
 Your payment codes, on your phone, drawn on the device and working with the radio off.
 

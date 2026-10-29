@@ -1,4 +1,4 @@
-# QR Command: current facts
+# Salt QR: current facts
 
 ## What this is
 The payment-QR consolidator on the phone: a Cloudflare Worker serving a static bundle built
