@@ -56,6 +56,10 @@
      mark's own colour and the focus colour, so it cannot say "watch this"; amber is a bright yellow, 12.0:1 on obsidian and
      11.3:1 on the panel, far more saturated than brass and clear of ember and alarm. */
   --salt-amber: #f2c230;
+  /* THE LOW-STOCK LIGHT, added 04 Nov 2026 when the restock light took a fourth step (green, yellow, amber, red): an orange between
+     amber and ember, dE 30.8 from amber, 36.6 from ember, 28.1 from the gas book's hue and 29.3 from copper, so it reads as its own step
+     beside any coin. Shared with Tide, as amber is. */
+  --salt-orange: #f28c18;
 
   /* The books. Each is its own hue, and none of them is a SEMANTIC one: ember, verdigris,
      steel and copper each mean something on the desk, so a product dot drawn in one would
