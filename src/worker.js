@@ -88,8 +88,13 @@ function cookie(request, name) {
   return "";
 }
 
-/* Who passed Access, or null. Never throws: a malformed token, an unreachable key server or an
- * unset variable all read as "nobody", which is the answer that opens nothing. */
+/* The one address the edit surface opens for. The Access application is shared with the Salt
+ * surfaces, so its policy is not this app's alone to keep: a valid token for anyone else is
+ * "nobody" here, as salt-command's /all does with the same address. */
+const OWNER_EMAIL = "maakmal97@icloud.com";
+
+/* Who passed Access, or null. Never throws: a malformed token, an unreachable key server, an
+ * unset variable or another person's token all read as "nobody", which opens nothing. */
 async function identity(request, env) {
   const team = String((env && env.ACCESS_TEAM) || "").trim();
   const aud = String((env && env.ACCESS_AUD) || "").trim();
@@ -112,7 +117,8 @@ async function identity(request, env) {
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
     const good = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64url(parts[2]),
       new TextEncoder().encode(parts[0] + "." + parts[1]));
-    return good ? { email: String(claims.email || "") } : null;
+    const email = String(claims.email || "").trim().toLowerCase();
+    return good && email === OWNER_EMAIL ? { email } : null;
   } catch (e) {
     return null;
   }

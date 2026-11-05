@@ -77,8 +77,9 @@ Every number here is re-asserted by `npm test`.
 - `identity()` in `src/worker.js` verifies RS256 against
   `https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`, with issuer, audience and expiry,
   from the `CF_Authorization` cookie or the `Cf-Access-Jwt-Assertion` header, on `/admin`,
-  `/admin/*` and `/api/*`. The suite mints tokens with its own key pair and breaks them eight
-  ways.
+  `/admin/*` and `/api/*`, then the email, which must be `OWNER_EMAIL` (trimmed, lower case;
+  05 Nov 2026). The suite mints tokens with its own key pair and breaks them eight ways, then
+  signs valid ones for another address, no address and a lookalike, each refused.
 - **The Access application** is Self-hosted, domain the workers.dev host, path `admin`, policy
   Allow for the owner's address.
 - `src/app/admin.html` ships as `public/admin/index.html`; `admin.js` is stamped, never

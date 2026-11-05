@@ -28,7 +28,9 @@ Mono (`newsreader-latin.woff2`, `geist-mono-latin.woff2`; Fraunces and JetBrains
 ## Access
 `/admin` sits in the shared "Salt / QR" Access application (also covers salt-command), aud
 `14a921e2...`, read from the API 14 Oct 2026. If `/admin/` says "Sign in through Cloudflare
-Access" while signed in, compare `ACCESS_AUD` with that app's aud first.
+Access" while signed in, compare `ACCESS_AUD` with that app's aud first, then that the
+signed-in address is `OWNER_EMAIL`: since 05 Nov 2026 `identity()` refuses any other, as
+salt-command's `/all` does.
 
 ## Cross-repo coordination (payer's link)
 The payer's-link format is also implemented by salt-command's `stmt/pay.js` (`payHref`),
@@ -38,4 +40,4 @@ whose suite reads it back through this repo's `linkOf`. This repo shipped the fo
 wrangler 4.152.0 (workerd 1.20261019.1, 23 Oct 2026); `@napi-rs/canvas` 1.0.13; `compatibility_date` set to 2026-08-08.
 
 ## Testing
-`test/verify.mjs`: 301 assertions (04 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).
+`test/verify.mjs`: 304 assertions (05 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).

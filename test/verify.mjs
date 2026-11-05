@@ -1748,7 +1748,8 @@ const hit = (url, init) => worker.fetch(new Request("https://pay.example" + url,
     return head + "." + body + "." + sig;
   };
   const now = Math.floor(Date.now() / 1000);
-  const good = { aud: [AUD], iss: ISS, exp: now + 300, iat: now, email: "owner@example.test" };
+  const OWNER = "maakmal97@icloud.com";
+  const good = { aud: [AUD], iss: ISS, exp: now + 300, iat: now, email: OWNER };
   const token = mint(good);
 
   const realFetch = globalThis.fetch;
@@ -1780,7 +1781,25 @@ const hit = (url, init) => worker.fetch(new Request("https://pay.example" + url,
 
   const me = await call(envOn, "/api/me", withCookie(token));
   ok("a valid token in the CF_Authorization cookie is verified against the team's key and names the signer",
-    me.status === 200 && (await me.json()).email === "owner@example.test");
+    me.status === 200 && (await me.json()).email === OWNER);
+  const meCase = await call(envOn, "/api/me", withCookie(mint({ ...good, email: "  MaakMal97@iCloud.com " })));
+  ok("the owner's address is matched without regard to case or surrounding spaces",
+    meCase.status === 200 && (await meCase.json()).email === OWNER);
+
+  /* The Access application is shared with the Salt surfaces, so a token that is valid in every
+   * other way, signed by the team's own key for this audience, must still open nothing unless
+   * it names the owner. */
+  const stranger = mint({ ...good, email: "someone@example.test" });
+  const nameless = mint({ ...good, email: undefined });
+  const lookalike = mint({ ...good, email: OWNER + ".evil.test" });
+  ok("a valid token for another address is refused on /admin/, /api/me and /api/state, and writes nothing",
+    (await call(envOn, "/admin/", withCookie(stranger))).status === 401 &&
+    (await call(envOn, "/api/me", withCookie(stranger))).status === 401 &&
+    (await call(envOn, "/api/state", withCookie(stranger, { method: "POST", body: "{}" }))).status === 401 &&
+    kv.store.size === 0);
+  ok("a valid token with no email, or one that only starts with the owner's, is refused",
+    (await call(envOn, "/api/me", withCookie(nameless))).status === 401 &&
+    (await call(envOn, "/api/me", { headers: { "cf-access-jwt-assertion": lookalike } })).status === 401);
   const meH = await call(envOn, "/api/me", { headers: { "cf-access-jwt-assertion": token } });
   ok("the same token in the Cf-Access-Jwt-Assertion header is accepted too", meH.status === 200);
 

@@ -112,7 +112,9 @@ Read the note at the top of the file first; `npm test` re-asserts every number.
 - **The gate is the token, not the header.** `identity()` in `src/worker.js` verifies the
   Access JWT and **fails closed**: `ACCESS_TEAM` or `ACCESS_AUD` empty in `wrangler.jsonc`
   makes every gated route 401. Neither is a secret; this Worker has none. `QR_STATE.put`
-  appears exactly once, after the identity check, asserted.
+  appears exactly once, after the identity check, asserted. **A valid token opens only for
+  `OWNER_EMAIL`** (exact, case and spaces aside; his yes of 05 Nov 2026): the Access application
+  is shared with the Salt surfaces, so its policy is not this app's alone to keep.
 - The page reads `/state.json` and `/api/me` and writes `/api/state`, nothing else, asserted.
   Nothing deploys after a state change.
 
