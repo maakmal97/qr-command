@@ -32,9 +32,11 @@ Access" while signed in, compare `ACCESS_AUD` with that app's aud first, then th
 signed-in address is `OWNER_EMAIL`: since 05 Nov 2026 `identity()` refuses any other, as
 salt-command's `/all` does.
 
-## Cross-repo coordination (payer's link)
-The payer's-link format is also implemented by salt-command's `stmt/pay.js` (`payHref`),
-whose suite reads it back through this repo's `linkOf`. This repo shipped the format first.
+## Cross-repo coordination (Salt Counter)
+Since 06 Nov 2026 Salt Counter never links here: salt-command's `stmt/paycodes.js` reads `/data.js` (the
+`self.QR_CODES` anchor) and `/state.json` through the binding `QRCMD`, `stmt/paycrc.js` is generated
+from `tools/store.js`, and `payHref` and `PAY_SITE` are gone from salt-command. `linkOf` stays for this
+app's own payer links.
 
 ## Tooling
 wrangler 4.152.0 (workerd 1.20261019.1, 23 Oct 2026); `@napi-rs/canvas` 1.0.13; `compatibility_date` set to 2026-08-08.

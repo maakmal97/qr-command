@@ -78,11 +78,13 @@ Read the note at the top of the file first; `npm test` re-asserts every number.
 - **A payer's link is `#<key>/<rail>/<amount>/<reference>`.** `linkOf()` checks each part and
   DROPS, never repairs, one that fails; the rail becomes the mode where the account is on it;
   the amount and reference show under the coin or plate, each copying, on that account only.
-  salt-command shares this format and reads it back through this `linkOf` (current coordination
-  detail: `MEMORY.md`): a format change is both repos. **That suite lifts `function linkOf(`
-  and the `var RAILS = [` block by text from `public/app.js` in this checkout on disk**, not
-  GitHub: keep both in their present shape, `linkOf` needing nothing but `RAILS` (asserted), and
-  fast-forward this checkout after any push from a worktree.
+- **Salt Counter reads this app's bundle, never links to it** (his rule of 06 Nov 2026): its Worker
+  fetches `/data.js` and `/state.json` through its service binding and draws the code, the number and
+  the JomPAY details itself, so no customer ever sees this app. **Keep `data.js`'s shape**:
+  `self.QR_CODES = <JSON array>;` then a newline and `self.QR_BUILD`, and the fields `key`, `payload`,
+  `acct`, `bank`, `biller`, `ref1`; and `tools/store.js`'s `crc16` and `payloadError`, which
+  salt-command's `tools/paycrcsync.mjs` copies by text into its `stmt/paycrc.js`. A change to either is
+  both repos (current detail: `MEMORY.md`).
 - **Every account carries a `bankMark`, and the build ships it for every account**; the suite
   fails a code account without one. `holderMark` stays plate-only. `bank` ships for every
   account and is what the row and the plate show.
