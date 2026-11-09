@@ -184,6 +184,13 @@
   --salt-paper-edge-ember: #e0a894; /* a warning panel's edge */
   color-scheme: dark;
 }
+/* ---- No scrollbars (1.30.0) ---- */
+/* His word of 09 Nov 2026: no scrollbar is drawn anywhere, on the page itself or on any box inside it (a frame's column, a pane, a sheet,
+   a table that slides at 390). A classic scrollbar (Windows) takes about 15px of the width, so a page that scrolled read narrower than one
+   that did not; with none drawn every page is the same width. Only the bar goes: touch, the wheel, a trackpad and the keyboard still
+   scroll. Every element and !important, so no surface draws its own thin bar back; a surface never restates this. */
+* { scrollbar-width: none !important; }
+::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
 /* THE BRAND FACES, SELF-HOSTED, AND THE ONLY WAY THEY LOAD (his instruction of 22 Sep 2026: no Google
    Fonts; the faces became Newsreader and Geist Mono on 18 Oct 2026, his choice). The files are Google's own latin subsets, fetched once and kept in src/fonts/ beside this
    file with their OFL licences; nothing here loads off another origin. A page that LINKS this file
@@ -196,7 +203,7 @@
   font-style: normal;
   font-weight: 200 800;
   font-display: swap;
-  src: url(./fonts/newsreader-latin.woff2?v=6241ddf453b9) format('woff2');
+  src: url(./fonts/newsreader-latin.woff2?v=bf83f027e66e) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
@@ -204,7 +211,7 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(./fonts/geist-mono-latin.woff2?v=6241ddf453b9) format('woff2');
+  src: url(./fonts/geist-mono-latin.woff2?v=bf83f027e66e) format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* ==== END DESIGN tokens ==== */

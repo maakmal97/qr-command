@@ -11,6 +11,10 @@
  *   node tools/designsync.mjs --pull     write the block from ../salt-ds (or $SALT_DS)
  *   node tools/designsync.mjs --check    non-zero if the block is not the design system's :root
  *
+ * AND THE SYSTEM'S NO SCROLLBARS RULE (9 Nov 2026, his word, salt-ds 1.30.0): no scrollbar is drawn on any Salt surface, so a page
+ * that scrolls is as wide as one that does not. It is a rule, not a token, so it is carried as its section of the stylesheet, sliced by
+ * its header (SECTIONS), after the :root block and before the faces; this app restates nothing of it.
+ *
  * THE FILE IS THE SOURCE. Edit the design system, --pull, build. An edit inside the markers is
  * overwritten by the next --pull and fails --check until then. */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs";
@@ -30,7 +34,17 @@ const APP_FONTS = resolve(REPO, "src", "app", "fonts");
 export const BEGIN = "/* ==== DESIGN tokens: generated from Code/salt-ds src/styles.css (:root) by tools/designsync.mjs --pull. Edit the design system, --pull; never this block. ==== */";
 export const END = "/* ==== END DESIGN tokens ==== */";
 
-/** The design system's :root block, verbatim, or null when the system is not on this machine. */
+/** The system's sections carried whole beside the tokens, by their headers: each runs to the next section's header. */
+export const SECTIONS = ["/* ---- No scrollbars ("];
+function section(css, head) {
+  const i = css.indexOf(head);
+  if (i < 0) throw new Error("designsync: no section headed " + head + " in " + DS_SRC);
+  if (css.indexOf(head, i + 1) >= 0) throw new Error("designsync: two sections headed " + head + " in " + DS_SRC);
+  const j = css.indexOf("\n/* ---- ", i + head.length);
+  return css.slice(i, j < 0 ? css.length : j).trim();
+}
+
+/** The design system's :root block and its carried sections, verbatim, or null when the system is not on this machine. */
 export function tokens() {
   if (!existsSync(DS_SRC)) return null;
   const css = readFileSync(DS_SRC, "utf8").replace(/\r\n/g, "\n");
@@ -41,7 +55,7 @@ export function tokens() {
   const fonts = readFileSync(DS_FONTS_CSS, "utf8").replace(/\r\n/g, "\n")
     .replace(/url\(fonts\/([^)]+)\)/g, "url(./fonts/$1?v=__BUILD__)");
   if (/https?:\/\//.test(fonts)) throw new Error("designsync: fonts-local.css names another origin");
-  return m[0] + "\n" + fonts.trim();
+  return m[0] + "\n" + SECTIONS.map((h) => section(css, h)).join("\n") + "\n" + fonts.trim();
 }
 
 /** True when every font file in src/app/fonts/ is the design system's, byte for byte. */

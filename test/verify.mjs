@@ -1887,6 +1887,12 @@ section("5. The service worker's guards");
   ok("app.css declares both faces from ./fonts/, stamped with this build",
     FONT_FILES.every((f) => cssF.includes("url(./fonts/" + f + "?v=" + rev.id + ")")) && /font-family: 'Newsreader'/.test(cssF));
   ok("the shell precaches both faces", FONT_FILES.every((f) => shell.includes("./fonts/" + f + "?v=" + rev.id)));
+  /* NO SCROLLBAR (9 Nov 2026, his word, salt-ds 1.30.0): the system draws none on any element, so a page that scrolls is as wide as one that
+     does not; nothing of this app draws one back */
+  const cssN = cssF.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok("app.css draws no scrollbar on any element, and nothing draws one back",
+    cssN.includes("* { scrollbar-width: none !important; }") && cssN.includes("::-webkit-scrollbar { display: none !important;")
+    && (cssN.match(/scrollbar-width/g) || []).length === 1 && !/scrollbar-(color|gutter)/.test(cssN) && (cssN.match(/::-webkit-scrollbar/g) || []).length === 1);
   const workerF = read(path.join(PUB, "..", "src", "worker.js"));
   ok("the policy admits the page's own fonts and nothing else's", /font-src 'self'/.test(workerF) && !/font-src[^",]*(data:|http)/.test(workerF));
 }
