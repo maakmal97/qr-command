@@ -2479,9 +2479,14 @@ async function runApp(opts) {
   ok("the day runs lagoon, flare, dusk and back, with no mood skipped", steady.join(" ") === "dusk lagoon flare dusk", steady.join(" "));
   const registered = [...cssM.matchAll(/@property (--amb-[a-z0-9-]+)/g)].map((m) => m[1]);
   const rootRule = (/(?:^|\})\s*:root\{([^}]*)\}/.exec(cssM) || [])[1] || "";
-  ok("the hour's blend moves every colour Ambient registers, and only on <html>",
-    registered.length >= 7 && registered.every((p) => rootRule.includes(p + " var(--mood-run) steps(360) var(--mood-lag)")) && !/var\(--mood-run\) linear/.test(cssM) &&
-    /setProperty\("--mood-lag", -m\.into \+ "ms"\)/.test(appJsM), registered.join(", "));
+  /* A CSS transition of these inherited colours restyles the whole page on every frame for the
+   * hour, steps() or not (measured 17 Nov 2026: a tap 6 to 10 times as slow). The blend is
+   * mood.js's own mix, set at most once a minute, of every colour Ambient registers. */
+  const blended = (/var BLENDED = \[([^\]]*)\]/.exec(appJsM) || [])[1] || "";
+  ok("the hour's blend mixes every colour Ambient registers, stepped by the minute, never transitioned",
+    registered.length >= 7 && registered.every((p) => blended.includes('"' + p + '"')) &&
+    !/transition:[^;}]*--amb-/.test(cssM) && !/--mood-run|--mood-lag/.test(cssM + appJsM) &&
+    /color-mix\(in srgb, /.test(appJsM) && /Math\.min\(wait, 60000/.test(appJsM), registered.join(", "));
   const idx = read(path.join(PUB, "index.html")), adm = read(path.join(PUB, "admin", "index.html"));
   ok("the mood is set in <head>, before the first frame, and theme-color follows the base",
     /<link rel="stylesheet" href="\.\/app\.css\?v=[^"]+">\n[^\n]*\n<script src="\.\/mood\.js\?v=[^"]+"><\/script>\n<\/head>/.test(idx) &&

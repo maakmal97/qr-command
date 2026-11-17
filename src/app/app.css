@@ -455,17 +455,8 @@
   font-synthesis:none;
   --amb-page-side:var(--amb-page-gutter);
 
-  /* THE MOOD'S HOUR (17 Nov 2026). mood.js sets both on <html> as the clock turns: run is the
-   * blend's length (0s while a mood stands), lag how far into it the page opened, as a negative
-   * delay. Only Ambient's registered colours can glide; the rest of a mood changes at once.
-   * steps(360), never linear: one step every ten seconds, under one level of a colour channel,
-   * where linear restyled the whole page on every frame for the hour. */
-  --mood-run:0s;
-  --mood-lag:0s;
-  transition:--amb-base var(--mood-run) steps(360) var(--mood-lag),--amb-surface var(--mood-run) steps(360) var(--mood-lag),
-    --amb-raised var(--mood-run) steps(360) var(--mood-lag),--amb-well var(--mood-run) steps(360) var(--mood-lag),
-    --amb-mesh-1 var(--mood-run) steps(360) var(--mood-lag),--amb-mesh-2 var(--mood-run) steps(360) var(--mood-lag),
-    --amb-mesh-3 var(--mood-run) steps(360) var(--mood-lag);
+  /* THE MOOD'S HOUR: no transition here. mood.js steps the blend itself once a minute; a CSS
+   * transition of these colours, even at steps(360), restyled the whole page on every frame. */
 
   /* geometry */
   --r:var(--amb-radius-lg);
