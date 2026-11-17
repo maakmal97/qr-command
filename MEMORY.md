@@ -48,4 +48,4 @@ app's own payer links.
 wrangler 4.152.0 (workerd 1.20261019.1, 23 Oct 2026); `@napi-rs/canvas` 1.0.13; `compatibility_date` set to 2026-08-08.
 
 ## Testing
-`test/verify.mjs`: 305 assertions (17 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).
+`test/verify.mjs`: 306 assertions (17 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).

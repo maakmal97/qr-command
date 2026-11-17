@@ -49,7 +49,10 @@ Every number here is re-asserted by `npm test`.
 - **The badge** (`drawBadge()`, struck by `drawThumbs()` on any rail but QR): the brand disc
   carrying the institution's traced `bankMark` through `QRArt.drawMark` where one exists, else
   initials derived from `name` (`initialsOf()`: up to three words' initials, or the first two
-  letters of one word). The code-less account wears it too since 15 Sep 2026.
+  letters of one word). The code-less account wears it too since 15 Sep 2026. Its ink is
+  `badgeInk()`: light (`#f2f4f5`) wherever light clears `MARK_LIGHT_MIN` (2:1) against the disc,
+  else slate; since 17 Nov 2026, when the bar fell from 3:1 so ATLAS and Setel reverse out in
+  white as their own artwork does, only Maybank's yellow takes the dark mark.
 - **Marks**: the build blanked `bankMark` on code accounts until 15 Sep 2026, so the live badges
   showed initials while the marks sat loaded. Each is traced from the logo on the institution's
   own website on the owner's instruction. The tracer keeps one ink: a two-colour logo is

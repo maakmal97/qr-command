@@ -817,6 +817,18 @@ section("2. The bundle carries the codes and nothing else");
     /if \(rail === "qr"\) \{[\s\S]{0,200}?paintFace\(el[\s\S]{0,300}?drawBadge\(el, a\);/.test(appJs) &&
     /function initialsOf\(name\)/.test(appJs) && /function drawBadge\(el, a\)/.test(appJs) &&
     /remember\("rail", id\);[\s\S]{0,600}?orderTiles\(\);\s*drawThumbs\(\);/.test(appJs));
+  /* THE BADGE'S MARK IS LIGHT unless the disc is too pale (owner, 17 Nov 2026): one number,
+   * MARK_LIGHT_MIN, classifies every account. At the old 3:1 ATLAS and Setel took a dark mark. */
+  {
+    const m = /var MARK_LIGHT_MIN = ([\d.]+);/.exec(appJs);
+    const C = QRArt.colour;
+    const dark = m ? shipped.filter((c) =>
+      C.contrast(C.hex2rgb(c.brand), [242, 244, 245]) < Number(m[1])).map((c) => c.key) : null;
+    ok("the badge marks are light on every disc but Maybank's yellow, by one threshold",
+      !!m && /function badgeInk\(brand\)/.test(appJs) && /var ink = badgeInk\(a\.brand\);/.test(appJs) &&
+      JSON.stringify(dark) === JSON.stringify(["maybank"]),
+      "dark: " + JSON.stringify(dark));
+  }
   ok("a step walks the visible order, never the build order",
     /shownOrder\.push\(order\[k\]\)/.test(appJs) &&
     /var i = shownOrder\[\(pos \+ dir \+ shownOrder\.length\) % shownOrder\.length\];/.test(appJs));

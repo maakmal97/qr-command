@@ -1110,6 +1110,17 @@
       : String(name).slice(0, 2);
     return s.toUpperCase();
   }
+  /* THE MARK IS REVERSED OUT IN LIGHT unless the disc is too pale to carry it (owner, 17 Nov
+   * 2026). A brand's own artwork on its own colour is nearly always white: ATLAS on orange,
+   * Setel on blue. Picking whichever ink contrasts more, or holding light to 3:1, struck those
+   * two in near-black, which reads as somebody else's logo. Light now stands down only below
+   * MARK_LIGHT_MIN against the disc, and today that is Maybank's yellow alone, whose own lockup
+   * is dark on yellow. A new account is classified by this one number, never by a stored field. */
+  var MARK_LIGHT_MIN = 2;
+  function badgeInk(brand) {
+    var C = self.QRArt.colour;
+    return C.contrast(C.hex2rgb(brand), [242, 244, 245]) >= MARK_LIGHT_MIN ? "#f2f4f5" : "#0b1215";
+  }
   function drawBadge(el, a) {
     var dpr = self.devicePixelRatio || 1, px = Math.round(THUMB * dpr);
     el.width = px; el.height = px;
@@ -1119,8 +1130,7 @@
     g.arc(px / 2, px / 2, px / 2 - dpr, 0, Math.PI * 2);
     g.fillStyle = a.brand;
     g.fill();
-    var C = self.QRArt.colour;
-    var ink = C.contrast(C.hex2rgb(a.brand), [242, 244, 245]) >= 3 ? "#f2f4f5" : "#0b1215";
+    var ink = badgeInk(a.brand);
     var mark = markOf(a.bankMark);
     // As tall as three fifths of the disc, or as broad as four fifths, whichever binds: a square
     // app icon fills the disc, a long wordmark runs across it.
