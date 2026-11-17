@@ -463,6 +463,7 @@ const codes = sanitise(doc, V);
 
 const sources = [
   ["index.html", path.join(APP, "index.html")],
+  ["ambient.css", path.join(APP, "ambient.css")],
   ["app.css", path.join(APP, "app.css")],
   ["app.js", path.join(APP, "app.js")],
   ["mood.js", path.join(APP, "mood.js")],
@@ -500,7 +501,7 @@ for (const [, src] of sources) h.update(lf(read(src)));
 h.update(lf(dataBody));
 const BUILD = h.digest("hex").slice(0, 12);
 
-const stamped = ["app.css", "mood.js", "app.js", "qr-art.js", "qrcode.js", "marks.js", "data.js", "admin.js"];
+const stamped = ["ambient.css", "app.css", "mood.js", "app.js", "qr-art.js", "qrcode.js", "marks.js", "data.js", "admin.js"];
 // The shell is the public app only. admin.js is stamped but never precached: the service worker
 // stays out of /admin/ and /api/ altogether, so an Access sign-in page can never be cached as it.
 const SHELL = ["./"].concat(stamped.filter((f) => f !== "admin.js").map((f) => "./" + f + "?v=" + BUILD));

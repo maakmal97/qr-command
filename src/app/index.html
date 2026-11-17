@@ -14,17 +14,21 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./favicon-tab.png" sizes="64x64">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="stylesheet" href="./ambient.css?v=__BUILD__">
 <link rel="stylesheet" href="./app.css?v=__BUILD__">
 <!-- The mood of the hour, set before the first frame (mood.js). -->
 <script src="./mood.js?v=__BUILD__"></script>
 </head>
 <body class="view-list">
 
+<div class="amb amb-shell amb-shell--page">
 <!-- The light: Ambient's mesh in the mood of the hour, the same for every account. -->
 <div class="sky" aria-hidden="true"></div>
+<div class="amb-screen pay-screen">
+<div class="amb-split amb-split--panes pay-split">
 
 <!-- The home screen. Every account, named, one tap away, nothing hidden. -->
-<section id="accounts" class="accounts" aria-label="Accounts">
+<section id="accounts" class="amb-stack accounts" aria-label="Accounts">
   <div class="ahead">
     <h1 class="atitle">Accounts</h1>
     <!-- The one door to the edit surface. It is a plain link: /admin/ sits behind Cloudflare
@@ -42,7 +46,8 @@
 </section>
 
 <!-- The code. Reached by tapping an account, and left by the button top left. -->
-<section id="codeview" class="codeview" aria-label="Payment code">
+<section id="codeview" class="amb-stack codeview" aria-label="Payment code">
+  <p class="empty-detail">Select an account</p>
   <div class="bar">
     <button type="button" id="back" class="back">
       <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false" class="chev">
@@ -57,12 +62,12 @@
     <!-- No title. The provider's name is struck around the coin's rim, where it belongs on a
          coin, and repeating it in 28px above was saying the same thing twice. The coin's own
          aria-label still carries it, so nothing is lost to a screen reader. -->
-    <div class="coinwrap">
+    <div class="coinwrap amb-codeframe amb-codeframe--bare">
       <!-- ONE FACE. There was a reverse carrying the account number, reached by turning the coin
            over, which meant copying the number required showing it first. "Copy account number"
            puts it on the clipboard without it ever being on screen, which left the reverse with
            nothing to do. -->
-      <button type="button" id="coinbtn" class="coinbtn">
+      <button type="button" id="coinbtn" class="coinbtn amb-codeframe__field">
         <canvas id="coin" class="coin" role="img" aria-label="Payment code"></canvas>
       </button>
       <!-- Shown OVER the coin rather than in place of it. The coin box stays laid out, because
@@ -72,7 +77,7 @@
            Transfer and JomPAY the coin is taken down and this plate carries the bank and the
            number, or the biller code and the references, each value copying on a tap. Filled by
            app.js from the record; body[data-view] switches between the two. -->
-      <div class="plate" id="plate" aria-label="Payment details"></div>
+      <div class="plate amb-plate" id="plate" aria-label="Payment details"></div>
       <div class="maint" id="maint" aria-hidden="true">
         <p class="maint-h">Under maintenance</p>
       </div>
@@ -81,7 +86,7 @@
     <!-- THE PAYER'S LINK: the amount and the reference it carried, under the coin or the plate
          on either rail, each copying on a tap. Filled by app.js from the hash, on the account the
          link named and no other; hidden when there is nothing to show. -->
-    <div class="due" id="due" aria-label="Amount and reference" hidden></div>
+    <div class="due amb-plate" id="due" aria-label="Amount and reference" hidden></div>
 
     <div class="tools">
       <!-- THE WAY BACK FROM A PAYER'S LINK (18 Oct 2026, a customer could not find it): the page
@@ -96,6 +101,9 @@
     </div>
   </main>
 </section>
+</div>
+</div>
+</div>
 
 <noscript>
   <p class="noscript">This page draws its codes on the device, so it needs JavaScript.</p>

@@ -453,6 +453,7 @@
 /* this app's own */
 :root{
   font-synthesis:none;
+  --amb-page-side:var(--amb-page-gutter);
 
   /* THE MOOD'S HOUR (17 Nov 2026). mood.js sets both on <html> as the clock turns: run is the
    * blend's length (0s while a mood stands), lag how far into it the page opened, as a negative
@@ -488,6 +489,8 @@
 
 *{box-sizing:border-box;}
 html,body{height:100%;}
+.pay-screen{padding:0;}
+.empty-detail{display:none;}
 
 body{
   margin:0;
@@ -562,7 +565,7 @@ body.view-code .codeview{
  * above, and plain 16px threw the insets away on every notched phone. */
 .accounts{
   gap:14px;
-  padding-top:calc(env(safe-area-inset-top) + clamp(16px,3.4vh,30px));
+  padding-top:calc(env(safe-area-inset-top) + clamp(16px,3.4dvh,30px));
   padding-left:calc(env(safe-area-inset-left) + 16px);
   padding-right:calc(env(safe-area-inset-right) + 16px);
   padding-bottom:calc(env(safe-area-inset-bottom) + 16px);
@@ -630,11 +633,7 @@ body.view-code .codeview{
 /* A filtered-out tile leaves the grid flow entirely, or auto-fill keeps a hole where it was. */
 .tile[hidden]{display:none;}
 
-/* ONE COLUMN OF ROWS (owner, 14 Sep 2026). The rows carry the institutions' DuitNow names,
- * which are too long for a two-column tile, and a list in the /admin/ order with the rail
- * filtering it is how fourteen accounts are found: the eye runs down one edge. THE ROWS ARE A
- * FIXED HEIGHT, AND THAT IS WHAT MAKES THE LIST SCROLL: a 1fr row stretched to fit the screen
- * shrinks the content while the boxes grow. */
+/* Rows follow the admin order. Fixed row heights keep the list scrollable. */
 .grid{
   flex:1 1 auto;
   min-height:0;
@@ -718,8 +717,8 @@ body.view-code .codeview{
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:clamp(8px,2vh,18px);
-  padding:0 16px clamp(8px,2vh,18px);
+  gap:clamp(8px,2dvh,18px);
+  padding:0 16px clamp(8px,2dvh,18px);
   text-align:center;
 }
 
@@ -961,7 +960,8 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 /* --------------------------------------------------------------------- fallbacks */
 
 .noscript{
-  position:relative;z-index:2;margin:0;padding:16px;text-align:center;
+  position:fixed;inset:0;z-index:2;margin:0;padding:calc(env(safe-area-inset-top) + 32px) 16px;
+  text-align:center;background:var(--amb-base);
   color:var(--amb-ink);font-size:14px;
 }
 
@@ -981,9 +981,50 @@ body.view-code .bar{animation:bar-in 240ms var(--ease) 30ms backwards;}
 
 /* Landscape on a phone: everything else moves beside the coin and the coin keeps its height. */
 @media (orientation:landscape) and (max-height:520px){
-  .stage{flex-direction:row;gap:18px;padding:0 14px 8px;align-items:center;}
+  .stage{flex-direction:row;gap:18px;padding:0 14px 8px 116px;align-items:center;}
+  .stage:has(.goback:not([hidden])){padding-bottom:80px;}
+  .coinwrap{height:100%;width:auto;}
+  .due{flex:1 1 240px;min-width:0;}
   .tools{position:absolute;right:14px;bottom:10px;}
   .bar{position:absolute;top:4px;left:4px;padding:0;}
+}
+
+@media (orientation:portrait) and (max-height:520px){
+  .codeview{overflow-y:auto;}
+  .stage{flex:0 0 auto;justify-content:flex-start;}
+  .coinwrap{flex:0 0 230px;}
+}
+
+@media (min-width:600px){
+  .accounts{width:min(100%,var(--amb-measure));margin-inline:auto;}
+}
+
+@media (min-width:960px) and (min-height:640px){
+  .pay-screen{
+    padding-inline:max(var(--amb-safe-left),var(--amb-page-side,var(--amb-page-gutter)))
+      max(var(--amb-safe-right),var(--amb-page-side,var(--amb-page-gutter)));
+  }
+  .pay-split > .accounts,.pay-split > .codeview{
+    position:relative;inset:auto;min-width:0;min-height:0;
+  }
+  .pay-split > .accounts{
+    padding:calc(var(--amb-safe-top) + 24px) 0 calc(var(--amb-safe-bottom) + 16px);
+    overflow:visible;
+  }
+  .pay-split > .codeview{
+    padding:calc(var(--amb-safe-top) + 16px) 0 calc(var(--amb-safe-bottom) + 16px);
+    overflow:hidden;
+  }
+  .pay-screen > .pay-split::before{content:none;}
+  body.view-code .accounts,
+  body.view-list .codeview{opacity:1;visibility:visible;}
+  body.view-list .codeview .bar,
+  body.view-list .codeview .stage{visibility:hidden;}
+  .empty-detail{
+    position:absolute;inset:0;display:grid;place-items:center;
+    margin:0;color:var(--amb-ink-2);pointer-events:none;
+  }
+  body.view-code .empty-detail{display:none;}
 }
 
 @media print{
@@ -1008,6 +1049,7 @@ body.admin{overflow:auto;}
   padding-bottom:calc(env(safe-area-inset-bottom) + 96px);
 }
 .manage .bar{justify-content:space-between;padding-left:0;padding-right:0;}
+.manage-intro{display:flex;flex-direction:column;gap:12px;}
 .who{font-size:var(--amb-text-caption);font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--amb-ink);}
 /* The one sentence on the page. It stands on the mesh, so it takes the first ink. */
 .hint{margin:0;font-size:var(--amb-text-subhead);line-height:1.5;color:var(--amb-ink);}
@@ -1027,7 +1069,7 @@ body.admin{overflow:auto;}
 .handle{
   appearance:none;-webkit-appearance:none;
   font-size:20px;line-height:1;
-  width:var(--tap);min-height:var(--tap);
+  flex:0 0 var(--tap);width:var(--tap);min-height:var(--tap);
   border:0;background:none;color:var(--amb-ink-2);
   cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
 }
@@ -1062,3 +1104,12 @@ body.admin{overflow:auto;}
 }
 .pill.save:hover:not(:disabled){background:var(--amb-accent);color:var(--amb-on-accent);transform:translateY(-1px);}
 .pill.save:disabled{box-shadow:none;}
+
+@media (min-width:960px){
+  .manage{
+    display:grid;grid-template-columns:minmax(220px,300px) minmax(0,560px);
+    align-content:start;align-items:start;gap:32px;
+    max-width:960px;
+  }
+  .manage-intro{position:sticky;top:calc(env(safe-area-inset-top) + 8px);}
+}

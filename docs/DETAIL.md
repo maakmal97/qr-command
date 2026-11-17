@@ -45,7 +45,9 @@ Every number here is re-asserted by `npm test`.
 - **A payer's link** (24 Sep 2026): `linkOf()` reads `#<key>/<rail>/<amount>/<reference>`;
   `route()` makes a named rail the mode where the account is on it, and `fillDue()` writes AMOUNT
   (`RM 70.00`, copying `70.00`) and REFERENCE into `#due` under the coin or the plate, through the
-  plate's own `fillRows()`, on the linked account only and never on a suspended one.
+  plate's own `fillRows()`, on the linked account only and never on a suspended one. Changing to
+  another rail keeps the validated amount and reference if that account supports it; otherwise
+  it clears the selection.
 - **The badge** (`drawBadge()`, struck by `drawThumbs()` on any rail but QR): the brand disc
   carrying the institution's traced `bankMark` through `QRArt.drawMark` where one exists, else
   initials derived from `name` (`initialsOf()`: up to three words' initials, or the first two
@@ -101,12 +103,17 @@ Every number here is re-asserted by `npm test`.
   `decorative: true` exactly once and drawn together at startup.
 - The light is Ambient's mesh (`.sky`, gradients, no filter), moved by the mood of the hour (17 Nov 2026); the coin transitions `transform`
   only with `will-change`; a step pre-renders offscreen.
-- One column of rows, 72 px, coin left and the institution's name beside it (mono caps until 17 Nov 2026), a
-  `tag` sub-line under it (owner, 14 Sep 2026; the two-column tile grid and the featured
-  full-width JPMorgan row are gone); rows fixed so the list scrolls (owner, 25 Aug 2026).
+- Equal 72 px rows show the institution and its `tag`; no account is featured. The list is
+  centred at medium widths. From 960 px wide and 640 px high, Ambient's panes keep it beside
+  the selected detail; shorter screens keep the single-screen flow. A landscape phone places
+  the detail beside the code, while a very short portrait screen scrolls the detail.
   `orderTiles()` renumbers `--i`; `.accounts` adds the safe-area insets back with `calc()`;
   closing scrolls the tile into view with `block:"nearest"`; `.tiledot` is
-  `border-radius:50%` until `.drawn`.
+  `border-radius:50%` until `.drawn`. Admin uses two columns from 960 px.
+- `fit()` caps the code at 520 CSS px on higher-density displays, or the CSS size needed to
+  reach the renderer's 580 physical px threshold at lower density. Smaller spaces still use the
+  plain-code fallback. Six 520 px faces at 3x can hold roughly 56 MiB of canvas pixels, before
+  other canvases; the cache remains bounded and is emptied on state changes.
 - **Saving**: a dismissed share sheet rejects with `AbortError`, a cancel, not a failure; a
   swipe and a long press each swallow the click that follows, or one gesture saves twice. A
   FLIP element gets its starting transform before its first paint, or it flashes full size.
@@ -122,6 +129,7 @@ The laptop master's `edit.html` missed the standard and was fixed 2 Sep 2026.
 |---|---|
 | `src/worker.js` | The Worker. Serves `public/` and sets every security header itself |
 | `src/app/admin.html`, `admin.js` | The edit surface, shipped under `/admin/` |
+| `src/app/ambient.css` | Ambient's components, carried whole and locked by `tools/designsync.mjs` |
 | `src/app/app.css` | Ambient's tokens from `Code\ambient-ds`, generated and locked (`CLAUDE.md` rule 7; the Salt identity from salt-ds until 17 Nov 2026), the rest this app's own over `--amb-*`: dark only, the mood's base and Ambient's mesh for every account, gliding with the hour; surfaces with a hairline for tiles and the plate; caption caps for labels and the status line, mono for figures; ghosts everywhere and one accent pill (admin Save, Paid). No face ships: the device's own type. The page never takes its light from the account; the coin alone carries the brand |
 | `src/app/app.js` | The app: rail, keyboard, swipe, hash, per-account tuning |
 | `src/app/sw.js` | Service worker template; `__BUILD__` and `__SHELL__` stamped by the build |
@@ -131,4 +139,5 @@ The laptop master's `edit.html` missed the standard and was fixed 2 Sep 2026.
 | `tools/build.mjs` | `data/accounts.json` in, `public/` out, with the leak check and the disclosure |
 | `public/marks.js` | Every traced mark in one file |
 | `test/verify.mjs` | The whole suite, no network, no browser |
+| `test/responsive.cjs` | Optional Playwright checks of the built public and admin pages, using mocked state and save endpoints |
 | `wrangler.jsonc` | Worker, assets, one KV namespace (`QR_STATE`, written only by `/api/state`), vars `ACCESS_TEAM` and `ACCESS_AUD`; no secrets |

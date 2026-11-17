@@ -108,7 +108,9 @@
   var lastFit = 0;
   function fit() {
     var box = elBtn.parentNode;
-    var size = Math.max(160, Math.floor(Math.min(box.clientWidth, box.clientHeight)));
+    var safe = self.QRArt.DEFAULTS.safePhysicalPx;
+    var cap = Math.max(520, Math.ceil(safe / (self.devicePixelRatio || 1)));
+    var size = Math.max(160, Math.floor(Math.min(cap, box.clientWidth, box.clientHeight)));
     // Only write when it has actually changed. Writing every paint made each redraw a forced
     // reflow as well, which is the last thing wanted in the middle of an animation.
     if (size !== lastFit) {
@@ -798,6 +800,7 @@
     if (document.body.className.indexOf("view-list") >= 0) return;
     document.body.className = "view-list" + (fresh ? " fresh" : "");
     idx = -1;
+    for (var k = 0; k < tiles.length; k++) tiles[k].setAttribute("aria-current", "false");
     document.title = "QR";
   }
 
@@ -826,7 +829,11 @@
     var from = still() ? null : rectOf(thumbOf(i));
     var pre = still() ? null : prerender(i);
 
-    history.pushState({ n: ++depth }, "", "#" + CODES[i].key);
+    if (document.body.className.indexOf("view-code") >= 0) {
+      history.replaceState(history.state, "", "#" + CODES[i].key);
+    } else {
+      history.pushState({ n: ++depth }, "", "#" + CODES[i].key);
+    }
     showCode(i, pre);
 
     var to = rectOf(elBtn);
@@ -1040,7 +1047,23 @@
       c.className = "railn";
       c.textContent = String(n);
       b.appendChild(c);
-      b.addEventListener("click", function () { setRail(r.id); });
+      b.addEventListener("click", function () {
+        if (r.id === rail) return;
+        setRail(r.id);
+        if (idx < 0) return;
+        if (!onRail(CODES[idx], rail)) {
+          history.replaceState(history.state, "", "#");
+          showList();
+          return;
+        }
+        var link = linkOf(location.hash);
+        if (link.rail) {
+          history.replaceState(history.state, "", "#" + encodeURIComponent(link.key) + "/" + rail +
+            "/" + encodeURIComponent(link.amount) + "/" + encodeURIComponent(link.ref));
+        }
+        sayTap();
+        paint();
+      });
       elRails.appendChild(b);
     });
   }
@@ -1252,6 +1275,7 @@
       var onCode = document.body.className.indexOf("view-code") >= 0;
       if (e.key === "Escape") { if (onCode) { close(); e.preventDefault(); } return; }
       if (!onCode) return;
+      if (e.target && /^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && e.target !== elBtn) return;
       if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
       else if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
       else if (e.key === "s" || e.key === "Enter") { save(); e.preventDefault(); }

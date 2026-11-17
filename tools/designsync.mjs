@@ -29,8 +29,7 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 /* the stylesheet that carries the tokens between the markers */
 const APP_CSS = resolve(REPO, "src", "app", "app.css");
 /* the system's files this app carries whole, and where; leave out what the app does not use */
-/* the tokens only (17 Nov 2026): app.css's own rules read them, and the markup and scripts stay this app's */
-const CARRIED = {};
+const CARRIED = { "ambient.css": resolve(REPO, "src", "app", "ambient.css") };
 /* ---- end ---- */
 
 const LOCK = resolve(REPO, "tools", "ambient.lock.json");

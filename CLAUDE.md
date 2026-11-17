@@ -135,7 +135,8 @@ Read the note at the top of the file first; `npm test` re-asserts every number.
   their view is visible; `goBack()` renders the list before measuring.
 - Measuring in a hidden browser pane reads the harness, not the page: transitions freeze at
   time zero. Finish them first with `getAnimations().forEach(a => a.finish())`.
-- One column of rows, no account featured; store order until `/admin/` sets one; suspended
+- Choose the account layout for the device and purpose, with no account featured (his word of
+  17 Nov 2026); store order until `/admin/` sets one; suspended
   accounts sink at run time through `orderTiles()`, which moves rather than rebuilds.
   `classOf()` is the one place a tile's classes are built; `--thumb` and `THUMB` are one
   number, 56 px. No pill, no title above the coin, no Save button: press and hold saves, and

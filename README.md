@@ -161,6 +161,10 @@ npm run dev        # http://localhost:8788
 npm test
 ```
 
+For the optional responsive browser checks, install Playwright and its Chromium, Firefox and
+WebKit browsers separately, make Playwright available to Node, then run `npm run build` and
+`npm run test:responsive`. The checks use a local server with mocked state and admin writes.
+
 `CLAUDE.md` carries the load-bearing rules. `docs/NOTES.md` is the longer account (why the error
 correction is M rather than H, why module edges are snapped to whole pixels), and `docs/DETAIL.md`
 holds the measured numbers.

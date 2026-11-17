@@ -796,14 +796,11 @@ section("2. The bundle carries the codes and nothing else");
      "means CODES[i]",
     /el\.hidden = !on;/.test(appJs) && !/elGrid\.textContent = ""/.test(appJs));
 
-  /* NO ACCOUNT IS FEATURED (owner, 14 Sep 2026): one column of rows, every row alike, named as
-   * the DuitNow list names the institution, and a tag is a sub-line telling two accounts at one
-   * institution apart. */
+  /* No account is featured. The layout may adapt to the device (owner, 17 Nov 2026). */
   ok("every account is one row alike, named after its institution, and a tag is a sub-line",
     !/ wide/.test(appJs) && !/\.tile\.wide\{/.test(cssCode) &&
     /tx\.textContent = a\.bank \|\| a\.name;/.test(appJs) &&
-    /tg\.className = "tiletag"/.test(appJs) &&
-    /grid-template-columns:1fr;/.test(cssCode));
+    /tg\.className = "tiletag"/.test(appJs));
   /* THE RAIL IS A MODE. It filters the list and decides what an opened account shows, it is
    * remembered, and an account reached by hash that is not on the current rail falls back to
    * the first rail it is on. Steps walk the visible order, so a swipe stays on the rail. */
@@ -1065,9 +1062,10 @@ section("2. The bundle carries the codes and nothing else");
       routed("#maybank/transfer/70/k7m2-p9qr") === "rail:transfer code:0" &&
       routed("#wise/qr/70/k7m2-p9qr") === "code:1" && routed("#maybank") === "code:0" &&
       routed("#nobody/qr/70/x") === "list", [routed("#maybank/transfer/70/k7m2-p9qr"), routed("#wise/qr/70/k7m2-p9qr")].join(" | "));
+    // The due plate also wears Ambient's plate class in the responsive layout.
     ok("the figure is filled on every repaint of the code, and hidden by default in the markup",
       /document\.body\.setAttribute\("data-view", v\);\s*fillDue\(a\);/.test(appJs) &&
-      /<div class="due" id="due"[^>]*hidden><\/div>/.test(indexHtml) && /\.due\[hidden\]\{display:none;\}/.test(cssCode));
+      /<div class="due(?: [^"]*)?" id="due"[^>]*hidden><\/div>/.test(indexHtml) && /\.due\[hidden\]\{display:none;\}/.test(cssCode));
   }
 
   ok("the number is embossed rather than printed: a shadow, a highlight and a face",
@@ -2117,7 +2115,7 @@ async function runApp(opts) {
   });
   const sched = (fn, ms, every) => { const id = nextId++; timers.set(id, { at: now + (ms || 0), fn, every: every ? ms : 0 }); return id; };
   const self_ = {
-    AbortController, QR_CODES: accounts, QR_BUILD: "testbuild", QRArt: art, MARKS: {}, devicePixelRatio: 3,   // a phone: a coin, not the plain code a small store falls back to
+    AbortController, QR_CODES: accounts, QR_BUILD: "testbuild", QRArt: art, MARKS: {}, devicePixelRatio: opts.dpr || 3,
     matchMedia: () => ({ matches: true }),     // motion off: nothing waits on an animation
     requestIdleCallback: (fn) => { idles.push(fn); return idles.length; },
     fetch: async (url, init) => {
@@ -2135,7 +2133,11 @@ async function runApp(opts) {
   new Function("self", "window", "document", "localStorage", "history", "location", "navigator", "fetch",
     "setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "getComputedStyle",
     read(path.join(PUB, "app.js")))(
-    self_, self_, document_, ls, { pushState() {}, replaceState() {}, back() {}, state: null }, loc, nav, self_.fetch,
+    self_, self_, document_, ls, {
+      pushState(_state, _title, hash) { loc.hash = hash; },
+      replaceState(_state, _title, hash) { loc.hash = hash; },
+      back() {}, state: null
+    }, loc, nav, self_.fetch,
     (f, ms) => sched(f, ms, false), (id) => timers.delete(id), (f, ms) => sched(f, ms, true), (id) => timers.delete(id),
     (f) => sched(f, 16, false), () => ({ getPropertyValue: () => "" }));
 
@@ -2169,6 +2171,8 @@ async function runApp(opts) {
     held: () => made.filter((c) => c.width >= 1000).length,
     fullDraws: (key) => calls.draws.filter((k) => !key || k === key).length,
     async openKey(key) { loc.hash = "#" + key; listeners.win.popstate(); await flush(); },
+    pressRail(label) { byId.rails.children.find((b) => b.textContent === label).on.click(); },
+    key(event) { listeners.doc.keydown(event); },
     show(hidden) { document_.hidden = hidden; listeners.doc.visibilitychange(); },
     pixels: () => byId.coin.toBuffer("image/png"),
     blank: () => byId.coin.width === 8 && byId.coin.getContext("2d").getImageData(0, 0, 8, 8).data.every((v) => v === 0)
@@ -2181,6 +2185,50 @@ async function runApp(opts) {
   const A = codes[0].key, B = codes[1].key;
   const live = {};
   const suspend = (...keys) => ({ maintenance: Object.fromEntries(keys.map((k) => [k, true])), order: [] });
+
+  {
+    const app = await runApp();
+    app.box.clientWidth = 1200; app.box.clientHeight = 900;
+    await app.openKey(A);
+    ok("a large display caps the drawn coin at 520 CSS pixels",
+      app.document.getElementById("coinbtn").style.width === "520px");
+    app.box.clientWidth = 180; app.box.clientHeight = 180;
+    await app.openKey(B);
+    ok("a coin too small for its device ratio still falls back to the plain code",
+      app.document.getElementById("coinbtn").style.width === "180px" &&
+      app.document.getElementById("coinbtn").classList.contains("plainmode"));
+    const lowDpr = await runApp({ dpr: 1 });
+    lowDpr.box.clientWidth = 1200; lowDpr.box.clientHeight = 900;
+    await lowDpr.openKey(A);
+    ok("a 1x desktop has room for a safe coin rather than falling back at the size cap",
+      lowDpr.document.getElementById("coinbtn").style.width === "580px" &&
+      !lowDpr.document.getElementById("coinbtn").classList.contains("plainmode"));
+    const zoomedOut = await runApp({ dpr: 0.8 });
+    zoomedOut.box.clientWidth = 1200; zoomedOut.box.clientHeight = 900;
+    await zoomedOut.openKey(A);
+    ok("zooming out keeps a safe coin when the display has room",
+      zoomedOut.document.getElementById("coinbtn").style.width === "725px" &&
+      !zoomedOut.document.getElementById("coinbtn").classList.contains("plainmode"));
+  }
+
+  {
+    const app = await runApp();
+    await app.openKey("maybank/qr/1/test");
+    app.pressRail("Transfer");
+    ok("changing rail with an account open updates the detail and keeps its payer link",
+      app.body.getAttribute("data-view") === "transfer" &&
+      app.loc.hash === "#maybank/transfer/1.00/test" &&
+      !app.document.getElementById("due").hidden);
+    let prevented = false;
+    app.key({ key: "Enter", target: app.document.getElementById("grid").children[0],
+      preventDefault() { prevented = true; } });
+    ok("Enter on a list control is not intercepted by the open detail",
+      !prevented && !app.nav.shared);
+    app.pressRail("JomPAY");
+    ok("changing to a rail without the open account clears the detail and its selection",
+      app.body.className.includes("view-list") && app.loc.hash === "#" &&
+      app.document.getElementById("grid").children.every((tile) => tile.getAttribute("aria-current") === "false"));
+  }
 
   /* R3 (owner, 19 Oct 2026): while the page is showing, state is re-read every 15 seconds. */
   {

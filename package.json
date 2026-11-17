@@ -7,6 +7,7 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "test": "node test/verify.mjs",
+    "test:responsive": "node test/responsive.cjs",
     "live": "node test/live.mjs",
     "check": "npm run build && npm test",
     "dev": "npm run build && wrangler dev --port 8788",

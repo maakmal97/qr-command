@@ -2,5 +2,7 @@
   "version": "0.7.15",
   "commit": "97ddc26baf3e56f16e0bbf60c42d4bf13f0d18ed",
   "tokens": "452353e10dec7521db3a1455e4395562b422ed12d4ba064a006f3788ae53a22c",
-  "files": {}
+  "files": {
+    "ambient.css": "965c701beaa5378909e3fbd5c38f241b4a51af065bb23bb319187ceb7b4e8cf5"
+  }
 }
