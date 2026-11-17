@@ -1209,12 +1209,15 @@ section("2. The bundle carries the codes and nothing else");
    * rather than by reading. Each is now forbidden by assertion. */
   ok("the aurora uses no filter, so changing it cannot re-blur a full-screen layer per frame",
     !/filter:\s*blur/.test(cssCode) && /\.sky\{/.test(cssCode));
-  /* THE LIGHT IS THE IDENTITY'S, NOT THE ACCOUNT'S (14 Sep 2026). Salt has one accent, copper
-   * and brass, and the coin already carries the provider's colour; so the page is never
-   * re-tuned per account, and there is no second sky layer to cross-fade to. */
-  ok("the aurora is copper and brass for every account, never re-tuned from the brand",
-    !/function tune\(/.test(appJs) && !/setProperty\("--s[123]"/.test(appJs) &&
-    !/\.sky\.on\{/.test(cssCode) && /rgba\(184,115,51/.test(cssCode) && /rgba\(197,160,89/.test(cssCode));
+  /* THE LIGHT IS THE HOUR'S, NOT THE ACCOUNT'S (14 Sep 2026; Ambient's mesh from 17 Nov 2026).
+   * The coin already carries the provider's colour, so the page is never re-tuned per account,
+   * and there is no second sky layer to cross-fade to: the light is Ambient's mesh, read from
+   * its tokens, which the mood of the hour moves. */
+  const skyRule = (/\.sky\{([^}]*)\}/.exec(cssCode) || [])[1] || "";
+  ok("the light is Ambient's mesh for every account, never re-tuned from the brand",
+    !/function tune\(/.test(appJs) && !/setProperty\("--s[123]"/.test(appJs) && !/\.sky\.on\{/.test(cssCode) &&
+    ["--amb-mesh-1", "--amb-mesh-2", "--amb-mesh-3", "--amb-base"].every((t) => skyRule.includes("var(" + t + ")")) &&
+    !/#[0-9a-f]{3,8}\b|rgba?\(/i.test(skyRule));
   ok("nothing transitions background-color on a full-screen element",
     !/\.sky[^{]*\{[^}]*transition:[^;}]*background-color/.test(cssCode));
   ok("the coin transitions transform only, never its box-shadow",
@@ -1259,8 +1262,9 @@ section("2. The bundle carries the codes and nothing else");
   const css = read(path.join(PUB, "app.css"));
   const appJs = read(path.join(PUB, "app.js"));
   const root = new Set();
-  // Every :root block, not just the first: the tokens are declared in more than one place.
-  for (const block of css.matchAll(/:root\s*\{([\s\S]*?)\}/g)) {
+  // Every rule whose selectors take in :root, not just the first: Ambient declares its tokens in
+  // several, most of them shared with [data-mood] or [data-theme] (":root, [data-mood] {").
+  for (const block of css.matchAll(/(?:^|[}\s,]):root[^{};]*\{([\s\S]*?)\}/g)) {
     for (const m of block[1].matchAll(/(--[a-z0-9-]+)\s*:/gi)) root.add(m[1]);
   }
   // Some are set at runtime, per element or on the document, rather than in the sheet.
@@ -1891,14 +1895,13 @@ section("5. The service worker's guards");
   ok("the edit surface is not in the shell: no admin file is precached",
     shell.every((u) => !/admin/.test(u)), shell.join(", "));
 
-  /* THE BRAND FACES (22 Sep 2026): the design system's two files, beside the page, named by the
-     stylesheet with this build's stamp, precached, and admitted by the policy from self alone. */
-  const FONT_FILES = ["newsreader-latin.woff2", "geist-mono-latin.woff2"];
-  ok("the brand faces ship beside the page", FONT_FILES.every((f) => fs.existsSync(path.join(PUB, "fonts", f))));
+  /* NO FACE SHIPS (17 Nov 2026, Ambient): the type is the device's own, so nothing is declared,
+     copied or precached for it, and the two Salt faces (22 Sep 2026 to 17 Nov 2026) are gone. */
   const cssF = read(path.join(PUB, "app.css"));
-  ok("app.css declares both faces from ./fonts/, stamped with this build",
-    FONT_FILES.every((f) => cssF.includes("url(./fonts/" + f + "?v=" + rev.id + ")")) && /font-family: 'Newsreader'/.test(cssF));
-  ok("the shell precaches both faces", FONT_FILES.every((f) => shell.includes("./fonts/" + f + "?v=" + rev.id)));
+  ok("no font file ships beside the page", !fs.existsSync(path.join(PUB, "fonts")) && !fs.existsSync(path.join(REPO, "src", "app", "fonts")));
+  ok("app.css declares no face and sets its type from Ambient's tokens",
+    !/@font-face/.test(cssF) && !/Newsreader|Geist/.test(cssF) && /body\{[^}]*font-family:var\(--amb-font\);/.test(cssF.replace(/\/\*[\s\S]*?\*\//g, "")));
+  ok("the shell precaches no font", shell.every((u) => !/fonts\/|\.woff2?/.test(u)), shell.join(", "));
   /* NO SCROLLBAR (9 Nov 2026, his word, salt-ds 1.30.0): the system draws none on any element, so a page that scrolls is as wide as one that
      does not; nothing of this app draws one back */
   const cssN = cssF.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -1996,8 +1999,6 @@ section("6. One build id, everywhere");
   const h = crypto.createHash("sha256");
   for (const p of parts) h.update(p);
   h.update(dataBody);
-  // the faces move the id too (22 Sep 2026), in the order the build hashes them
-  for (const f of ["newsreader-latin.woff2", "geist-mono-latin.woff2"]) h.update(fs.readFileSync(path.join(PUB, "fonts", f)));
   ok("the build id still hashes the files that are on disk", h.digest("hex").slice(0, 12) === rev.id,
     "run npm run build; something in public/ was changed by hand");
 }
@@ -2408,6 +2409,39 @@ async function runApp(opts) {
   const css = read(path.join(PUB, "app.css")).replace(/\/\*[\s\S]*?\*\//g, "");
   const weight = (sel) => { const m = new RegExp("(^|\\})\\s*" + sel.replace(".", "\\.") + "\\s*\\{([^}]*)\\}").exec(css); const f = m && /font-weight:\s*(\d+)/.exec(m[2]); return f ? +f[1] : 0; };
   ok("the eyebrow and the plate's labels weigh 600", weight(".atitle") === 600 && weight(".plabel") === 600, weight(".atitle") + " and " + weight(".plabel"));
+}
+
+/* AMBIENT, DARK ONLY, THE MOOD BY THE HOUR (his word, 17 Nov 2026). The schedule is the shipped
+ * function, run; the blend is the browser's transition of every colour Ambient registers. */
+{
+  const appJsM = read(path.join(PUB, "mood.js"));
+  const cssM = read(path.join(PUB, "app.css")).replace(/\/\*[\s\S]*?\*\//g, "");
+  const src = (/var MOOD_TURNS[\s\S]*?\n  function moodAt\(ms\) \{[\s\S]*?\n  \}/.exec(appJsM) || [""])[0];
+  const moodAt = src ? new Function(src + "\nreturn moodAt;")() : null;
+  const H = 3600000, at = (h, m) => moodAt((h * 60 + (m || 0)) * 60000);
+  ok("the mood stands steady by day, at golden hour and by night",
+    !!moodAt && at(10).to === "lagoon" && at(10).into === -1 && at(18).to === "flare" && at(18).into === -1 &&
+    at(2).to === "dusk" && at(2).into === -1 && at(23).to === "dusk" && at(23).into === -1);
+  ok("each turn blends over one hour, from the mood before it, and the clock wraps at midnight",
+    !!moodAt && at(5, 30).from === "dusk" && at(5, 30).to === "lagoon" && at(5, 30).into === 30 * 60000 &&
+    at(16).into === 0 && at(16).from === "lagoon" && at(19, 59).from === "flare" && at(19, 59).into === 59 * 60000 &&
+    at(6).into === -1 && at(2).wait === 3 * H && at(23).wait === 6 * H && at(15, 59).wait === 60000);
+  const steady = [];
+  for (let m = 0; m < 24 * 60; m += 15) { const r = at(0, m); if (r.into === -1 && steady[steady.length - 1] !== r.to) steady.push(r.to); }
+  ok("the day runs lagoon, flare, dusk and back, with no mood skipped", steady.join(" ") === "dusk lagoon flare dusk", steady.join(" "));
+  const registered = [...cssM.matchAll(/@property (--amb-[a-z0-9-]+)/g)].map((m) => m[1]);
+  const rootRule = (/(?:^|\})\s*:root\{([^}]*)\}/.exec(cssM) || [])[1] || "";
+  ok("the hour's blend moves every colour Ambient registers, and only on <html>",
+    registered.length >= 7 && registered.every((p) => rootRule.includes(p + " var(--mood-run) steps(360) var(--mood-lag)")) && !/var\(--mood-run\) linear/.test(cssM) &&
+    /setProperty\("--mood-lag", -m\.into \+ "ms"\)/.test(appJsM), registered.join(", "));
+  const idx = read(path.join(PUB, "index.html")), adm = read(path.join(PUB, "admin", "index.html"));
+  ok("the mood is set in <head>, before the first frame, and theme-color follows the base",
+    /<link rel="stylesheet" href="\.\/app\.css\?v=[^"]+">\n[^\n]*\n<script src="\.\/mood\.js\?v=[^"]+"><\/script>\n<\/head>/.test(idx) &&
+    /meta\[name="theme-color"\]/.test(appJsM) && /self\.setMood = setMood;/.test(appJsM) &&
+    !/function setMood/.test(read(path.join(PUB, "app.js"))) && /if \(self\.setMood\) self\.setMood\(\);/.test(read(path.join(PUB, "app.js"))));
+  ok("both pages are held dark, and the edit surface stands in Slate",
+    /<html lang="en-GB" data-theme="dark">/.test(idx) && /<html lang="en-GB" data-theme="dark" data-mood="slate">/.test(adm) &&
+    /name="color-scheme" content="dark"/.test(idx) && /name="color-scheme" content="dark"/.test(adm));
 }
 
 /* --------------------------------------------------------------------- verdict */

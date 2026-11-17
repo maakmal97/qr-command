@@ -1,69 +1,77 @@
 #!/usr/bin/env node
-/* designsync.mjs: the identity's tokens in app.css are the design system's own, never a copy typed here.
+/* designsync.mjs: this app's design is Ambient's own files, never a copy typed here.
  *
- * Pay applies salt-ds by hand, because nothing here may load off another origin, and until 22 Sep
- * 2026 its :root carried eight of the identity's colours transcribed, so a retune upstream never
- * reached it and the two drifted (the hairline "strong" alpha was named here and nowhere else).
- * The :root block of Code/salt-ds/src/styles.css is now written into src/app/app.css between two
- * markers, exactly as salt-command's master carries the whole stylesheet and the statements site
- * carries the same block, and the build refuses to ship while the copy differs from the file.
+ * COPY THIS FILE to the app's tools/designsync.mjs and set the two paths under "This app".
+ * Nothing in the app may load off another origin, so the app carries the design system:
+ *   - src/tokens.css, whole, between two markers in the app's stylesheet
+ *   - any of ambient.css, ambient.js and icons.svg, as files beside it
+ * A pull also writes tools/ambient.lock.json: the design system's commit and a hash of each
+ * thing carried. The app's build imports matches() and refuses to ship on drift.
  *
- *   node tools/designsync.mjs --pull     write the block from ../salt-ds (or $SALT_DS)
- *   node tools/designsync.mjs --check    non-zero if the block is not the design system's :root
+ *   node tools/designsync.mjs --pull     write the block, the files and the lock from ../ambient-ds
+ *                                        (or $AMBIENT_DS). Refused unless that checkout is a clean main.
+ *   node tools/designsync.mjs --pull --preview   pull whatever is there, to look. A preview never passes --check.
+ *   node tools/designsync.mjs --check    non-zero if anything carried is not what the lock recorded, or if
+ *                                        a clean main beside the app has moved on since
  *
- * AND THE SYSTEM'S NO SCROLLBARS RULE (9 Nov 2026, his word, salt-ds 1.30.0): no scrollbar is drawn on any Salt surface, so a page
- * that scrolls is as wide as one that does not. It is a rule, not a token, so it is carried as its section of the stylesheet, sliced by
- * its header (SECTIONS), after the :root block and before the faces; this app restates nothing of it.
- *
- * THE FILE IS THE SOURCE. Edit the design system, --pull, build. An edit inside the markers is
- * overwritten by the next --pull and fails --check until then. */
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs";
+ * THE DESIGN SYSTEM IS THE SOURCE. Change it there, land it on main, --pull, build. An edit inside
+ * the markers, or to a carried file, is overwritten by the next --pull and fails --check until then.
+ * --check needs no design system on the machine (a CI runner has none): the lock is enough. */
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, realpathSync } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+/* ---- This app ---- */
+/* the stylesheet that carries the tokens between the markers */
 const APP_CSS = resolve(REPO, "src", "app", "app.css");
-const DS_ROOT = resolve(process.env.SALT_DS || resolve(REPO, "..", "salt-ds"));
-const DS_SRC = resolve(DS_ROOT, "src", "styles.css");
-const DS_FONTS_CSS = resolve(DS_ROOT, "src", "fonts-local.css");
-const DS_FONTS = resolve(DS_ROOT, "src", "fonts");   /* beside fonts-local.css since 22 Sep 2026 */
-/* The brand faces (22 Sep 2026): the design system's files, copied into src/app/fonts/ by --pull,
-   built into public/fonts/, hashed into the build id and precached with the shell. */
-export const FONT_FILES = ["newsreader-latin.woff2", "geist-mono-latin.woff2"];
-const APP_FONTS = resolve(REPO, "src", "app", "fonts");
-export const BEGIN = "/* ==== DESIGN tokens: generated from Code/salt-ds src/styles.css (:root) by tools/designsync.mjs --pull. Edit the design system, --pull; never this block. ==== */";
+/* the system's files this app carries whole, and where; leave out what the app does not use */
+/* the tokens only (17 Nov 2026): app.css's own rules read them, and the markup and scripts stay this app's */
+const CARRIED = {};
+/* ---- end ---- */
+
+const LOCK = resolve(REPO, "tools", "ambient.lock.json");
+const DS_ROOT = resolve(process.env.AMBIENT_DS || resolve(REPO, "..", "ambient-ds"));
+const DS_SRC = resolve(DS_ROOT, "src");
+/* Ambient ships no face: the system's own font on every device. The name stays so a build that
+   hashed, copied and precached a design system's fonts reads an empty list and does nothing. */
+export const FONT_FILES = [];
+export const BEGIN = "/* ==== DESIGN tokens: generated from Code/ambient-ds src/tokens.css by tools/designsync.mjs --pull. Edit the design system, --pull; never this block. ==== */";
 export const END = "/* ==== END DESIGN tokens ==== */";
 
-/** The system's sections carried whole beside the tokens, by their headers: each runs to the next section's header. */
-export const SECTIONS = ["/* ---- No scrollbars ("];
-function section(css, head) {
-  const i = css.indexOf(head);
-  if (i < 0) throw new Error("designsync: no section headed " + head + " in " + DS_SRC);
-  if (css.indexOf(head, i + 1) >= 0) throw new Error("designsync: two sections headed " + head + " in " + DS_SRC);
-  const j = css.indexOf("\n/* ---- ", i + head.length);
-  return css.slice(i, j < 0 ? css.length : j).trim();
-}
+/* line endings are git's business, so nothing here depends on them */
+const read = (f) => readFileSync(f, "utf8").replace(/\r\n/g, "\n");
+const sha = (s) => createHash("sha256").update(s).digest("hex");
 
-/** The design system's :root block and its carried sections, verbatim, or null when the system is not on this machine. */
+/** The design system's token file, verbatim, or null when the system is not on this machine. */
 export function tokens() {
-  if (!existsSync(DS_SRC)) return null;
-  const css = readFileSync(DS_SRC, "utf8").replace(/\r\n/g, "\n");
-  const m = /:root\s*\{[\s\S]*?\n\}/.exec(css);
-  if (!m) throw new Error("designsync: no :root block in " + DS_SRC);
-  /* the faces' @font-face rules follow the tokens, each file stamped with the build so the stylesheet
-     and the shell's precache name the same URL */
-  const fonts = readFileSync(DS_FONTS_CSS, "utf8").replace(/\r\n/g, "\n")
-    .replace(/url\(fonts\/([^)]+)\)/g, "url(./fonts/$1?v=__BUILD__)");
-  if (/https?:\/\//.test(fonts)) throw new Error("designsync: fonts-local.css names another origin");
-  return m[0] + "\n" + SECTIONS.map((h) => section(css, h)).join("\n") + "\n" + fonts.trim();
+  const f = resolve(DS_SRC, "tokens.css");
+  return existsSync(f) ? read(f).trim() : null;
 }
-
-/** True when every font file in src/app/fonts/ is the design system's, byte for byte. */
-export function fontsMatch() {
-  return FONT_FILES.every((f) => {
-    const mine = resolve(APP_FONTS, f);
-    return existsSync(mine) && readFileSync(mine).equals(readFileSync(resolve(DS_FONTS, f)));
-  });
+/** What the last pull recorded: { version, commit, tokens, files, preview? }, or null before the first. */
+export function lock() {
+  return existsSync(LOCK) ? JSON.parse(read(LOCK)) : null;
+}
+/** The version this app carries, as the last pull recorded it. */
+export function version() {
+  const l = lock();
+  return l ? l.version : null;
+}
+/* Where the design system's checkout stands, or null when it is not on this machine. */
+function source() {
+  if (tokens() == null) return null;
+  /* twenty seconds at most: a fetch with no network must not hold a pull for ever */
+  const git = (...a) => execFileSync("git", ["-C", DS_ROOT, ...a], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 20000 }).trim();
+  try { return { commit: git("rev-parse", "HEAD"), branch: git("rev-parse", "--abbrev-ref", "HEAD"), dirty: git("status", "--porcelain") !== "", git }; }
+  catch { return { commit: null, branch: null, dirty: true, git }; }
+}
+/* Whether that checkout's main is the main everyone has: level with its origin, as last fetched. */
+function landed(src) {
+  try { src.git("fetch", "-q", "origin", "main"); } catch { /* offline, or no origin: go by what is known here */ }
+  try { return src.git("rev-parse", "origin/main") === src.commit; } catch { return true; }
 }
 
 function locate(css) {
@@ -75,47 +83,78 @@ function locate(css) {
   return { i, j: j + END.length };
 }
 
-/** The block app.css carries now, between the markers, or null. */
+/** The block the app's stylesheet carries now, between the markers, or null. */
 export function carried() {
-  const css = readFileSync(APP_CSS, "utf8").replace(/\r\n/g, "\n");
-  const at = locate(css);
+  const css = read(APP_CSS), at = locate(css);
   return at ? css.slice(at.i + BEGIN.length + 1, at.j - END.length - 1) : null;
 }
 
-/** True when the block in app.css is the design system's :root. Throws when the system is absent. */
-export function matches() {
-  const want = tokens();
-  if (want == null) throw new Error("designsync: no design system at " + DS_SRC + " (set SALT_DS)");
-  return carried() === want;
+/** What is wrong with the copy here: an empty list when the app may ship. */
+export function drift() {
+  const l = lock(), out = [];
+  if (!l) return ["nothing has been pulled: there is no " + LOCK];
+  if (l.preview) out.push("the copy here is a preview, pulled from a design system that was not a clean main");
+  const mine = carried();
+  if (mine == null || sha(mine) !== l.tokens) out.push("the tokens in " + APP_CSS + " are not what was pulled");
+  for (const [name, f] of Object.entries(CARRIED)) {
+    if (!existsSync(f) || sha(read(f)) !== l.files[name]) out.push(f + " is not what was pulled");
+  }
+  /* and where a clean main of the design system is beside the app, the app must be level with it */
+  const src = source();
+  if (src && src.commit && !src.dirty && src.branch === "main" && src.commit !== l.commit) {
+    const behind = tokens() !== mine || Object.entries(CARRIED).some(([name, f]) => !existsSync(f) || read(f) !== read(resolve(DS_SRC, name)));
+    if (behind) out.push("the design system has moved on to " + src.commit.slice(0, 7) + " since the pull at " + String(l.commit).slice(0, 7));
+  }
+  return out;
+}
+/** True when everything carried is what the last pull wrote, and no newer design waits on main. */
+export const matches = () => drift().length === 0;
+/** Ambient has no font files, so there is nothing to differ. */
+export const fontsMatch = () => true;
+
+function pull(preview) {
+  const want = tokens(), src = source();
+  if (want == null) return "no design system at " + DS_SRC + " (set AMBIENT_DS)";
+  if (!preview && (src.dirty || src.branch !== "main")) {
+    return "the design system at " + DS_ROOT + (src.branch !== "main" ? " is on " + (src.branch || "no branch") : " has uncommitted changes")
+      + ": pull only from a clean main, or add --preview to look (a preview never ships)";
+  }
+  if (!preview && !landed(src)) return "the design system's main at " + DS_ROOT + " is not level with its origin/main: push it or pull it first, or add --preview to look";
+  const css = read(APP_CSS), at = locate(css);
+  if (!at) return APP_CSS + " carries no DESIGN tokens markers; add the BEGIN and END lines where the tokens go";
+  const files = {};
+  for (const name of Object.keys(CARRIED)) files[name] = read(resolve(DS_SRC, name));
+  writeFileSync(APP_CSS, css.slice(0, at.i) + BEGIN + "\n" + want + "\n" + END + css.slice(at.j), "utf8");
+  for (const [name, mine] of Object.entries(CARRIED)) {
+    mkdirSync(dirname(mine), { recursive: true });
+    writeFileSync(mine, files[name], "utf8");
+  }
+  const ver = (/Ambient tokens (\d+\.\d+\.\d+)/.exec(want) || [])[1] || null;
+  const record = { version: ver, commit: src.commit, ...(preview ? { preview: true } : {}), tokens: sha(want),
+    files: Object.fromEntries(Object.entries(files).map(([name, text]) => [name, sha(text)])) };
+  writeFileSync(LOCK, JSON.stringify(record, null, 2) + "\n", "utf8");
+  console.log("  ok    pulled Ambient " + ver + " at " + String(src.commit).slice(0, 7) + (preview ? " as a preview" : "") + ": "
+    + want.split("\n").length + " lines of tokens and " + Object.keys(files).join(", "));
+  return null;
 }
 
 function main() {
-  const mode = process.argv[2] || "--check";
+  const args = process.argv.slice(2), mode = args.find((a) => a === "--pull" || a === "--check") || (args.length ? "" : "--check");
   if (mode === "--pull") {
-    const want = tokens();
-    if (want == null) { console.log("  FAIL  no design system at " + DS_SRC + " (set SALT_DS)"); process.exit(1); }
-    const css = readFileSync(APP_CSS, "utf8").replace(/\r\n/g, "\n");
-    const at = locate(css);
-    if (!at) { console.log("  FAIL  app.css carries no DESIGN tokens markers"); process.exit(1); }
-    writeFileSync(APP_CSS, css.slice(0, at.i) + BEGIN + "\n" + want + "\n" + END + css.slice(at.j), "utf8");
-    console.log("  ok    pulled " + want.split("\n").length + " lines of tokens and faces into src/app/app.css");
-    mkdirSync(APP_FONTS, { recursive: true });
-    for (const f of FONT_FILES) copyFileSync(resolve(DS_FONTS, f), resolve(APP_FONTS, f));
-    console.log("  ok    pulled " + FONT_FILES.length + " font files into src/app/fonts/");
+    const refused = pull(args.includes("--preview"));
+    if (refused) { console.log("  FAIL  " + refused); process.exit(1); }
   } else if (mode === "--check") {
-    if (!matches()) {
-      console.log("  FAIL  the tokens in src/app/app.css are not the design system's :root; run: node tools/designsync.mjs --pull");
-      process.exit(1);
-    }
-    if (!fontsMatch()) {
-      console.log("  FAIL  src/app/fonts/ is not the design system's fonts/; run: node tools/designsync.mjs --pull");
-      process.exit(1);
-    }
-    console.log("  ok    src/app/app.css carries the design system's tokens and faces, and src/app/fonts/ its files, byte for byte");
+    const off = drift();
+    for (const f of off) console.log("  FAIL  " + f);
+    if (off.length) { console.log("        run: node tools/designsync.mjs --pull"); process.exit(1); }
+    const l = lock();
+    console.log("  ok    level with Ambient " + l.version + " at " + String(l.commit).slice(0, 7) + ": the tokens and " + Object.keys(CARRIED).length + " carried files, as pulled");
   } else {
-    console.log("usage: node tools/designsync.mjs [--pull|--check]");
+    console.log("usage: node tools/designsync.mjs [--pull [--preview] | --check]");
     process.exit(2);
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+/* run as a command, however the path to this file was spelt (a junction, a symlink, another case) */
+const here = fileURLToPath(import.meta.url);
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === realpathSync(here)) main();

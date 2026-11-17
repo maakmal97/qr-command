@@ -22,14 +22,14 @@ paths of the official `atlasmuamalat.com.my/.../logo.svg`, rendered to a PNG fir
 `bankMark`, `holderMark`, `tag`, `ring`, `biller`, `ref1`.
 
 ## Design tokens source (CLAUDE.md rule 7)
-Generated from the `:root` of `Code\salt-ds\src\styles.css`: the owner's own "Salt
-Commodities" design system, not JPMorgan's Salt. `designsync` and the build read whatever
-branch that checkout has out, so it must be on an up-to-date `master` (a feature branch there
-fails the build). From a worktree `..\salt-ds` does not exist: set `SALT_DS`. Last pulled
-17 Nov 2026 from salt-ds `master` 98d6327 (1.34.0, PR #51): `--salt-product-prep` gone (1.31.0),
-`--salt-page-max` 1376px added (1.32.0), read by nothing here yet; `--salt-orange` #f28c18 (1.26.0) likewise. Since 18 Oct 2026 (1e23e44, 1.6.0) the faces are Newsreader over Geist
-Mono (`newsreader-latin.woff2`, `geist-mono-latin.woff2`; Fraunces and JetBrains Mono before);
-`color-scheme: dark` arrives in the block as well as this app's own `:root`.
+Ambient since 17 Nov 2026 (salt-ds until then): `Code\ambient-ds\src\tokens.css`, pulled whole,
+tokens only (`CARRIED = {}` in `tools/designsync.mjs`, Ambient's `consumer/designsync.mjs`). From a
+worktree `..\ambient-ds` does not exist: set `AMBIENT_DS`. Last pulled 17 Nov 2026: Ambient 0.7.15
+at 97ddc26. Not carried yet: `ambient.css`, `ambient.js`, `icons.svg` (the redesign on Ambient's
+components is still Stage 4 of the vault plan). The mood clock: Dusk to Lagoon 05:00 to 06:00,
+Lagoon to Flare 16:00 to 17:00, Flare to Dusk 19:00 to 20:00, phone time; only Ambient's seven
+registered colours glide, the inks turn at the blend's start. `.sky` is the `.amb-mesh` recipe at
+opacity .6. theme-color and the manifest are Slate's dark base #2c2d39.
 
 ## Access
 `/admin` sits in the shared "Salt / QR" Access application (also covers salt-command), aud
@@ -48,4 +48,4 @@ app's own payer links.
 wrangler 4.152.0 (workerd 1.20261019.1, 23 Oct 2026); `@napi-rs/canvas` 1.0.13; `compatibility_date` set to 2026-08-08.
 
 ## Testing
-`test/verify.mjs`: 306 assertions (17 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).
+`test/verify.mjs`: 312 assertions (17 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).

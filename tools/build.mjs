@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { matches as designMatches, fontsMatch as designFontsMatch, FONT_FILES } from "./designsync.mjs";
+import { matches as designMatches, drift as designDrift } from "./designsync.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..");
@@ -453,10 +453,9 @@ function auditPublic(doc, codes, V) {
 
 /* -------------------------------------------------------------------- the build */
 
-/* The identity's tokens in app.css are the design system's own (22 Sep 2026), never a copy typed
- * here; the build stops on drift, as salt-command's gate does for its master. */
-if (!designMatches()) die("src/app/app.css carries tokens that are not the design system's :root; run: node tools/designsync.mjs --pull");
-if (!designFontsMatch()) die("src/app/fonts/ is not the design system's fonts/; run: node tools/designsync.mjs --pull");
+/* The tokens in app.css are Ambient's own (salt-ds's from 22 Sep 2026, Ambient's from 17 Nov
+ * 2026), never a copy typed here; the build stops on drift from tools/ambient.lock.json. */
+if (!designMatches()) die("src/app/app.css does not carry the Ambient tokens the lock records: " + designDrift().join("; ") + "; run: node tools/designsync.mjs --pull");
 
 const V = await masterValidator();
 const doc = loadStore();
@@ -466,6 +465,7 @@ const sources = [
   ["index.html", path.join(APP, "index.html")],
   ["app.css", path.join(APP, "app.css")],
   ["app.js", path.join(APP, "app.js")],
+  ["mood.js", path.join(APP, "mood.js")],
   ["qr-art.js", path.join(APP, "qr-art.js")],
   ["qrcode.js", path.join(REPO, "src", "vendor", "qrcode.js")],
   ["sw.js", path.join(APP, "sw.js")],
@@ -498,14 +498,12 @@ const lf = (s) => s.replace(/\r\n/g, "\n");
 const h = crypto.createHash("sha256");
 for (const [, src] of sources) h.update(lf(read(src)));
 h.update(lf(dataBody));
-for (const f of FONT_FILES) h.update(fs.readFileSync(path.join(APP, "fonts", f)));   // the faces move the id too
 const BUILD = h.digest("hex").slice(0, 12);
 
-const stamped = ["app.css", "app.js", "qr-art.js", "qrcode.js", "marks.js", "data.js", "admin.js"];
+const stamped = ["app.css", "mood.js", "app.js", "qr-art.js", "qrcode.js", "marks.js", "data.js", "admin.js"];
 // The shell is the public app only. admin.js is stamped but never precached: the service worker
 // stays out of /admin/ and /api/ altogether, so an Access sign-in page can never be cached as it.
-const SHELL = ["./"].concat(stamped.filter((f) => f !== "admin.js").map((f) => "./" + f + "?v=" + BUILD))
-  .concat(FONT_FILES.map((f) => "./fonts/" + f + "?v=" + BUILD));   // the faces, so the app reads in its own type offline
+const SHELL = ["./"].concat(stamped.filter((f) => f !== "admin.js").map((f) => "./" + f + "?v=" + BUILD));
 
 fs.mkdirSync(PUB, { recursive: true });
 for (const f of walk(PUB)) if (/\.(html|js|css|json|webmanifest)$/i.test(f)) fs.rmSync(f);
@@ -516,9 +514,8 @@ for (const [name, src] of sources) {
   write(path.join(PUB, name), read(src).replace(/__BUILD__/g, BUILD));
 }
 write(path.join(PUB, "data.js"), dataBody + 'self.QR_BUILD = "' + BUILD + '";\n');
-/* the brand faces (22 Sep 2026): bytes, copied as they are; app.css names them stamped */
-fs.mkdirSync(path.join(PUB, "fonts"), { recursive: true });
-for (const f of FONT_FILES) fs.copyFileSync(path.join(APP, "fonts", f), path.join(PUB, "fonts", f));
+/* no face ships (17 Nov 2026): Ambient's type is the device's own, so public/fonts/ is gone */
+fs.rmSync(path.join(PUB, "fonts"), { recursive: true, force: true });
 // Every traced mark in one file, so a mark costs no extra request. Always written, even empty,
 // because it is in the stamped list and the service worker's shell expects it to exist.
 write(path.join(PUB, "marks.js"),
@@ -537,8 +534,8 @@ write(path.join(PUB, "manifest.webmanifest"), JSON.stringify({
   scope: "./",
   display: "standalone",
   orientation: "portrait",
-  background_color: "#05080a",
-  theme_color: "#05080a",
+  background_color: "#2c2d39",
+  theme_color: "#2c2d39",
   icons: [
     { src: "./icon-192.png", sizes: "192x192", type: "image/png" },
     { src: "./icon-512.png", sizes: "512x512", type: "image/png" },

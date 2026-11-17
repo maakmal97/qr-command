@@ -2,7 +2,7 @@
 #
 # The suite on GitHub's machine for every push to main and every pull request, so a push that
 # skipped `npm run deploy` (a worktree, a docs change, a hand push) is still tested and shows a
-# tick or a cross. It does not build (the build reads the salt-ds checkout beside this one) and
+# tick or a cross. It does not build (the build reads the ambient-ds checkout beside this one for its drift check) and
 # it never deploys: `npm run deploy` on the laptop stays the only road to the live Worker.
 # `npm test` is test/verify.mjs: no network, about 15 s.
 

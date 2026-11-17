@@ -99,9 +99,9 @@ Every number here is re-asserted by `npm test`.
   finger. `cssMs()` reads them once; the press-and-hold threshold is not derived from them.
 - `visibility` is delayed by the duration; `depth` counts our own entries; thumbnails are
   `decorative: true` exactly once and drawn together at startup.
-- The aurora is two gradient layers cross-faded, no filter; the coin transitions `transform`
+- The light is Ambient's mesh (`.sky`, gradients, no filter), moved by the mood of the hour (17 Nov 2026); the coin transitions `transform`
   only with `will-change`; a step pre-renders offscreen.
-- One column of rows, 72 px, coin left and the institution's name beside it in mono caps, a
+- One column of rows, 72 px, coin left and the institution's name beside it (mono caps until 17 Nov 2026), a
   `tag` sub-line under it (owner, 14 Sep 2026; the two-column tile grid and the featured
   full-width JPMorgan row are gone); rows fixed so the list scrolls (owner, 25 Aug 2026).
   `orderTiles()` renumbers `--i`; `.accounts` adds the safe-area insets back with `calc()`;
@@ -122,7 +122,7 @@ The laptop master's `edit.html` missed the standard and was fixed 2 Sep 2026.
 |---|---|
 | `src/worker.js` | The Worker. Serves `public/` and sets every security header itself |
 | `src/app/admin.html`, `admin.js` | The edit surface, shipped under `/admin/` |
-| `src/app/app.css` | The Salt identity from `Code\salt-ds`, tokens generated (`CLAUDE.md` rule 7), the rest this app's own: obsidian ground, one copper-and-brass aurora for every account, mono caps for every label and control, Fraunces for the two sentences, ghosts everywhere and one brass-to-copper pill (admin Save). Fraunces and JetBrains Mono ship from `src/app/fonts/` under `font-src 'self'`. The page no longer takes its light from the account; the coin alone carries the brand |
+| `src/app/app.css` | Ambient's tokens from `Code\ambient-ds`, generated and locked (`CLAUDE.md` rule 7; the Salt identity from salt-ds until 17 Nov 2026), the rest this app's own over `--amb-*`: dark only, the mood's base and Ambient's mesh for every account, gliding with the hour; surfaces with a hairline for tiles and the plate; caption caps for labels and the status line, mono for figures; ghosts everywhere and one accent pill (admin Save, Paid). No face ships: the device's own type. The page never takes its light from the account; the coin alone carries the brand |
 | `src/app/app.js` | The app: rail, keyboard, swipe, hash, per-account tuning |
 | `src/app/sw.js` | Service worker template; `__BUILD__` and `__SHELL__` stamped by the build |
 | `src/vendor/qrcode.js` | The encoder, copied from the retired laptop master unchanged |

@@ -32,14 +32,17 @@ Numbers are fixed: `test/verify.mjs` cites rule 4; `docs/DETAIL.md` cites rule 7
 6. **No dependency reaches the browser.** CSP `default-src 'none'`, `script-src 'self'`, no
    `unsafe-inline`: an inline script or a `style=` attribute is a blank page, and the build
    refuses it. Logos are `Path2D` data, never rasters; `img-src` refuses `data:`, asserted.
-7. **The identity's tokens in `src/app/app.css` are generated** from another repo's
-   design-token root (source path: `MEMORY.md`) by `node tools/designsync.mjs --pull`, between
-   the DESIGN markers; the build refuses to ship on drift. **Pull only from salt-ds `master`:**
-   `designsync` and the build read whatever branch that checkout has out. The rest of `app.css` is this app's
-   own and restates no colour the identity names. The two fonts in `src/app/fonts/` are pulled
-   the same way; the build copies, hashes, stamps and precaches them. **A design change he gives is made in salt-ds
-   first and reaches this app in the same piece of work, unasked** (his word of 18 Oct 2026): salt-ds's
-   `npm run propagate` runs the pull and build here; never type the change into `app.css`.
+7. **The tokens in `src/app/app.css` are Ambient's**, generated from `ambient-ds`'s
+   `src/tokens.css` (path: `MEMORY.md`) by `node tools/designsync.mjs --pull`, between the DESIGN
+   markers, and locked in `tools/ambient.lock.json`; the build refuses to ship on drift from the
+   lock. **The pull refuses anything but a clean `main` level with its origin.** Only the tokens
+   are carried; the rest of `app.css` is this app's own, reads `--amb-*` (never `--amb-l-*`,
+   `--amb-d-*` or the mode switches) and names no colour. No face ships: the type is the device's.
+   Dark only (`data-theme="dark"` on `<html>`); the mood follows the hour (`setMood` in `app.js`,
+   his word of 17 Nov 2026); the admin is Slate. **A design change he gives is made in ambient-ds
+   first and reaches this app in the same piece of work, unasked** (his word of 18 Oct 2026, then
+   of salt-ds): ambient-ds's `npm run propagate` runs the pull and build here; never type the
+   change into `app.css`.
 
 ## The renderer, `src/app/qr-art.js`
 
