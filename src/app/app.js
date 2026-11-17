@@ -1052,7 +1052,9 @@
         setRail(r.id);
         if (idx < 0) return;
         if (!onRail(CODES[idx], rail)) {
-          history.replaceState(history.state, "", "#");
+          // Unwind as close() does: back over our own entry, so no dead copy of the list is left.
+          if (depth > 0) { depth--; history.back(); }
+          else history.replaceState({ n: 0 }, "", "#");
           showList();
           return;
         }

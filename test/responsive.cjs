@@ -157,6 +157,19 @@ async function checkInteractions(browser, base) {
     await page.setViewportSize({ width: 1180, height: 820 });
     await page.waitForFunction(() => getComputedStyle(document.querySelector("#accounts")).visibility === "visible");
 
+    // An account opened from the list, then a rail it is not on: the list must come back on the
+    // list's own history entry, not on a dead copy that one more Back would merely repeat.
+    const fresh = await context.newPage();
+    await fresh.goto(base + "/");
+    await fresh.waitForFunction(() => document.body.classList.contains("view-list"));
+    await fresh.getByRole("button", { name: /Transfer/ }).click();
+    await fresh.locator("#grid .tile:visible", { hasText: "Maybank" }).first().click();
+    await fresh.waitForFunction(() => /^#maybank(\/|$)/.test(location.hash));
+    await fresh.getByRole("button", { name: /JomPAY/ }).click();
+    await fresh.waitForFunction(() => document.body.classList.contains("view-list") && !location.hash &&
+      history.state === null, null, { timeout: 5000 });
+    await fresh.close();
+
     await page.goto(base + "/admin/");
     await page.waitForSelector(".row");
     for (const [width, height] of [[320, 568], [568, 320], [960, 640], [1920, 1080]]) {
