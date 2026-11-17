@@ -106,6 +106,19 @@
    "bank": "KAF Digital Bank"
   },
   {
+   "key": "atlas",
+   "bankMark": "atlas",
+   "name": "ATLAS",
+   "sub": "8888 7543 2821 12",
+   "owner": "me",
+   "group": "bank",
+   "brand": "#FF5B05",
+   "mid": "564167",
+   "payload": "00020201021126460014A000000615000101065641670214888875432821125204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY63040A40",
+   "bank": "Bank Muamalat",
+   "maintenance": true
+  },
+  {
    "key": "tng",
    "bankMark": "tng",
    "name": "Touch 'n Go",

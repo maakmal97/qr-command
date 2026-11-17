@@ -134,6 +134,22 @@ self.QR_CODES = [
     "ref1": ""
   },
   {
+    "key": "atlas",
+    "name": "ATLAS",
+    "brand": "#FF5B05",
+    "payload": "00020201021126460014A000000615000101065641670214888875432821125204000053034585802MY5925MUHAMMAD AFIF AKMAL BIN A6002MY63040A40",
+    "acct": "8888 7543 2821 12",
+    "maintenance": true,
+    "bank": "Bank Muamalat",
+    "holder": "",
+    "bankMark": "atlas",
+    "holderMark": "",
+    "tag": "",
+    "ring": "",
+    "biller": "",
+    "ref1": ""
+  },
+  {
     "key": "tng",
     "name": "Touch 'n Go",
     "brand": "#1A2B6B",
@@ -230,4 +246,4 @@ self.QR_CODES = [
     "ref1": "6011111809738"
   }
 ];
-self.QR_BUILD = "bf83f027e66e";
+self.QR_BUILD = "408d8aa3f69d";

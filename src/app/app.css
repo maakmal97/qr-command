@@ -71,7 +71,6 @@
   --salt-product-candy: #cf8fb4;  /* rose, hue 330 */
   --salt-product-rice: #7b86cc;   /* indigo, hue 235 */
   --salt-product-gas: #e8794d;    /* flame, hue 30 */
-  --salt-product-prep: #c77ae0;   /* magenta, hue 295 */
 
   /* Materials */
   --salt-glass: rgba(255, 255, 255, 0.03);
@@ -94,6 +93,9 @@
   --salt-tap: 44px;                      /* the least a control may measure, either way */
   --salt-bar-h: 4rem;                    /* the phone's bar of places, above the safe area: 64px at the
                                             default text size, and in rem so it grows with the words in it */
+  --salt-page-max: 1376px;               /* 1.32.0, his word of 15 Nov 2026: the widest a page stands, its gutters outside
+                                            it; every surface's frame reads it, so each is the same width at every
+                                            screen (1.32.1: the comment names no surface, as a served page must not) */
   --salt-sheet-radius: var(--salt-radius-lg); /* the top corners of a sheet, the inner corners of a drawer */
 
   /* Gradients. Brass to copper for marks and fills; white to copper for titles. */

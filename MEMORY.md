@@ -11,6 +11,12 @@ accounts show and their order.
 ## Visibility
 Public since 14 Oct 2026, his decision, so CI runs on free Actions minutes. Before the switch every account was set under maintenance in KV `state` (14 of 14, read back live); the accounts stay suspended until he lifts them in `/admin/`.
 
+## Accounts
+15 since 17 Nov 2026: `atlas` (ATLAS by Bank Muamalat, Savings Account-i, DuitNow id 564167)
+added on QR and Transfer, baked `maintenance: true`. KV `state` predates it, so the baked flag
+holds until his next `/admin/` save writes it in. Its mark is traced from the orange wordmark
+paths of the official `atlasmuamalat.com.my/.../logo.svg`, rendered to a PNG first.
+
 ## Bundle fields (CLAUDE.md rule 4)
 14 fields ship: `key`, `name`, `brand`, `payload`, `acct`, `maintenance`, `bank`, `holder`,
 `bankMark`, `holderMark`, `tag`, `ring`, `biller`, `ref1`.
@@ -20,8 +26,8 @@ Generated from the `:root` of `Code\salt-ds\src\styles.css`: the owner's own "Sa
 Commodities" design system, not JPMorgan's Salt. `designsync` and the build read whatever
 branch that checkout has out, so it must be on an up-to-date `master` (a feature branch there
 fails the build). From a worktree `..\salt-ds` does not exist: set `SALT_DS`. Last pulled
-04 Nov 2026 from salt-ds `master` 10eebdb (1.26.0, PR #38; here #18, live build `6241ddf453b9`):
-`--salt-orange` #f28c18 added, read by nothing here yet. Since 18 Oct 2026 (1e23e44, 1.6.0) the faces are Newsreader over Geist
+17 Nov 2026 from salt-ds `master` 98d6327 (1.34.0, PR #51): `--salt-product-prep` gone (1.31.0),
+`--salt-page-max` 1376px added (1.32.0), read by nothing here yet; `--salt-orange` #f28c18 (1.26.0) likewise. Since 18 Oct 2026 (1e23e44, 1.6.0) the faces are Newsreader over Geist
 Mono (`newsreader-latin.woff2`, `geist-mono-latin.woff2`; Fraunces and JetBrains Mono before);
 `color-scheme: dark` arrives in the block as well as this app's own `:root`.
 
@@ -42,4 +48,4 @@ app's own payer links.
 wrangler 4.152.0 (workerd 1.20261019.1, 23 Oct 2026); `@napi-rs/canvas` 1.0.13; `compatibility_date` set to 2026-08-08.
 
 ## Testing
-`test/verify.mjs`: 304 assertions (05 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).
+`test/verify.mjs`: 305 assertions (17 Nov 2026), no network; decodes about a thousand renders per run; section 7 runs the shipped `app.js` against a stub page (timers and idle callbacks driven by hand).
