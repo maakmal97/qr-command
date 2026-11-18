@@ -3,17 +3,17 @@
  * activate. There is no version constant to remember to bump, because a constant someone has
  * to remember is a constant that eventually goes stale.
  */
-const CACHE = "pay-3697825e3eb1";
+const CACHE = "pay-70e2e3ef2605";
 const SHELL = [
   "./",
-  "./ambient.css?v=3697825e3eb1",
-  "./app.css?v=3697825e3eb1",
-  "./mood.js?v=3697825e3eb1",
-  "./app.js?v=3697825e3eb1",
-  "./qr-art.js?v=3697825e3eb1",
-  "./qrcode.js?v=3697825e3eb1",
-  "./marks.js?v=3697825e3eb1",
-  "./data.js?v=3697825e3eb1"
+  "./ambient.css?v=70e2e3ef2605",
+  "./app.css?v=70e2e3ef2605",
+  "./mood.js?v=70e2e3ef2605",
+  "./app.js?v=70e2e3ef2605",
+  "./qr-art.js?v=70e2e3ef2605",
+  "./qrcode.js?v=70e2e3ef2605",
+  "./marks.js?v=70e2e3ef2605",
+  "./data.js?v=70e2e3ef2605"
 ];
 
 self.addEventListener("install", (e) => {
@@ -64,8 +64,17 @@ self.addEventListener("fetch", (e) => {
   // is stamped with the build id in its query string, so a cache hit is by definition the
   // right version and a new build simply misses.
   if (req.mode === "navigate") {
+    /* A restored tab or a move through history asks for the page from the HTTP cache WITHOUT
+     * checking it (cache mode force-cache), and no-cache on the response does not stop that: an
+     * old build came back as the page. Those loads ask the network afresh by address instead,
+     * still asking for a page (accept), so the Worker answers with HTML and not its JSON. A
+     * redirect cannot answer a navigation from here, so that case goes back to the request itself. */
+    const unchecked = req.cache === "force-cache" || req.cache === "only-if-cached";
+    const ask = unchecked
+      ? fetch(req.url, { cache: "no-cache", credentials: "same-origin", headers: { accept: req.headers.get("accept") || "text/html" } }).then((r) => (r.redirected ? fetch(req) : r))
+      : fetch(req);
     e.respondWith(
-      fetch(req)
+      ask
         .then((r) => {
           if (cacheable(r)) {
             const copy = r.clone();

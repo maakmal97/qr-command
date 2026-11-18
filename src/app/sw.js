@@ -54,8 +54,17 @@ self.addEventListener("fetch", (e) => {
   // is stamped with the build id in its query string, so a cache hit is by definition the
   // right version and a new build simply misses.
   if (req.mode === "navigate") {
+    /* A restored tab or a move through history asks for the page from the HTTP cache WITHOUT
+     * checking it (cache mode force-cache), and no-cache on the response does not stop that: an
+     * old build came back as the page. Those loads ask the network afresh by address instead,
+     * still asking for a page (accept), so the Worker answers with HTML and not its JSON. A
+     * redirect cannot answer a navigation from here, so that case goes back to the request itself. */
+    const unchecked = req.cache === "force-cache" || req.cache === "only-if-cached";
+    const ask = unchecked
+      ? fetch(req.url, { cache: "no-cache", credentials: "same-origin", headers: { accept: req.headers.get("accept") || "text/html" } }).then((r) => (r.redirected ? fetch(req) : r))
+      : fetch(req);
     e.respondWith(
-      fetch(req)
+      ask
         .then((r) => {
           if (cacheable(r)) {
             const copy = r.clone();

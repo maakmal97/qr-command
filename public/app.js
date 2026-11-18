@@ -442,6 +442,14 @@
       followBuild();
       go();
     });
+    /* A page brought back whole from the browser's back-forward store gets no visibilitychange:
+     * it was never hidden in its own eyes. pageshow says so, and it asks the same questions. */
+    self.addEventListener("pageshow", function (e) {
+      if (!e.persisted) return;
+      read();
+      followBuild();
+      go();
+    });
   }
 
   /* THE PAGE FOLLOWS THE BUILD (owner, 15 Sep 2026). The service worker takes a new build over
@@ -456,8 +464,15 @@
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (j) {
         if (!j || typeof j.id !== "string" || j.id === BUILD) return;
-        if (recall("reloaded") === j.id) return;
-        remember("reloaded", j.id);
+        /* UP TO THREE TRIES A BUILD, NOT ONE (18 Nov 2026). One try stranded a page for good when
+         * its reload came back stale (a restored tab, a cached copy, a network that failed at that
+         * moment): the id was already spent, so no later return ever asked again. Still never a loop:
+         * a minute at least between tries, so a bundle and its rev disagreeing costs one reload an
+         * open, three in all. */
+        var tried = (recall("reloaded") || "").split("|");
+        var n = tried[0] === j.id ? +tried[1] || 1 : 0;
+        if (n >= 3 || (n && Date.now() - (+tried[2] || 0) < 60000)) return;
+        remember("reloaded", j.id + "|" + (n + 1) + "|" + Date.now());
         location.reload();
       })
       .catch(function () {});

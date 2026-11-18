@@ -523,10 +523,11 @@ const SAFE = QRArt.DEFAULTS.safePhysicalPx;
    * it was closed; now it compares its build id with the served rev.json on every return to the
    * front and reloads once when they differ. The id is remembered before the reload, so a
    * disagreement can never loop. */
-  ok("an open page reloads itself once when a newer build is served",
+  ok("an open page reloads itself when a newer build is served, three tries a build at most",
     /function followBuild\(\)/.test(appJsSrc) &&
     /fetch\("rev\.json", \{ cache: "no-store"/.test(appJsSrc) &&
-    /if \(recall\("reloaded"\) === j\.id\) return;[\s\S]{0,80}?remember\("reloaded", j\.id\);[\s\S]{0,40}?location\.reload\(\);/.test(appJsSrc) &&
+    /var n = tried\[0\] === j\.id \? \+tried\[1\] \|\| 1 : 0;\s*if \(n >= 3 \|\| \(n && Date\.now\(\) - \(\+tried\[2\] \|\| 0\) < 60000\)\) return;\s*remember\("reloaded", j\.id \+ "\|" \+ \(n \+ 1\) \+ "\|" \+ Date\.now\(\)\);\s*location\.reload\(\);/.test(appJsSrc) &&
+    /addEventListener\("pageshow", function \(e\) \{\s*if \(!e\.persisted\) return;\s*read\(\);\s*followBuild\(\);/.test(appJsSrc) &&
     /document\.addEventListener\("visibilitychange", function \(\) \{[\s\S]{0,160}?read\(\);\s*followBuild\(\);/.test(appJsSrc));
   /* ONE WRITE, AND IT IS INSIDE THE GATE. The Worker puts to the namespace in exactly one place,
    * after identity() has answered, and reads it in exactly one. */
@@ -1874,6 +1875,9 @@ section("5. The service worker's guards");
   ok("it ignores every non-GET request", /req\.method\s*!==\s*"GET"/.test(swSrc));
   ok("it ignores cross-origin requests", /url\.origin\s*!==\s*self\.location\.origin/.test(swSrc));
   ok("navigations go to the network first", /req\.mode\s*===\s*"navigate"/.test(swSrc));
+  ok("a restored or history load never takes the page from the HTTP cache unchecked",
+    /req\.cache === "force-cache" \|\| req\.cache === "only-if-cached"/.test(swSrc) &&
+    /fetch\(req\.url, \{ cache: "no-cache", credentials: "same-origin", headers: \{ accept: req\.headers\.get\("accept"\) \|\| "text\/html" \} \}\)\.then\(\(r\) => \(r\.redirected \? fetch\(req\) : r\)\)/.test(swSrc));
   ok("stale caches are deleted on activate", /caches\.delete/.test(swSrc));
 }
 
