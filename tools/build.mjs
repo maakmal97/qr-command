@@ -73,7 +73,7 @@ const VALIDATOR = path.join(REPO, "tools", "store.js");
  * a screenshot of the coin. Anyone who views source still reads it. That is the same trade the
  * owner already made for account numbers on 11 Aug 2026, made again knowingly. */
 const SHIP = ["key", "name", "brand", "payload", "acct", "maintenance", "bank", "holder",
-              "bankMark", "holderMark", "tag", "ring", "biller", "ref1"];
+              "bankMark", "holderMark", "tag", "ring", "biller", "ref1", "note"];
 
 const die = (m) => { console.error("\nbuild failed: " + m + "\n"); process.exit(1); };
 const read = (p) => fs.readFileSync(p, "utf8");
@@ -212,6 +212,11 @@ function sanitise(doc, V) {
     // Normalised to a real string for the same reason maintenance is a real boolean: a field
     // present on some records and missing from others is one the phone has to guess about.
     rec.tag = String(a.tag || "").trim();
+    /* A NOTE is one plain line a payer must read before a transfer, such as which banks cannot
+     * send to this one (Wise, 20 Nov 2026). Shown on the Transfer view, carried to Salt Counter's
+     * pay sheet by its paysync. Short by rule: a note that needs two lines is a page of its own. */
+    rec.note = String(a.note || "").trim();
+    if (rec.note.length > 100) die(where + " has a note of " + rec.note.length + " characters; keep it to 100");
     /* The optional SECOND colour, which strikes the ring around the face while `brand` strikes
      * the face itself. Validated here as well as by the master, because the coin is drawn from
      * it and a bad colour is a coin nobody can read rather than a document nobody can save. */

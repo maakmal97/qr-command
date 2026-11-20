@@ -589,7 +589,7 @@ section("2. The bundle carries the codes and nothing else");
   // `biller` and `ref1` added 4 Sep 2026 for JomPAY. Widening this list is the deliberate act
   // rule 4 describes: it happens here and in build.mjs's SHIP, in the open, or not at all.
   const SHIP = ["acct", "bank", "bankMark", "biller", "brand", "holder", "holderMark", "key",
-                "maintenance", "name", "payload", "ref1", "ring", "tag"];
+                "maintenance", "name", "note", "payload", "ref1", "ring", "tag"];
   const wrong = shipped.filter((c) => Object.keys(c).sort().join() !== SHIP.join());
   ok("every shipped record has exactly " + SHIP.join(", ") + " and nothing else",
     wrong.length === 0,

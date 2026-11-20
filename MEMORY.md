@@ -18,8 +18,9 @@ holds until his next `/admin/` save writes it in. Its mark is traced from the or
 paths of the official `atlasmuamalat.com.my/.../logo.svg`, rendered to a PNG first.
 
 ## Bundle fields (CLAUDE.md rule 4)
-14 fields ship: `key`, `name`, `brand`, `payload`, `acct`, `maintenance`, `bank`, `holder`,
-`bankMark`, `holderMark`, `tag`, `ring`, `biller`, `ref1`.
+15 fields ship: `key`, `name`, `brand`, `payload`, `acct`, `maintenance`, `bank`, `holder`,
+`bankMark`, `holderMark`, `tag`, `ring`, `biller`, `ref1`, `note` (20 Nov 2026: one line a payer
+reads on the Transfer view, carried to Salt Counter by its paysync).
 
 ## Design tokens source (CLAUDE.md rule 7)
 Ambient since 17 Nov 2026 (salt-ds until then): `Code\ambient-ds\src\tokens.css` and `ambient.css`,

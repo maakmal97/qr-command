@@ -15,7 +15,8 @@
    "group": "bank",
    "brand": "#163300",
    "bank": "Wise",
-   "bankMark": "wise"
+   "bankMark": "wise",
+   "note": "DuitNow Transfer only. Not from HSBC, Alliance Bank or AEON Bank."
   },
   {
    "key": "maybank",

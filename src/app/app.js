@@ -488,7 +488,8 @@
     var rows = v === "jompay"
       ? [["Biller code", a.biller, "biller code"], ["Ref-1", a.ref1, "Ref-1"], ["Ref-2", "-"]]
       : [["Bank", a.bank], ["Account", spaced(a.acct), "account number"]]
-          .concat(a.holder ? [["Receiver", a.holder]] : []);
+          .concat(a.holder ? [["Receiver", a.holder]] : [])
+          .concat(a.note ? [["Note", a.note]] : []);
     fillRows(elPlate, rows);
   }
 
