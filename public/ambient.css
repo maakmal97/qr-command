@@ -178,14 +178,17 @@
   padding: 0 28px;
   border: 1px solid transparent;
   border-radius: var(--amb-radius-pill);
-  background: var(--amb-pill);
-  color: var(--amb-on-pill);
+  /* 0.7.19 (the owner's answer of 18 Nov 2026, "uncoloured pills"): a filled pill is the accent, in every mood and mode. It was the neutral pill, white on a dark ground; --amb-pill stays for what is chosen (a segment, a step, a key) */
+  background: var(--amb-accent);
+  color: var(--amb-on-accent);
   font-size: var(--amb-text-callout);
   font-weight: 700;
   line-height: 1.1;
   text-align: center;
 }
 .amb-pill--accent { background: var(--amb-accent); color: var(--amb-on-accent); }
+/* 0.7.18: the action that commits and cannot be taken back (Cancel order, Discard), the state's own red under the accent's ink */
+.amb-pill--danger { background: var(--amb-neg); color: var(--amb-on-accent); }
 .amb-pill--quiet { border-color: var(--amb-line-field); background: none; color: var(--amb-ink); }
 .amb-pill--sm { min-height: var(--amb-tap); padding: 0 var(--amb-space-4); font-size: var(--amb-text-subhead); font-weight: 600; }
 .amb-pill--block { display: flex; width: 100%; }
@@ -475,6 +478,20 @@ textarea.amb-input { min-height: 96px; padding-block: 12px; resize: none; }
 .amb-switch::after { content: ""; position: absolute; top: calc(50% - 13.5px); left: 2px; width: 27px; height: 27px; border-radius: 50%; background: var(--amb-on-accent); transition: transform var(--amb-dur-fast) var(--amb-ease-fast); }
 .amb-switch:checked::before { background: var(--amb-accent); }
 .amb-switch:checked::after { transform: translateX(20px); }
+/* ---- Slider: a figure set by sliding, a native range in even steps, 44px tall; the figure is said in words beside its label ---- */
+.amb-slider { display: grid; gap: 6px; max-width: 28rem; text-align: left; }
+.amb-slider__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--amb-space-3); }
+.amb-slider__value { font-size: var(--amb-text-title2); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--amb-ink); }
+.amb-slider__input { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: var(--amb-tap); margin: 0; padding: 0; border: 0; background: none; cursor: pointer; touch-action: pan-y; }
+.amb-slider__input::-webkit-slider-runnable-track { height: 6px; border-radius: var(--amb-radius-pill); background: var(--amb-line-field); }
+.amb-slider__input::-moz-range-track { height: 6px; border-radius: var(--amb-radius-pill); background: var(--amb-line-field); }
+.amb-slider__input::-moz-range-progress { height: 6px; border-radius: var(--amb-radius-pill); background: var(--amb-accent); }
+.amb-slider__input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; margin-top: -11px; border: 0; border-radius: 50%; background: var(--amb-accent); transition: transform var(--amb-dur-fast) var(--amb-ease-fast); }
+.amb-slider__input::-moz-range-thumb { box-sizing: border-box; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--amb-accent); transition: transform var(--amb-dur-fast) var(--amb-ease-fast); }
+.amb-slider__input:active::-webkit-slider-thumb { transform: scale(1.15); }
+.amb-slider__input:active::-moz-range-thumb { transform: scale(1.15); }
+.amb-slider__input:disabled { cursor: not-allowed; opacity: .45; }
+.amb-slider__ends { display: flex; justify-content: space-between; gap: var(--amb-space-3); font-size: var(--amb-text-footnote); font-variant-numeric: tabular-nums; color: var(--amb-ink-2); }
 .amb-handle { -webkit-appearance: none; appearance: none; flex: none; display: grid; place-items: center; width: var(--amb-tap); height: var(--amb-tap); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--amb-ink-2); cursor: grab; touch-action: none; }
 
 /* ---- Card: a bank card at its true proportion, flooded by its own mood ---- */
@@ -1264,6 +1281,54 @@ polyline.amb-map__water { fill: none; stroke: var(--amb-water); stroke-width: 12
 .amb-steps--path .amb-step__date + .amb-step__title { padding-top: 0; }
 .amb-steps--path > .amb-step:has(> .amb-step__leg) { padding-bottom: var(--amb-space-3); }
 .amb-step__leg { justify-self: start; margin-top: var(--amb-space-3); padding: 3px 10px; border-radius: var(--amb-radius-pill); background: var(--amb-well); font-size: var(--amb-text-footnote); font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; color: var(--amb-ink-2); }
+/* a flow across places (0.7.31): the steps of a system, each led by the place it happens in and the
+   time it is reached after the first, and under every stop but the last the hand-off to the next:
+   what travels, by what road, opened by which key. The hand-off is the connector, so its line is
+   solid and an arrow on it points to the next stop. The slow stop is ringed in the warn and says Slow. */
+.amb-steps--flow > .amb-step::after { background: var(--amb-line-field); }
+.amb-steps--flow > .amb-step:has(> .amb-step__hand) { padding-bottom: var(--amb-space-3); }
+.amb-step__head { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--amb-space-2); min-height: 36px; }
+.amb-step__place { font-size: var(--amb-text-footnote); font-weight: 600; line-height: 1.3; color: var(--amb-ink); }
+.amb-step__time { font-size: var(--amb-text-footnote); font-weight: 500; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--amb-ink-2); }
+.amb-steps--flow .amb-step__head + .amb-step__title { padding-top: 0; }
+.amb-step__hand { position: relative; justify-self: start; margin-top: var(--amb-space-3); padding: 5px 10px; border-radius: var(--amb-radius-sm); background: var(--amb-well); font-size: var(--amb-text-footnote); font-weight: 500; line-height: 1.4; color: var(--amb-ink-2); overflow-wrap: anywhere; }
+/* the arrow on the connector beside the hand-off: the line stands at the middle of the 36px ring */
+.amb-step__hand::before { content: ""; position: absolute; top: 50%; left: calc(13px - 36px - var(--amb-space-3)); box-sizing: border-box; width: 10px; height: 10px; border-right: 2px solid var(--amb-ink-2); border-bottom: 2px solid var(--amb-ink-2); transform: translateY(-70%) rotate(45deg); }
+.amb-step__key, .amb-row__key { font-family: var(--amb-font-mono); font-size: var(--amb-text-footnote); font-weight: 600; color: var(--amb-ink); overflow-wrap: anywhere; }
+.amb-steps--flow > .amb-step.is-slow::before { border-color: var(--amb-warn); }
+
+/* an architecture map (0.7.31): a fifth drawing of the chart frame. Lanes are full-width bands on the
+   well, each holding its boxes; roads run between boxes, each with its number, as a map's marks; a road
+   a key opens is numbered on a filled disc. Every word on the drawing is also in the table under it,
+   and what travels on each road is its row in the key. The frame is 320 units wide, so a phone draws it
+   about 1:1; its words stay between 12px and 15px at any width, and the boxes grow round them. */
+.amb-chart:has(> .amb-diagram) { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--amb-space-3) var(--amb-space-5); }
+.amb-chart:has(> .amb-diagram) > * { flex: 1 1 100%; min-width: 0; }
+.amb-chart > .amb-diagram { flex: 3 1 18rem; max-width: 36rem; }
+.amb-chart:has(> .amb-diagram) > .amb-list--keyed { flex: 2 1 17rem; }
+.amb-diagram { container-type: inline-size; overflow: clip; border: 1px solid var(--amb-line); border-radius: var(--amb-radius-lg); background: var(--amb-surface); }
+.amb-diagram__drawing { display: block; width: 100%; height: auto; }
+.amb-diagram__drawing text { dominant-baseline: central; }
+.amb-diagram__lane > rect { fill: var(--amb-well); rx: 10px; }
+.amb-diagram__lane > text { fill: var(--amb-ink-2); font-size: clamp(calc(12px * tan(atan2(320px, 100cqi))), 12px, calc(13px * tan(atan2(320px, 100cqi)))); font-weight: 600; }
+.amb-diagram__box > rect { fill: var(--amb-surface); stroke: var(--amb-line-field); stroke-width: 1; vector-effect: non-scaling-stroke; rx: 8px; }
+.amb-diagram__name, .amb-diagram__line { text-anchor: middle; }
+.amb-diagram__name { fill: var(--amb-ink); font-size: clamp(calc(12px * tan(atan2(320px, 100cqi))), 13px, calc(15px * tan(atan2(320px, 100cqi)))); font-weight: 600; }
+.amb-diagram__line { fill: var(--amb-ink-2); font-size: clamp(calc(12px * tan(atan2(320px, 100cqi))), 12px, calc(13px * tan(atan2(320px, 100cqi)))); }
+.amb-diagram__road > polyline { fill: none; stroke: var(--amb-ink-2); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.amb-diagram__head > path { fill: var(--amb-ink-2); }
+.amb-diagram__mark { transform-box: fill-box; transform-origin: center; transform: scale(tan(atan2(320px, 100cqi))); }
+.amb-diagram__mark > circle { fill: var(--amb-surface); stroke: var(--amb-ink); stroke-width: 2; }
+.amb-diagram__mark > text { fill: var(--amb-ink); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; text-anchor: middle; }
+.amb-diagram__road--locked .amb-diagram__mark > circle { fill: var(--amb-pill); stroke: var(--amb-pill); }
+.amb-diagram__road--locked .amb-diagram__mark > text { fill: var(--amb-on-pill); }
+.amb-key--locked { border-color: var(--amb-pill); background: var(--amb-pill); color: var(--amb-on-pill); }
+/* a road both ways carries an arrow at each end, by its marker-start */
+.amb-diagram__road--both > polyline { stroke-linecap: butt; }
+/* the key of a diagram stands narrow beside it, so a road's key name takes its own line under the words */
+.amb-chart:has(> .amb-diagram) > .amb-list--keyed .amb-row { flex-wrap: wrap; row-gap: 2px; }
+.amb-chart:has(> .amb-diagram) > .amb-list--keyed .amb-row > .amb-row__text { flex: 1 1 0; }
+.amb-chart:has(> .amb-diagram) > .amb-list--keyed .amb-row > .amb-row__trail { flex: 1 1 100%; padding-left: 40px; }
 /* a Wi-Fi card: one network as a guest meets it. The values to type, each copied whole, beside the code
    that joins it, one code a band. The page draws the code as an SVG of its modules; the frame keeps it
    on the field that always scans. On a phone the copies are the way in: a code is for another screen. */
@@ -1275,9 +1340,11 @@ polyline.amb-map__water { fill: none; stroke: var(--amb-water); stroke-width: 12
 .amb-codeframe__code { fill: var(--amb-qr-ink); shape-rendering: crispEdges; }
 /* a map is a picture: in forced colours it keeps its own, and the key carries it in words */
 @media (forced-colors: active) {
-  .amb-map__drawing { forced-color-adjust: none; }
+  .amb-map__drawing, .amb-diagram__drawing { forced-color-adjust: none; }
   .amb-key { border-color: CanvasText; }
   .amb-key--stay { background: CanvasText; }
+  .amb-key--locked { background: CanvasText; color: Canvas; }
+  .amb-steps--flow > .amb-step.is-slow::before { border-color: CanvasText; border-style: double; border-width: 4px; }
   .amb-key--route { forced-color-adjust: none; }
 }
 
@@ -1508,6 +1575,15 @@ polyline.amb-map__water { fill: none; stroke: var(--amb-water); stroke-width: 12
 .amb-sheet__head { display: flex; align-items: center; gap: var(--amb-space-3); padding-bottom: var(--amb-space-3); margin-bottom: var(--amb-space-2); border-bottom: 1px solid var(--amb-line); }
 .amb-sheet__title { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--amb-text-body); font-weight: 700; line-height: 1.25; }
 .amb-sheet__body { display: grid; gap: var(--amb-space-3); }
+/* 0.7.30: a sheet's foot: its answers, in view at the foot of the sheet while what stands above them scrolls (the owner's word of
+   19 Nov 2026: on a phone a long sheet's Send stood under the fold). The last thing in the sheet, after its body; on a short sheet it
+   stands where it falls. Like a record's foot it draws no box and no edge: behind it lies a fade of the sheet's own ground, clear at
+   its top and the ground itself from its first pill down, so what scrolls under it dissolves before it reaches them. A sticky box
+   keeps clear of the padding of what scrolls it, so the foot is set back by the sheet's padding at its foot and sides, and that room
+   under and beside its pills is its own. It lets taps through to what shows in its fade; only what it holds takes them. */
+.amb-sheet { --amb-sheet-end: calc(var(--amb-space-5) + var(--amb-safe-bottom)); }
+.amb-sheet__foot { position: sticky; z-index: 1; bottom: calc(-1 * var(--amb-sheet-end)); display: grid; gap: var(--amb-space-3); margin: 0 calc(-1 * var(--amb-space-5)) calc(-1 * var(--amb-sheet-end)); padding: var(--amb-space-5) var(--amb-space-5) var(--amb-sheet-end); background: linear-gradient(to bottom, transparent, var(--amb-solid-sheet) var(--amb-space-5)); pointer-events: none; }
+.amb-sheet__foot > * { pointer-events: auto; }
 .amb-action {
   -webkit-appearance: none;
   appearance: none;
@@ -1559,7 +1635,7 @@ polyline.amb-map__water { fill: none; stroke: var(--amb-water); stroke-width: 12
    A sheet stands after the shell, outside every container, so this reads the window, which the sheet fills. The
    card is 480px at most, 440px inside, so what it holds still stands as it does on a phone (a table stacks) */
 @media (min-width: 720px) {
-  .amb-sheet { inset: 0; height: fit-content; max-width: 480px; max-height: calc(100dvh - 2 * var(--amb-space-6)); margin: auto; padding-block: var(--amb-space-5); border: 1px solid var(--amb-rim); border-radius: var(--amb-radius-xl); transform: translateY(12px) scale(.98); }
+  .amb-sheet { --amb-sheet-end: var(--amb-space-5); inset: 0; height: fit-content; max-width: 480px; max-height: calc(100dvh - 2 * var(--amb-space-6)); margin: auto; padding-block: var(--amb-space-5); border: 1px solid var(--amb-rim); border-radius: var(--amb-radius-xl); transform: translateY(12px) scale(.98); }
   .amb-sheet--full { height: min(720px, calc(100dvh - 2 * var(--amb-space-8))); }
   @starting-style { .amb-sheet[open] { opacity: 0; transform: translateY(12px) scale(.98); } }
 }
@@ -1813,3 +1889,68 @@ fieldset.amb-rating > .amb-rating__stars { margin-left: -7px; }
   .amb-shell--rail:has(> .amb-appbar):has(> .amb-screen--docked) > .amb-dock > :is(.amb-tabbar, .amb-mini, .amb-savebar) { box-shadow: inset 0 1px 0 var(--amb-sheen); }
 }
 @media print { .amb-shell[data-amb-moved] > .amb-screen--docked { clip-path: none; } }
+
+/* ---- A working shell (0.7.16, redrawn 0.7.20): the owner's answers of 18 Nov 2026, on Salt Admin at a laptop's width.
+   A shell with amb-shell--work gives the height and the width to the work from 960px. Its compact hero is a bar on
+   the page's own ground, one row at the app bar's height, whose two ends are the content columns' own and which
+   closes on a hairline: the title at the start in the ink, its line beside it, then at the end its time line (what
+   is true in every place, a time or a state), its cluster of actions, and the room the app bar's circles stand in.
+   The mesh is a strip along the screen's top edge and stands behind nothing that is read. Its rail runs to the
+   screen's foot. A segment that chooses a place's part may ask to be tabs (amb-segment--tabs): text on one line
+   across the content's width over a hairline, the part one is in underlined in the accent, so it never reads as
+   the filters under it, which stay pills. Its panes give the queue up to 440px, and the queue still gives way
+   first where the panes are narrow. Narrower than 960px nothing changes: the hero is the stack on the mesh, the
+   dock the bar, the tabs the segment. ---- */
+@container amb (min-width: 960px) {
+  .amb-shell--work .amb-hero--compact { position: relative; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 0 var(--amb-space-4); margin: 0 var(--amb-bar-r) var(--amb-space-4) var(--amb-bar-l); padding: calc(var(--amb-safe-top) + var(--amb-space-2)) 0 var(--amb-space-2); border-bottom: 1px solid var(--amb-line); background-image: none; text-align: start; }
+  /* the bar's sides are the content's own: a stack's inset, or over panes the edge their cards stand on (below) */
+  .amb-shell--work .amb-hero--compact { --amb-bar-l: var(--amb-space-4); --amb-bar-r: var(--amb-space-4); }
+  .amb-shell--work .amb-hero--compact::before { content: ""; position: absolute; top: 0; left: calc(-1 * (var(--amb-inset-l) + var(--amb-bar-l))); right: calc(-1 * (var(--amb-inset-r) + var(--amb-bar-r))); height: var(--amb-space-1); background-image: linear-gradient(to right, var(--amb-mesh-1), var(--amb-mesh-3), var(--amb-mesh-2)); }
+  /* the bar ends where the content does, so it keeps the room of the app bar's circles, one or two, only while they show */
+  .amb-shell--work:has(> .amb-appbar > :last-child:not([hidden]) > :not([hidden]), > .amb-appbar > .amb-circle:last-child:not([hidden])) .amb-hero--compact { padding-right: calc(var(--amb-tap) + var(--amb-space-3)); }
+  .amb-shell--work:has(> .amb-appbar > :last-child:not([hidden]) > :nth-child(2):not([hidden])) .amb-hero--compact { padding-right: calc(2 * var(--amb-tap) + var(--amb-space-2) + var(--amb-space-3)); }
+  .amb-shell--work .amb-hero--compact > * { margin: 0; }
+  .amb-shell--work .amb-hero--compact > .amb-hero__title { display: flex; align-items: center; min-height: var(--amb-tap); font-size: var(--amb-text-title2); }
+  .amb-shell--work .amb-hero--compact > :is(.amb-hero__title, .amb-hero__sub) { align-self: baseline; }
+  .amb-shell--work .amb-hero--compact > .amb-hero__sub { flex: 1 1 0; min-width: 0; font-size: var(--amb-text-subhead); color: var(--amb-ink-2); text-wrap: pretty; }
+  .amb-shell--work .amb-hero--compact > .amb-hero__time { margin-left: auto; font-size: var(--amb-text-footnote); color: var(--amb-ink-2); white-space: nowrap; }
+  .amb-shell--work .amb-hero--compact > .amb-cluster { gap: var(--amb-space-2); margin-left: auto; }
+  .amb-shell--work .amb-hero--compact > .amb-hero__time ~ .amb-cluster { margin-left: 0; }
+  .amb-shell--work .amb-hero--compact > .amb-cluster > .amb-pill { min-height: var(--amb-tap); }
+  /* 0.7.23: the bar's status chip is a dot and its word, no ground, so it is no fourth button; a pill that carries aria-pressed is an indicator,
+     a step under the bar's one move, pressed while its view is open, and edged in the negative ink while it carries a negative count */
+  .amb-shell--work .amb-hero--compact > .amb-chip--glass { border-color: transparent; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .amb-shell--work .amb-hero--compact > .amb-cluster > .amb-pill[aria-pressed] { font-weight: 500; color: var(--amb-ink-2); }
+  .amb-shell--work .amb-hero--compact > .amb-cluster > .amb-pill[aria-pressed]:has(> .amb-chip--neg:not([hidden])) { border-color: var(--amb-neg); color: var(--amb-ink); }
+  .amb-shell--work .amb-hero--compact > .amb-cluster > .amb-pill[aria-pressed="true"] { border-color: var(--amb-accent); box-shadow: inset 0 0 0 1px var(--amb-accent); color: var(--amb-ink); }
+  .amb-shell--work.amb-shell--rail > .amb-dock > .amb-tabbar { flex: 1 1 auto; }
+  .amb-shell--work .amb-segment--tabs { flex-wrap: nowrap; gap: var(--amb-space-6); max-width: none; padding: 0; border: 0; border-bottom: 1px solid var(--amb-line); border-radius: 0; background: none; }
+  .amb-shell--work .amb-segment--tabs > .amb-segment__opt { position: relative; flex: 0 0 auto; min-width: var(--amb-tap); padding: 0 2px; border: 0; border-radius: 0; background: none; font-size: var(--amb-text-subhead); color: var(--amb-ink-2); }
+  .amb-shell--work .amb-segment--tabs > .amb-segment__opt[aria-pressed="true"] { background: none; color: var(--amb-ink); }
+  /* the underline is drawn, never a border: a clear border is given a colour under forced colours, where the pressed tab keeps its outline */
+  .amb-shell--work .amb-segment--tabs > .amb-segment__opt[aria-pressed="true"]::after { content: ""; position: absolute; inset: auto 0 -1px 0; height: 2px; background: var(--amb-accent); }
+  .amb-shell--work .amb-segment--tabs > .amb-segment__opt:not([aria-pressed="true"]) > .amb-segment__count { color: inherit; }
+  .amb-shell--work .amb-segment--tabs > .amb-segment__opt[aria-disabled="true"] { color: var(--amb-ink-2); }
+  .amb-shell--work .amb-segment--tabs > .amb-segment__opt[aria-disabled="true"] > .amb-segment__count { color: var(--amb-ink-3); }
+  @media (min-height: 640px) {
+    .amb-shell--work .amb-hero--compact { --amb-bar-l: calc(var(--amb-pane-room) - min(var(--amb-pane-room), var(--amb-inset-l))); --amb-bar-r: calc(var(--amb-pane-room) - min(var(--amb-pane-room), var(--amb-inset-r))); }
+    /* 0.7.22: a stack standing before shown panes (a notice, filters, a place's tabs) takes the edges the panes' cards stand on, which are the bar's too, so one line runs down the page's two sides */
+    /* 0.7.28: a bar keeps the room one circle takes whether its place shows one or not, so its buttons stand at one place across the places */
+    .amb-shell--work:has(> .amb-appbar .amb-circle) .amb-hero--compact { padding-right: calc(var(--amb-tap) + var(--amb-space-3)); }
+    /* 0.7.26: the bar's circles stand where they stand over panes, so they do not move between a part with panes and one without */
+    .amb-shell--work:has(> .amb-appbar) > .amb-appbar { padding-left: max(var(--amb-safe-left), var(--amb-pane-room)); padding-right: max(var(--amb-safe-right), var(--amb-pane-room)); }
+    .amb-shell--work.amb-shell--page:has(> .amb-appbar) > .amb-appbar { padding-left: calc(max(var(--amb-safe-left), var(--amb-page-side, 0px), var(--amb-pane-room)) - max(0px, var(--amb-page-side, 0px) - var(--amb-safe-left))); padding-right: calc(max(var(--amb-safe-right), var(--amb-page-side, 0px), var(--amb-pane-room)) - max(0px, var(--amb-page-side, 0px) - var(--amb-safe-right))); }
+    .amb-shell--work.amb-shell--rail:has(> .amb-appbar) > .amb-appbar { padding-left: var(--amb-safe-left); }
+    /* 0.7.27: a plain split's outer columns start and end on the same edge */
+    .amb-shell--work :is(.amb-screen, .amb-place) > .amb-split:not(.amb-split--panes) > .amb-stack:first-child { padding-left: calc(var(--amb-pane-room) - min(var(--amb-pane-room), var(--amb-inset-l))); }
+    .amb-shell--work :is(.amb-screen, .amb-place) > .amb-split:not(.amb-split--panes) > .amb-stack:last-child { padding-right: calc(var(--amb-pane-room) - min(var(--amb-pane-room), var(--amb-inset-r))); }
+    .amb-shell--work :is(.amb-screen, .amb-place) > :is(.amb-stack, .amb-list, .amb-tiles, .amb-form):not(.amb-split) { padding-inline: calc(var(--amb-pane-room) - min(var(--amb-pane-room), var(--amb-inset-l))) calc(var(--amb-pane-room) - min(var(--amb-pane-room), var(--amb-inset-r))); }
+    .amb-shell--work :is(.amb-screen, .amb-place) > .amb-split--panes { grid-template-columns: minmax(280px, min(440px, 40%)) minmax(0, 1fr); }
+  }
+  /* 0.7.17: one grid for every place of a working shell. A plain split takes the panes' own columns, so a place of two columns and a place of panes share their edges. */
+  .amb-shell--work :is(.amb-screen, .amb-place) > .amb-split:not(.amb-split--panes) { grid-template-columns: minmax(280px, min(440px, 40%)) minmax(0, 1fr); }
+}
+/* a working shell's bar in a narrow window (960px to 1200px): its line takes a row of its own under the title, so the time and the actions keep the first row beside the app bar's circles */
+@container amb (min-width: 960px) and (max-width: 1199.98px) {
+  .amb-shell--work .amb-hero--compact > .amb-hero__sub { order: 1; flex: 1 1 100%; padding-bottom: var(--amb-space-1); }
+}
