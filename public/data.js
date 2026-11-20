@@ -7,17 +7,17 @@
 self.QR_CODES = [
   {
     "key": "wise",
-    "name": "JPMorgan Chase",
-    "brand": "#5B2F12",
+    "name": "Wise",
+    "brand": "#163300",
     "payload": "",
-    "acct": "3121 0000 1330 933",
+    "acct": "2002 0490 76",
     "maintenance": false,
-    "bank": "JPMorgan Chase Bank Berhad",
-    "holder": "Wise Payments Malaysia Sdn Bhd",
-    "bankMark": "jpmc",
-    "holderMark": "wise",
-    "tag": "Wise",
-    "ring": "#9FE870",
+    "bank": "Wise",
+    "holder": "",
+    "bankMark": "wise",
+    "holderMark": "",
+    "tag": "",
+    "ring": "",
     "biller": "",
     "ref1": ""
   },
@@ -246,4 +246,4 @@ self.QR_CODES = [
     "ref1": "6011111809738"
   }
 ];
-self.QR_BUILD = "70e2e3ef2605";
+self.QR_BUILD = "9faadd12aacd";

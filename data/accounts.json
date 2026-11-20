@@ -9,17 +9,13 @@
  "accounts": [
   {
    "key": "wise",
-   "name": "JPMorgan Chase",
-   "sub": "3121 0000 1330 933",
+   "name": "Wise",
+   "sub": "2002 0490 76",
    "owner": "me",
    "group": "bank",
-   "brand": "#5B2F12",
-   "bank": "JPMorgan Chase Bank Berhad",
-   "holder": "Wise Payments Malaysia Sdn Bhd",
-   "bankMark": "jpmc",
-   "holderMark": "wise",
-   "tag": "Wise",
-   "ring": "#9FE870"
+   "brand": "#163300",
+   "bank": "Wise",
+   "bankMark": "wise"
   },
   {
    "key": "maybank",
